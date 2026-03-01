@@ -1352,6 +1352,228 @@ header {
   z-index:5;
 }
 
+
+/* ══ TUTORIAL ══ */
+#tutorial-screen {
+  padding:0;
+  justify-content:flex-start;
+  overflow:hidden;
+  position:relative;
+}
+
+.tut-slide {
+  display:none;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  width:100%;
+  height:100%;
+  min-height:100vh;
+  padding:28px 24px 24px;
+  gap:0;
+  position:absolute;
+  inset:0;
+  opacity:0;
+  transition:opacity 0.3s ease;
+}
+
+.tut-slide.active {
+  display:flex;
+  opacity:1;
+}
+
+.tut-slide.exit-left  { animation:slideOutLeft 0.3s ease forwards; }
+.tut-slide.enter-right { animation:slideInRight 0.3s ease forwards; }
+.tut-slide.exit-right  { animation:slideOutRight 0.3s ease forwards; }
+.tut-slide.enter-left  { animation:slideInLeft 0.3s ease forwards; }
+
+@keyframes slideOutLeft  { to { transform:translateX(-60px); opacity:0; } }
+@keyframes slideInRight  { from { transform:translateX(60px); opacity:0; } to { transform:translateX(0); opacity:1; } }
+@keyframes slideOutRight { to { transform:translateX(60px); opacity:0; } }
+@keyframes slideInLeft   { from { transform:translateX(-60px); opacity:0; } to { transform:translateX(0); opacity:1; } }
+
+.tut-step {
+  font-family:'Press Start 2P', monospace;
+  font-size:0.38rem;
+  color:var(--c2);
+  letter-spacing:2px;
+  margin-bottom:14px;
+}
+
+.tut-title {
+  font-family:'Press Start 2P', monospace;
+  font-size:clamp(0.85rem,4vw,1.2rem);
+  color:var(--text);
+  text-align:center;
+  letter-spacing:2px;
+  margin-bottom:10px;
+  line-height:1.6;
+}
+
+.tut-title span { color:var(--c4); }
+
+.tut-body {
+  font-family:'Press Start 2P', monospace;
+  font-size:0.42rem;
+  color:var(--muted);
+  text-align:center;
+  line-height:2.2;
+  letter-spacing:0.5px;
+  max-width:320px;
+  margin-bottom:20px;
+}
+
+.tut-body b { color:var(--c2); font-weight:normal; }
+.tut-body em { color:var(--c4); font-style:normal; }
+
+/* Demo board */
+.tut-demo {
+  display:grid;
+  gap:3px;
+  background:var(--surface);
+  border:1px solid rgba(10,245,255,0.15);
+  border-radius:6px;
+  padding:8px;
+  margin-bottom:20px;
+  box-shadow:0 0 20px rgba(10,245,255,0.08);
+}
+
+.tut-cell {
+  width:22px; height:22px;
+  border-radius:3px;
+  background:var(--surface2);
+  transition:background 0.2s, box-shadow 0.2s;
+}
+
+.tut-cell.on {
+  box-shadow:0 0 6px currentColor;
+}
+
+.tut-cell.flash {
+  animation:cellFlash 0.4s ease forwards;
+}
+
+@keyframes cellFlash {
+  0%   { filter:brightness(1); transform:scale(1); }
+  40%  { filter:brightness(3); transform:scale(1.15); }
+  100% { filter:brightness(0); transform:scale(0); opacity:0; }
+}
+
+/* Power-up preview pills */
+.tut-powers {
+  display:flex;
+  gap:8px;
+  margin-bottom:20px;
+  flex-wrap:wrap;
+  justify-content:center;
+}
+
+.tut-power-pill {
+  display:flex;
+  align-items:center;
+  gap:6px;
+  background:var(--surface);
+  border-radius:6px;
+  padding:8px 12px;
+  border:1px solid rgba(255,255,255,0.08);
+}
+
+.tut-power-pill .pip-icon { font-size:1rem; }
+.tut-power-pill .pip-text {
+  font-family:'Press Start 2P', monospace;
+  font-size:0.3rem;
+  color:var(--muted);
+  line-height:1.8;
+}
+.tut-power-pill .pip-name { color:var(--text); display:block; }
+
+/* Nav dots */
+.tut-dots {
+  display:flex;
+  gap:8px;
+  margin-bottom:16px;
+}
+
+.tut-dot {
+  width:8px; height:8px;
+  border-radius:50%;
+  background:var(--surface2);
+  transition:background 0.2s, transform 0.2s;
+}
+
+.tut-dot.active {
+  background:var(--c4);
+  transform:scale(1.3);
+  box-shadow:0 0 6px var(--glow4);
+}
+
+/* Nav buttons */
+.tut-nav {
+  display:flex;
+  gap:10px;
+  width:100%;
+  max-width:300px;
+}
+
+.tut-btn {
+  flex:1;
+  padding:12px;
+  border:none;
+  border-radius:4px;
+  font-family:'Press Start 2P', monospace;
+  font-size:0.45rem;
+  letter-spacing:1px;
+  cursor:pointer;
+  transition:all 0.12s;
+}
+
+.tut-btn:active { transform:scale(0.96); }
+
+.tut-btn.prev {
+  background:var(--surface);
+  color:var(--muted);
+  border:1px solid rgba(255,255,255,0.08);
+  flex:0.6;
+}
+
+.tut-btn.next {
+  background:var(--c4);
+  color:#000;
+  box-shadow:0 0 12px var(--glow4);
+}
+
+.tut-btn.finish {
+  background:var(--c1);
+  color:#fff;
+  box-shadow:0 0 14px var(--glow1);
+  flex:1;
+}
+
+/* Piece preview in tut */
+.tut-piece-row {
+  display:flex;
+  gap:14px;
+  justify-content:center;
+  margin-bottom:18px;
+  flex-wrap:wrap;
+}
+
+.tut-piece {
+  display:grid;
+  gap:3px;
+  padding:6px;
+  background:var(--surface);
+  border-radius:4px;
+  border:1px solid rgba(255,255,255,0.06);
+}
+
+.tut-pc {
+  width:16px; height:16px;
+  border-radius:2px;
+}
+
+.tut-pc.off { background:transparent; }
+
 </style>
 </head>
 <body>
@@ -1392,9 +1614,126 @@ header {
     ★ DAILY CHALLENGE
     <span class="daily-done-tag" id="daily-badge">TODAY</span>
   </button>
+  <button class="menu-btn ghost" onclick="showTutorial()" style="border-color:var(--c5);color:var(--c5);box-shadow:0 0 15px rgba(191,90,242,0.15)">? HOW TO PLAY</button>
   <button class="menu-btn ghost" onclick="showLeaderboard()">🏆 LEADERBOARD</button>
   <button class="menu-btn ghost" onclick="showStats()" style="border-color:var(--c4);color:var(--c4);box-shadow:0 0 15px rgba(10,245,255,0.15)">📊 STATS</button>
   <button class="menu-btn ghost" onclick="showUnlocks()" style="border-color:var(--c3);color:var(--c3);box-shadow:0 0 15px rgba(48,209,88,0.15)">🔓 UNLOCKS</button>
+</div>
+
+
+<!-- ══ TUTORIAL SCREEN ══ -->
+<div id="tutorial-screen" class="screen">
+
+  <!-- Slide 1: The Goal -->
+  <div class="tut-slide active" id="tut-slide-0">
+    <div class="tut-step">1 / 5</div>
+    <div class="tut-title">THE <span>GOAL</span></div>
+    <div class="tut-body">
+      Fill <b>complete rows</b> or<br>
+      <b>complete columns</b> to<br>
+      clear them and score points.<br><br>
+      The more you clear at once,<br>
+      the bigger the <em>combo!</em>
+    </div>
+    <div class="tut-demo" id="tut-demo-0" style="grid-template-columns:repeat(6,1fr)"></div>
+    <div class="tut-dots" id="tut-dots"></div>
+    <div class="tut-nav">
+      <button class="tut-btn prev" onclick="tutNav(-1)" style="visibility:hidden">◀</button>
+      <button class="tut-btn next" onclick="tutNav(1)">NEXT ▶</button>
+    </div>
+  </div>
+
+  <!-- Slide 2: Placing Pieces -->
+  <div class="tut-slide" id="tut-slide-1">
+    <div class="tut-step">2 / 5</div>
+    <div class="tut-title">PLACING <span>PIECES</span></div>
+    <div class="tut-body">
+      You have <b>3 pieces</b> in your tray.<br><br>
+      <b>Hold + drag</b> a piece onto<br>
+      the board to place it.<br><br>
+      A new set appears when all<br>
+      <em>3 are placed.</em>
+    </div>
+    <div class="tut-piece-row" id="tut-pieces"></div>
+    <div class="tut-dots" id="tut-dots-1"></div>
+    <div class="tut-nav">
+      <button class="tut-btn prev" onclick="tutNav(-1)">◀</button>
+      <button class="tut-btn next" onclick="tutNav(1)">NEXT ▶</button>
+    </div>
+  </div>
+
+  <!-- Slide 3: Game Over -->
+  <div class="tut-slide" id="tut-slide-2">
+    <div class="tut-step">3 / 5</div>
+    <div class="tut-title">GAME <span>OVER</span></div>
+    <div class="tut-body">
+      The game ends when <b>none</b><br>
+      of your 3 pieces can fit<br>
+      anywhere on the board.<br><br>
+      Plan ahead — don't let the<br>
+      board get <em>too full!</em>
+    </div>
+    <div class="tut-demo" id="tut-demo-2" style="grid-template-columns:repeat(5,1fr)"></div>
+    <div class="tut-dots" id="tut-dots-2"></div>
+    <div class="tut-nav">
+      <button class="tut-btn prev" onclick="tutNav(-1)">◀</button>
+      <button class="tut-btn next" onclick="tutNav(1)">NEXT ▶</button>
+    </div>
+  </div>
+
+  <!-- Slide 4: Power-Ups -->
+  <div class="tut-slide" id="tut-slide-3">
+    <div class="tut-step">4 / 5</div>
+    <div class="tut-title">POWER<span>-UPS</span></div>
+    <div class="tut-body">
+      Clear lines to earn powers.<br>
+      Tap one to activate it,<br>
+      then tap the board!
+    </div>
+    <div class="tut-powers">
+      <div class="tut-power-pill">
+        <div class="pip-icon">⚡</div>
+        <div class="pip-text"><span class="pip-name">LASER</span>Nukes a full row</div>
+      </div>
+      <div class="tut-power-pill">
+        <div class="pip-icon">🔨</div>
+        <div class="pip-text"><span class="pip-name">SHATTER</span>Smashes a + cross</div>
+      </div>
+      <div class="tut-power-pill">
+        <div class="pip-icon">🔥</div>
+        <div class="pip-text"><span class="pip-name">WILDFIRE</span>Burns one color</div>
+      </div>
+      <div class="tut-power-pill">
+        <div class="pip-icon">💣</div>
+        <div class="pip-text"><span class="pip-name">BOMB</span>3x3 explosion</div>
+      </div>
+    </div>
+    <div class="tut-dots" id="tut-dots-3"></div>
+    <div class="tut-nav">
+      <button class="tut-btn prev" onclick="tutNav(-1)">◀</button>
+      <button class="tut-btn next" onclick="tutNav(1)">NEXT ▶</button>
+    </div>
+  </div>
+
+  <!-- Slide 5: Tips -->
+  <div class="tut-slide" id="tut-slide-4">
+    <div class="tut-step">5 / 5</div>
+    <div class="tut-title">PRO <span>TIPS</span></div>
+    <div class="tut-body">
+      <b>★</b> Clear multiple lines at<br>
+      once for a combo bonus<br><br>
+      <b>★</b> Do the <em>Daily Challenge</em><br>
+      to build your streak<br><br>
+      <b>★</b> Reach score milestones<br>
+      to unlock new themes
+    </div>
+    <div class="tut-dots" id="tut-dots-4"></div>
+    <div class="tut-nav">
+      <button class="tut-btn prev" onclick="tutNav(-1)">◀</button>
+      <button class="tut-btn finish" onclick="finishTutorial()">▶ PLAY!</button>
+    </div>
+  </div>
+
 </div>
 
 <!-- ══ GAME SCREEN ══ -->
@@ -1429,7 +1768,7 @@ header {
       <div class="powerup-name">LASER</div>
     </button>
     <button class="powerup-btn empty-power" id="pu-shatter" onclick="activatePower('shatter')">
-      <div class="powerup-icon">💣</div>
+      <div class="powerup-icon">🔨</div>
       <div class="powerup-name">SHATTER</div>
     </button>
     <button class="powerup-btn empty-power" id="pu-wildfire" onclick="activatePower('wildfire')">
@@ -2647,6 +2986,217 @@ function showLbTab(mode,btn){
 
 
 
+
+// ════════════════════════════════════
+//  TUTORIAL
+// ════════════════════════════════════
+let tutCurrent = 0;
+const TUT_TOTAL = 5;
+
+function showTutorial() {
+  sfxMenu();
+  tutCurrent = 0;
+  buildTutDemos();
+  buildTutDots();
+  showScreen('tutorial-screen');
+  showTutSlide(0, 0);
+}
+
+function finishTutorial() {
+  sfxMenu();
+  localStorage.setItem('bb_tut_done', '1');
+  showScreen('menu-screen');
+}
+
+function tutNav(dir) {
+  const next = tutCurrent + dir;
+  if(next < 0 || next >= TUT_TOTAL) return;
+  sfxMenu();
+  showTutSlide(next, dir);
+}
+
+function showTutSlide(idx, dir) {
+  const old = document.getElementById('tut-slide-' + tutCurrent);
+  const nxt = document.getElementById('tut-slide-' + idx);
+  if(!nxt) return;
+
+  if(old && old !== nxt) {
+    old.classList.add(dir > 0 ? 'exit-left' : 'exit-right');
+    setTimeout(() => {
+      old.classList.remove('active', 'exit-left', 'exit-right');
+    }, 300);
+  }
+
+  tutCurrent = idx;
+  nxt.classList.add('active');
+  nxt.style.opacity = '0';
+  nxt.classList.add(dir > 0 ? 'enter-right' : 'enter-left');
+  requestAnimationFrame(() => {
+    nxt.style.opacity = '';
+    setTimeout(() => nxt.classList.remove('enter-right', 'enter-left'), 350);
+  });
+
+  // Update all dot sets
+  for(let i = 0; i < TUT_TOTAL; i++) {
+    const dotSet = document.getElementById('tut-dots-' + i);
+    if(dotSet) {
+      dotSet.querySelectorAll('.tut-dot').forEach((d, di) => {
+        d.classList.toggle('active', di === idx);
+      });
+    }
+  }
+
+  // Trigger demo animations
+  if(idx === 0) animateTutClear();
+  if(idx === 2) animateTutFull();
+}
+
+function buildTutDots() {
+  for(let s = 0; s < TUT_TOTAL; s++) {
+    const container = document.getElementById('tut-dots-' + (s === 0 ? '' : s));
+    const el = document.getElementById(s === 0 ? 'tut-dots' : 'tut-dots-' + s);
+    if(!el) continue;
+    el.innerHTML = '';
+    for(let i = 0; i < TUT_TOTAL; i++) {
+      const d = document.createElement('div');
+      d.className = 'tut-dot' + (i === 0 ? ' active' : '');
+      el.appendChild(d);
+    }
+  }
+}
+
+// ── Demo 0: Row clearing animation ──
+const DEMO0_COLS = 6;
+const DEMO0_ROWS = 4;
+let demo0Timer = null;
+
+function buildTutDemos() {
+  // Demo 0 — clearing board
+  const d0 = document.getElementById('tut-demo-0');
+  if(d0) {
+    d0.innerHTML = '';
+    d0.style.gridTemplateColumns = 'repeat(' + DEMO0_COLS + ', 1fr)';
+    const colors = ['#ff2d55','#ffd60a','#30d158','#0af5ff','#bf5af2','#ff6b35'];
+    for(let r = 0; r < DEMO0_ROWS; r++) {
+      for(let c = 0; c < DEMO0_COLS; c++) {
+        const cell = document.createElement('div');
+        cell.className = 'tut-cell';
+        cell.id = 'td0-' + r + '-' + c;
+        // Bottom two rows filled, top two sparse
+        if(r >= 2) {
+          const col = colors[(r * DEMO0_COLS + c) % colors.length];
+          cell.style.background = col;
+          cell.style.color = col;
+          cell.classList.add('on');
+        }
+        d0.appendChild(cell);
+      }
+    }
+  }
+
+  // Demo 2 — full board (game over state)
+  const d2 = document.getElementById('tut-demo-2');
+  if(d2) {
+    d2.innerHTML = '';
+    d2.style.gridTemplateColumns = 'repeat(5, 1fr)';
+    const colors2 = ['#ff2d55','#ffd60a','#30d158','#0af5ff','#bf5af2'];
+    for(let r = 0; r < 4; r++) {
+      for(let c = 0; c < 5; c++) {
+        const cell = document.createElement('div');
+        cell.className = 'tut-cell';
+        const filled = !(r === 0 && c >= 3); // Leave small gap top right
+        if(filled) {
+          const col = colors2[(r + c) % colors2.length];
+          cell.style.background = col;
+          cell.style.color = col;
+          cell.classList.add('on');
+        }
+        d2.appendChild(cell);
+      }
+    }
+  }
+
+  // Piece previews on slide 2
+  buildTutPieces();
+}
+
+function buildTutPieces() {
+  const container = document.getElementById('tut-pieces');
+  if(!container) return;
+  container.innerHTML = '';
+  const examples = [
+    { shape:[[1,1,1]], color:'#0af5ff' },
+    { shape:[[1,0],[1,1],[0,1]], color:'#ff2d55' },
+    { shape:[[1,1],[1,1]], color:'#ffd60a' },
+    { shape:[[1],[1],[1],[1]], color:'#30d158' },
+    { shape:[[1,1,1],[0,1,0]], color:'#bf5af2' },
+  ];
+  examples.forEach(p => {
+    const cols = p.shape[0].length;
+    const wrap = document.createElement('div');
+    wrap.className = 'tut-piece';
+    wrap.style.gridTemplateColumns = 'repeat(' + cols + ', 1fr)';
+    p.shape.forEach(row => row.forEach(val => {
+      const c = document.createElement('div');
+      c.className = 'tut-pc' + (val ? '' : ' off');
+      if(val) { c.style.background = p.color; c.style.boxShadow = '0 0 4px ' + p.color; }
+      wrap.appendChild(c);
+    }));
+    container.appendChild(wrap);
+  });
+}
+
+let _demo0Interval = null;
+function animateTutClear() {
+  if(_demo0Interval) clearInterval(_demo0Interval);
+  // Reset
+  buildTutDemos();
+  // After 800ms, flash the full bottom rows and remove them
+  _demo0Interval = setTimeout(() => {
+    const colors = ['#ff2d55','#ffd60a','#30d158','#0af5ff','#bf5af2','#ff6b35'];
+    // Fill the second-to-last row completely
+    for(let c = 0; c < DEMO0_COLS; c++) {
+      const cell = document.getElementById('td0-2-' + c);
+      if(cell && !cell.classList.contains('on')) {
+        const col = colors[c % colors.length];
+        cell.style.background = col;
+        cell.style.color = col;
+        cell.classList.add('on');
+      }
+    }
+    // Small delay then flash + clear that row
+    setTimeout(() => {
+      for(let c = 0; c < DEMO0_COLS; c++) {
+        const cell = document.getElementById('td0-2-' + c);
+        if(cell) cell.classList.add('flash');
+      }
+      setTimeout(() => {
+        for(let c = 0; c < DEMO0_COLS; c++) {
+          const cell = document.getElementById('td0-2-' + c);
+          if(cell) { cell.classList.remove('on','flash'); cell.style.background=''; cell.style.color=''; }
+        }
+        // Loop
+        setTimeout(() => animateTutClear(), 1200);
+      }, 500);
+    }, 500);
+  }, 900);
+}
+
+function animateTutFull() {
+  // Pulse the nearly-full board cells to emphasize danger
+  const d2 = document.getElementById('tut-demo-2');
+  if(!d2) return;
+  let bright = false;
+  if(_demo0Interval) clearInterval(_demo0Interval);
+  _demo0Interval = setInterval(() => {
+    bright = !bright;
+    d2.querySelectorAll('.tut-cell.on').forEach(c => {
+      c.style.filter = bright ? 'brightness(1.4)' : 'brightness(0.8)';
+    });
+  }, 600);
+}
+
+
 // ════════════════════════════════════
 //  STATS TRACKING
 // ════════════════════════════════════
@@ -2874,7 +3424,7 @@ function renderBombOnBoard() {
 // ════════════════════════════════════
 const POWERS = {
   laser:    { color:'#ffd60a', glow:'rgba(255,214,10,0.4)',   icon:'⚡', name:'LASER' },
-  shatter:  { color:'#0af5ff', glow:'rgba(10,245,255,0.4)',  icon:'💣', name:'SHATTER' },
+  shatter:  { color:'#0af5ff', glow:'rgba(10,245,255,0.4)',  icon:'🔨', name:'SHATTER' },
   wildfire: { color:'#ff6b35', glow:'rgba(255,107,53,0.4)',  icon:'🔥', name:'WILDFIRE' },
   bomb:     { color:'#ff2d55', glow:'rgba(255,45,85,0.5)',   icon:'💣', name:'BOMB' },
 };
@@ -2961,11 +3511,11 @@ function activatePower(type) {
   } else if(type === 'shatter') {
     if(boardEl) {
       boardEl.classList.add('select-mode');
-      boardEl.querySelectorAll('.cell.filled').forEach(cell => {
+      boardEl.querySelectorAll('.cell').forEach(cell => {
         cell.addEventListener('click', onShatterClick, {once:false});
       });
     }
-    if(hint) hint.textContent = 'TAP A BLOCK TO SHATTER | TAP POWER TO CANCEL';
+    if(hint) hint.textContent = 'TAP A BLOCK TO SHATTER IT + NEIGHBORS | TAP POWER TO CANCEL';
     showSelectHint('SHATTER - TAP A BLOCK');
   } else if(type === 'wildfire') {
     if(boardEl) {
@@ -3076,19 +3626,34 @@ function onShatterClick(e) {
   if(!board[r][c]) return;
   usePower('shatter');
 
-  const rect = e.currentTarget.getBoundingClientRect();
-  spawnParticles(rect.left + rect.width/2, rect.top + rect.height/2, board[r][c], 20);
-  e.currentTarget.classList.add('clearing');
+  // Cross pattern: center + 4 direct neighbors
+  const targets = [
+    {r, c},
+    {r:r-1, c}, {r:r+1, c},
+    {r, c:c-1}, {r, c:c+1},
+  ].filter(t => t.r >= 0 && t.r < ROWS && t.c >= 0 && t.c < COLS);
+
+  const boardEl = $id('board');
+  targets.forEach(t => {
+    const idx = t.r * COLS + t.c;
+    const cell = boardEl ? boardEl.querySelectorAll('.cell')[idx] : null;
+    const color = board[t.r][t.c] || '#0af5ff';
+    if(cell) {
+      cell.classList.add('clearing');
+      const rect = cell.getBoundingClientRect();
+      spawnParticles(rect.left + rect.width/2, rect.top + rect.height/2, color, t.r === r && t.c === c ? 18 : 10);
+    }
+  });
 
   flashPower('#0af5ff');
-  sfxClear(1);
-  haptic([20,10,40]);
-  shakeBoard(1);
+  sfxClear(2);
+  haptic([20, 10, 40, 10, 40]);
+  shakeBoard(2);
 
   setTimeout(() => {
-    board[r][c] = null;
+    targets.forEach(t => board[t.r][t.c] = null);
     renderBoard();
-    addScore(150, 1, 1);
+    addScore(targets.length * 80, targets.length, 1);
     checkGameOver();
   }, 380);
 }
@@ -3240,6 +3805,7 @@ function addXP(amount) {
   updateXPBar();
   checkNewUnlocks();
   updatePowerUI();
+  // Show tutorial for first-time players
 }
 
 function updateXPBar() {
@@ -3342,6 +3908,7 @@ document.addEventListener('DOMContentLoaded', function() {
   updateXPBar();
   checkNewUnlocks();
   updatePowerUI();
+  // Show tutorial for first-time players
   window.addEventListener('resize', resizeCanvas);
   animParticles();
 
