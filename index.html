@@ -373,7 +373,12 @@ header {
   border-radius:0 0 3px 0;
 }
 
-.cell.highlight { transform:scale(0.88); opacity:0.8; }
+.cell.highlight {
+  transform:scale(0.88);
+  background: rgba(10,245,255,0.35) !important;
+  box-shadow: 0 0 8px rgba(10,245,255,0.5) !important;
+  border-radius:3px;
+}
 .cell.invalid { background:rgba(255,45,85,0.4) !important; transform:scale(0.88); }
 
 .cell.clearing {
@@ -1581,6 +1586,111 @@ header {
 
 .tut-pc.off { background:transparent; }
 
+
+.powerup-btn.hint-pulse {
+  animation: hintPulse 0.5s ease-in-out 4 !important;
+}
+
+@keyframes hintPulse {
+  0%,100% { transform: scale(1); box-shadow: 0 0 8px var(--pu-glow, rgba(255,214,10,0.3)); }
+  50%      { transform: scale(1.15); box-shadow: 0 0 24px var(--pu-glow, rgba(255,214,10,0.8)), 0 0 40px var(--pu-glow); }
+}
+
+
+/* ══ WILD THEMES ══ */
+
+/* NEON CITY — hot pink/electric blue city grid */
+body.theme-neon-city {
+  --bg: #0a0014;
+  --surface: #12001f;
+  --surface2: #1a0030;
+}
+body.theme-neon-city #board {
+  box-shadow: 0 0 30px rgba(255,0,200,0.3), 0 0 60px rgba(0,200,255,0.2) !important;
+}
+body.theme-neon-city #app {
+  background: linear-gradient(180deg, #0a0014 0%, #080010 60%, #0a0008 100%) !important;
+}
+
+/* TOXIC — radioactive green slime */
+body.theme-toxic {
+  --bg: #010d01;
+  --surface: #041504;
+  --surface2: #082008;
+}
+body.theme-toxic #board {
+  box-shadow: 0 0 40px rgba(0,255,65,0.25), inset 0 0 30px rgba(0,255,65,0.05) !important;
+}
+
+/* CANDY — pastel sweet shop */
+body.theme-candy {
+  --bg: #1a0520;
+  --surface: #220a2a;
+  --surface2: #2e1038;
+}
+
+/* MIDNIGHT — deep dark noir */
+body.theme-midnight {
+  --bg: #000005;
+  --surface: #05050f;
+  --surface2: #0a0a1a;
+}
+body.theme-midnight #board {
+  box-shadow: 0 0 20px rgba(100,100,255,0.1) !important;
+}
+
+/* LAVA — molten orange chaos */
+body.theme-lava {
+  --bg: #0f0000;
+  --surface: #1a0300;
+  --surface2: #250500;
+}
+body.theme-lava #board {
+  box-shadow: 0 0 40px rgba(255,60,0,0.3), 0 0 80px rgba(255,120,0,0.15) !important;
+}
+body.theme-lava #app {
+  background: linear-gradient(180deg, #0f0000 0%, #1a0200 100%) !important;
+}
+
+/* HOLOGRAM — iridescent white tech */
+body.theme-hologram {
+  --bg: #f0f4ff;
+  --surface: #e8eeff;
+  --surface2: #dde4ff;
+  --text: #0a0820;
+  --muted: #606090;
+}
+body.theme-hologram #board {
+  box-shadow: 0 0 30px rgba(100,100,255,0.3) !important;
+}
+body.theme-hologram .cell.filled {
+  filter: brightness(0.85) saturate(1.3);
+}
+
+/* RETRO — amber phosphor CRT */
+body.theme-retro {
+  --bg: #0d0800;
+  --surface: #1a1000;
+  --surface2: #251800;
+}
+body.theme-retro #board {
+  box-shadow: 0 0 30px rgba(255,170,0,0.25), inset 0 0 20px rgba(255,140,0,0.08) !important;
+  filter: sepia(0.4);
+}
+body.theme-retro .cell.filled {
+  filter: sepia(0.5) saturate(1.5);
+}
+
+/* ICE — frozen arctic */
+body.theme-ice {
+  --bg: #000d1f;
+  --surface: #001428;
+  --surface2: #001e38;
+}
+body.theme-ice #board {
+  box-shadow: 0 0 40px rgba(150,220,255,0.2), inset 0 0 20px rgba(150,220,255,0.05) !important;
+}
+
 </style>
 </head>
 <body>
@@ -2375,13 +2485,14 @@ function restartGame() {
 function initGame() {
   score=0; consecutiveClearCount=0;
   resetPowers();
+  clearPowerHintTimer();
   sessionBestCombo=0; sessionBestLines=0; sessionPiecesPlaced=0; sessionLinesCleared=0;
   $id('score').textContent='0';
   $id('best-display').textContent=best.toLocaleString();
   board=Array.from({length:ROWS},()=>Array(COLS).fill(null));
   if(!isDaily && gamesPlayed>=5) addStartingObstacles();
   renderBoard();
-  pieces=[rngPiece(),rngPiece(),rngPiece()];
+  pieces=[rngPieceEasy(),rngPieceEasy(),rngPieceEasy()];
   renderTray();
 }
 
@@ -2393,14 +2504,113 @@ function addStartingObstacles() {
   }
 }
 
-function rngPiece() {
-  const shape=PIECES[Math.floor(rng()*PIECES.length)];
-  const theme = THEMES.find(t=>t.id===activeTheme) || THEMES[0];
+
+// Easy starter pieces — simple flat shapes only
+const EASY_PIECES = [
+  [[1]],
+  [[1,1]], [[1],[1]],
+  [[1,1,1]], [[1],[1],[1]],
+  [[1,1],[1,1]],
+  [[1,1,1,1]], [[1],[1],[1],[1]],
+];
+
+const EASY_PHASE_PIECES = 9; // first 3 trays are easy
+
+function rngPieceEasy() {
+  const shape = EASY_PIECES[Math.floor(rng() * EASY_PIECES.length)];
+  const theme = THEMES.find(t => t.id === activeTheme) || THEMES[0];
   const palette = theme.colors;
-  const ci=Math.floor(rng()*palette.length);
-  const color = palette[ci];
-  return{shape, color, hex:colorHex[color]||color||'#0af5ff'};
+  const color = palette[Math.floor(rng() * palette.length)];
+  return { shape, color, hex: colorHex[color] || color || '#0af5ff' };
 }
+
+// Score how useful a piece shape is given the current board state.
+// Returns a weight: higher = more useful to give the player.
+function scorePieceUsefulness(shape) {
+  let bestScore = 0;
+
+  for (let sr = 0; sr < ROWS; sr++) {
+    for (let sc = 0; sc < COLS; sc++) {
+      if (!canPlace(shape, sr, sc)) continue;
+
+      // Simulate placing this piece
+      const filled = [];
+      for (let r = 0; r < shape.length; r++) {
+        for (let c = 0; c < shape[r].length; c++) {
+          if (shape[r][c]) filled.push([sr + r, sc + c]);
+        }
+      }
+
+      // Count how many rows/cols this placement would complete
+      let linesCompleted = 0;
+      for (let r = 0; r < ROWS; r++) {
+        const rowCells = filled.filter(([fr]) => fr === r).length;
+        const alreadyFilled = board[r].filter(c => c).length;
+        if (alreadyFilled + rowCells === COLS) linesCompleted++;
+      }
+      for (let c = 0; c < COLS; c++) {
+        const colCells = filled.filter(([, fc]) => fc === c).length;
+        const alreadyFilled = board.filter(row => row[c]).length;
+        if (alreadyFilled + colCells === ROWS) linesCompleted++;
+      }
+
+      // Also reward pieces that get close to completing lines
+      let nearMisses = 0;
+      for (let r = 0; r < ROWS; r++) {
+        const rowCells = filled.filter(([fr]) => fr === r).length;
+        const alreadyFilled = board[r].filter(c => c).length;
+        const remaining = COLS - alreadyFilled - rowCells;
+        if (remaining <= 2 && remaining > 0) nearMisses++;
+      }
+      for (let c = 0; c < COLS; c++) {
+        const colCells = filled.filter(([, fc]) => fc === c).length;
+        const alreadyFilled = board.filter(row => row[c]).length;
+        const remaining = ROWS - alreadyFilled - colCells;
+        if (remaining <= 2 && remaining > 0) nearMisses++;
+      }
+
+      const placementScore = linesCompleted * 10 + nearMisses * 2 + 1;
+      if (placementScore > bestScore) bestScore = placementScore;
+    }
+  }
+
+  return bestScore;
+}
+
+function rngPiece() {
+  const theme = THEMES.find(t => t.id === activeTheme) || THEMES[0];
+  const palette = theme.colors;
+
+  // Filter to only placeable pieces
+  const playable = PIECES.filter(shape => canPlaceAny({ shape }));
+  const pool = playable.length > 0 ? playable : PIECES;
+
+  // Score each piece and build a weighted pool
+  // 70% chance to pick from high-scoring pieces, 30% pure random (keeps game fair not too easy)
+  const useSmartPick = rng() < 0.70;
+  let shape;
+
+  if (useSmartPick) {
+    const scored = pool.map(s => ({ shape: s, weight: scorePieceUsefulness(s) }));
+    const maxWeight = Math.max(...scored.map(s => s.weight));
+    // Bias toward best pieces but include all with at least some weight
+    const weighted = scored.map(s => ({ shape: s.shape, weight: s.weight / maxWeight }));
+    // Weighted random selection
+    const totalWeight = weighted.reduce((sum, s) => sum + s.weight, 0);
+    let pick = rng() * totalWeight;
+    shape = weighted[weighted.length - 1].shape; // fallback
+    for (const entry of weighted) {
+      pick -= entry.weight;
+      if (pick <= 0) { shape = entry.shape; break; }
+    }
+  } else {
+    shape = pool[Math.floor(rng() * pool.length)];
+  }
+
+  const color = palette[Math.floor(rng() * palette.length)];
+  return { shape, color, hex: colorHex[color] || color || '#0af5ff' };
+}
+
 
 // ════════════════════════════════════
 //  BOARD RENDER
@@ -2557,7 +2767,8 @@ function onDragEnd(e) {
     pieces[dragSlot]=null;
     refillPieces();
     renderTray();
-    checkGameOver();
+    // Delay checkGameOver until after line clear animation (400ms) finishes
+    setTimeout(() => checkGameOver(), 450);
   } else {
     const slots2=document.querySelectorAll('.piece-slot');
     if(slots2[dragSlot]) slots2[dragSlot].classList.remove('dragging-source');
@@ -2583,18 +2794,18 @@ function getBoardPos(pos) {
 function highlightBoard(startRow,startCol) {
   clearHighlights();
   if(!dragPiece) return;
-  const valid=canPlace(dragPiece.shape,startRow,startCol);
+  if(!canPlace(dragPiece.shape,startRow,startCol)) return;
   const cells=document.querySelectorAll('#board .cell');
   dragPiece.shape.forEach((row,r)=>row.forEach((val,c)=>{
     if(!val) return;
     const br=startRow+r, bc=startCol+c;
     if(br>=0&&br<ROWS&&bc>=0&&bc<COLS)
-      cells[br*COLS+bc].classList.add(valid?'highlight':'invalid');
+      cells[br*COLS+bc].classList.add('highlight');
   }));
 }
 
 function clearHighlights() {
-  document.querySelectorAll('#board .cell').forEach(c=>c.classList.remove('highlight','invalid'));
+  document.querySelectorAll('#board .cell').forEach(c=>c.classList.remove('highlight'));
 }
 
 // ════════════════════════════════════
@@ -2613,6 +2824,7 @@ function placePiece(piece,startRow,startCol) {
   const slots=document.querySelectorAll('.piece-slot');
   if(slots[dragSlot]) slots[dragSlot].classList.remove('dragging-source');
   sessionPiecesPlaced++;
+  resetPowerHintTimer();
   if(piece.isBomb) {
     placeBombPiece(piece, startRow, startCol);
     return;
@@ -2625,7 +2837,15 @@ function placePiece(piece,startRow,startCol) {
 }
 
 function refillPieces() {
-  if(pieces.every(p=>p===null)) pieces=[rngPiece(),rngPiece(),rngPiece()];
+  if(pieces.every(p=>p===null)) {
+    const gen = sessionPiecesPlaced < EASY_PHASE_PIECES ? rngPieceEasy : rngPiece;
+    // Keep regenerating until at least one piece can be placed
+    let attempts = 0;
+    do {
+      pieces = [gen(), gen(), gen()];
+      attempts++;
+    } while(attempts < 20 && !pieces.some(p => canPlaceAny(p)));
+  }
 }
 
 // ════════════════════════════════════
@@ -2689,6 +2909,7 @@ function clearLines() {
 }
 
 function addScore(pts,lines,combo) {
+  const oldLevel = getLevel();
   score+=pts;
   $id('score').textContent=score.toLocaleString();
   if(!isDaily&&score>best){
@@ -2696,6 +2917,7 @@ function addScore(pts,lines,combo) {
     localStorage.setItem('bb_best',best);
     $id('best-display').textContent=best.toLocaleString();
   }
+  incStat('total_score', pts);
 
   // Popup
   const popup=document.createElement('div');
@@ -2721,6 +2943,15 @@ function addScore(pts,lines,combo) {
     banner.textContent=label;
     document.body.appendChild(banner);
     setTimeout(()=>banner.remove(),850);
+  }
+
+  // Check for level up in real time
+  const newLevel = getLevel();
+  if(newLevel > oldLevel) {
+    showToast('★ LEVEL UP! LEVEL ' + newLevel + ' ★');
+    sfxLevelUp();
+    updateXPBar();
+    checkNewUnlocks();
   }
 }
 
@@ -2752,12 +2983,56 @@ function checkGameOver() {
   gamesPlayed++;
   localStorage.setItem('bb_games', gamesPlayed);
   recordGameStats(score, sessionLinesCleared, sessionPiecesPlaced);
-  setTimeout(() => isDaily ? finishDaily() : finishClassic(), 500);
+  deathFlood(() => isDaily ? finishDaily() : finishClassic());
+}
+
+function deathFlood(callback) {
+  const cells = document.querySelectorAll('#board .cell');
+  const totalCells = ROWS * COLS;
+
+  // Collect all empty cells
+  const emptyCells = [];
+  for(let r = 0; r < ROWS; r++) {
+    for(let c = 0; c < COLS; c++) {
+      if(!board[r][c]) emptyCells.push({ r, c, idx: r * COLS + c });
+    }
+  }
+
+  if(emptyCells.length === 0) {
+    setTimeout(callback, 400);
+    return;
+  }
+
+  // Flood from bottom-up, left to right for dramatic effect
+  emptyCells.sort((a, b) => b.r - a.r || a.c - b.c);
+
+  const floodColor = '#ff2d55';
+  const totalTime = 900; // ms to fill entire board
+  const delay = totalTime / emptyCells.length;
+
+  emptyCells.forEach((cell, i) => {
+    setTimeout(() => {
+      const el = cells[cell.idx];
+      if(el) {
+        el.style.background = floodColor;
+        el.style.boxShadow = `0 0 6px ${floodColor}`;
+        el.style.transform = 'scale(0.85)';
+        el.style.transition = 'all 0.15s ease';
+        // Quick pulse in
+        setTimeout(() => { if(el) el.style.transform = ''; }, 120);
+      }
+      // Creepy ticking sounds as cells fill
+      if(i % 6 === 0) playTone(80 + i * 1.5, 'square', 0.04, 0.06);
+    }, i * delay);
+  });
+
+  // After flood completes, just proceed
+  setTimeout(callback, emptyCells.length * delay + 150);
 }
 
 function finishClassic() {
-  const xpEarned = Math.floor(score / 100) + (score >= best ? 50 : 0);
-  if(xpEarned > 0) addXP(xpEarned);
+  // Level is now based on cumulative score — just update bar
+  addXP(0);
   checkNewUnlocks();
   pendingScore = score;
   if(!playerName) {
@@ -3003,10 +3278,33 @@ const TUT_TOTAL = 5;
 function showTutorial() {
   sfxMenu();
   tutCurrent = 0;
+
+  // Fully reset all slides — clear every class and state
+  for(let i = 0; i < TUT_TOTAL; i++) {
+    const slide = document.getElementById('tut-slide-' + i);
+    if(slide) {
+      slide.className = 'tut-slide';
+      slide.style.opacity = '';
+    }
+  }
+  // Stop any running demo animations
+  if(_demo0Interval) { clearInterval(_demo0Interval); clearTimeout(_demo0Interval); _demo0Interval = null; }
+
   buildTutDemos();
   buildTutDots();
   showScreen('tutorial-screen');
-  showTutSlide(0, 0);
+
+  // Activate slide 0 cleanly with no animation
+  const first = document.getElementById('tut-slide-0');
+  if(first) { first.className = 'tut-slide active'; first.style.opacity = '1'; }
+
+  // Update dots to show slide 0 active
+  for(let i = 0; i < TUT_TOTAL; i++) {
+    const dotEl = document.getElementById(i === 0 ? 'tut-dots' : 'tut-dots-' + i);
+    if(dotEl) dotEl.querySelectorAll('.tut-dot').forEach((d, di) => d.classList.toggle('active', di === 0));
+  }
+
+  animateTutClear();
 }
 
 function finishTutorial() {
@@ -3213,7 +3511,7 @@ function incStat(k, by=1)  { setStat(k, getStat(k)+by); }
 
 function recordGameStats(pts, linesCleared, piecesPlaced) {
   incStat('total_games');
-  incStat('total_score', pts);
+  // total_score is accumulated in real-time via addScore, not at game end
   incStat('total_lines', linesCleared);
   incStat('total_pieces', piecesPlaced);
   const hs = getStat('high_score');
@@ -3426,6 +3724,50 @@ function renderBombOnBoard() {
 }
 
 
+
+// ════════════════════════════════════
+//  POWER-UP HINT NUDGE
+// ════════════════════════════════════
+let powerHintTimer = null;
+const POWER_HINT_DELAY = 12000; // 12 seconds idle with unused power
+
+function resetPowerHintTimer() {
+  clearTimeout(powerHintTimer);
+  // Only nudge if they have a power and aren't already in select mode
+  powerHintTimer = setTimeout(() => {
+    const hasPower = Object.entries(powerInventory).some(([,count]) => count > 0);
+    if(hasPower && !activePower) {
+      showPowerHint();
+    }
+  }, POWER_HINT_DELAY);
+}
+
+function showPowerHint() {
+  // Find which power they have
+  const available = Object.entries(powerInventory)
+    .filter(([,count]) => count > 0)
+    .map(([type]) => type);
+  if(!available.length) return;
+
+  const type = available[0];
+  const p = POWERS[type];
+
+  // Pulse the button
+  const btn = $id('pu-' + type);
+  if(btn) {
+    btn.classList.add('hint-pulse');
+    setTimeout(() => btn && btn.classList.remove('hint-pulse'), 2500);
+  }
+
+  showToast(p.icon + ' TAP YOUR ' + p.name + ' POWER!');
+  playTone(440, 'sine', 0.08, 0.12);
+  playTone(550, 'sine', 0.08, 0.1, 0.1);
+}
+
+function clearPowerHintTimer() {
+  clearTimeout(powerHintTimer);
+}
+
 // ════════════════════════════════════
 //  POWER-UP SYSTEM
 // ════════════════════════════════════
@@ -3441,21 +3783,28 @@ let activePower = null; // currently selected power waiting for board tap
 
 function awardPower(lines, combo) {
   if(lines >= 4 || combo >= 4) {
+    // 80% chance
+    if(Math.random() > 0.80) return;
     const roll = Math.random();
     if(roll < 0.35) givePower('bomb');
     else if(roll < 0.65) givePower('wildfire');
     else if(roll < 0.85) givePower('laser');
     else givePower('shatter');
   } else if(lines >= 3 || combo >= 3) {
+    // 55% chance
+    if(Math.random() > 0.55) return;
     const roll = Math.random();
     if(roll < 0.5) givePower('wildfire');
     else if(roll < 0.8) givePower('laser');
     else givePower('shatter');
   } else if(lines >= 2 || combo >= 2) {
+    // 25% chance
+    if(Math.random() > 0.25) return;
     const roll = Math.random();
     if(roll < 0.5) givePower('laser');
     else givePower('shatter');
-  } else if(Math.random() < 0.12) {
+  } else if(Math.random() < 0.07) {
+    // 7% on single line
     givePower('laser');
   }
 }
@@ -3466,6 +3815,7 @@ function givePower(type) {
   updatePowerUI();
   showToast(POWERS[type].icon + ' ' + POWERS[type].name + ' READY!');
   sfxPowerEarned();
+  resetPowerHintTimer();
 }
 
 function updatePowerUI() {
@@ -3712,6 +4062,7 @@ function onWildfireClick(e) {
 function usePower(type) {
   powerInventory[type] = Math.max(0, powerInventory[type] - 1);
   cancelPower();
+  clearPowerHintTimer();
 }
 
 function flashPower(color) {
@@ -3740,92 +4091,130 @@ const THEMES = [
     bg:'#080810', surface:'#0e0e1e', surface2:'#141428',
     colors:['#ff2d55','#ffd60a','#30d158','#0af5ff','#bf5af2','#ff6b35','#ff375f'],
     boardBg:'#0e0e1e', boardBorder:'rgba(10,245,255,0.15)',
-    preview:['#ff2d55','#ffd60a','#30d158','#0af5ff','#bf5af2']
+    preview:['#ff2d55','#ffd60a','#30d158','#0af5ff','#bf5af2'],
+    emoji:'🎮'
   },
   {
-    id:'sunset', name:'SUNSET', req:5000, reqLabel:'5K SCORE',
-    bg:'#1a0a00', surface:'#1e0e05', surface2:'#2a1408',
-    colors:['#ff6b35','#ff9f1c','#ffbf69','#ff4757','#ffa502','#ff6b35','#ff4500'],
-    boardBg:'#1e0e05', boardBorder:'rgba(255,107,53,0.25)',
-    preview:['#ff6b35','#ff9f1c','#ffbf69','#ff4757','#ffa502']
+    id:'neon-city', name:'NEON CITY', req:2, reqLabel:'LEVEL 2',
+    bg:'#0a0014', surface:'#12001f', surface2:'#1a0030',
+    colors:['#ff00c8','#00eeff','#ff0090','#00ffcc','#cc00ff','#ff4dff','#00ccff'],
+    boardBg:'#12001f', boardBorder:'rgba(255,0,200,0.3)',
+    preview:['#ff00c8','#00eeff','#ff0090','#00ffcc','#cc00ff'],
+    emoji:'🌃'
   },
   {
-    id:'forest', name:'FOREST', req:15000, reqLabel:'15K SCORE',
-    bg:'#030d06', surface:'#071a0a', surface2:'#0d2410',
-    colors:['#30d158','#34c759','#a8e063','#52de97','#1dd1a1','#00b894','#55efc4'],
-    boardBg:'#071a0a', boardBorder:'rgba(48,209,88,0.2)',
-    preview:['#30d158','#a8e063','#52de97','#1dd1a1','#00b894']
+    id:'toxic', name:'TOXIC', req:3, reqLabel:'LEVEL 3',
+    bg:'#010d01', surface:'#041504', surface2:'#082008',
+    colors:['#00ff41','#39ff14','#7fff00','#adff2f','#00e600','#33ff33','#b3ff00'],
+    boardBg:'#041504', boardBorder:'rgba(0,255,65,0.3)',
+    preview:['#00ff41','#39ff14','#7fff00','#adff2f','#00e600'],
+    emoji:'☢️'
   },
   {
-    id:'galaxy', name:'GALAXY', req:30000, reqLabel:'30K SCORE',
-    bg:'#05001a', surface:'#0a0025', surface2:'#10003a',
-    colors:['#bf5af2','#9b59b6','#a29bfe','#6c5ce7','#fd79a8','#e84393','#d63031'],
-    boardBg:'#0a0025', boardBorder:'rgba(191,90,242,0.25)',
-    preview:['#bf5af2','#a29bfe','#6c5ce7','#fd79a8','#e84393']
+    id:'candy', name:'CANDY', req:4, reqLabel:'LEVEL 4',
+    bg:'#1a0520', surface:'#220a2a', surface2:'#2e1038',
+    colors:['#ff99cc','#ffaaff','#aaffee','#ffffaa','#ffccaa','#ccaaff','#aaffcc'],
+    boardBg:'#220a2a', boardBorder:'rgba(255,153,204,0.3)',
+    preview:['#ff99cc','#ffaaff','#aaffee','#ffffaa','#ccaaff'],
+    emoji:'🍬'
   },
   {
-    id:'ocean', name:'OCEAN', req:50000, reqLabel:'50K SCORE',
-    bg:'#000d1a', surface:'#001525', surface2:'#002040',
-    colors:['#0af5ff','#00cec9','#74b9ff','#0984e3','#81ecec','#55efc4','#00b894'],
-    boardBg:'#001525', boardBorder:'rgba(10,245,255,0.2)',
-    preview:['#0af5ff','#74b9ff','#0984e3','#81ecec','#00cec9']
+    id:'lava', name:'LAVA', req:5, reqLabel:'LEVEL 5',
+    bg:'#0f0000', surface:'#1a0300', surface2:'#250500',
+    colors:['#ff3c00','#ff6a00','#ff9500','#ffb700','#ff4500','#e63900','#ff2200'],
+    boardBg:'#1a0300', boardBorder:'rgba(255,60,0,0.35)',
+    preview:['#ff3c00','#ff6a00','#ff9500','#ffb700','#ff4500'],
+    emoji:'🌋'
   },
   {
-    id:'volcano', name:'VOLCANO', req:100000, reqLabel:'100K SCORE',
-    bg:'#0d0000', surface:'#1a0000', surface2:'#250000',
-    colors:['#ff2d55','#ff4500','#ff6b35','#ffd60a','#ff0000','#c0392b','#e74c3c'],
-    boardBg:'#1a0000', boardBorder:'rgba(255,45,85,0.3)',
-    preview:['#ff2d55','#ff4500','#ff6b35','#ffd60a','#e74c3c']
+    id:'midnight', name:'MIDNIGHT', req:6, reqLabel:'LEVEL 6',
+    bg:'#000005', surface:'#05050f', surface2:'#0a0a1a',
+    colors:['#4040ff','#6060ff','#3030cc','#8080ff','#5050ee','#2020bb','#7070ff'],
+    boardBg:'#05050f', boardBorder:'rgba(80,80,255,0.2)',
+    preview:['#4040ff','#6060ff','#3030cc','#8080ff','#7070ff'],
+    emoji:'🌙'
+  },
+  {
+    id:'hologram', name:'HOLOGRAM', req:7, reqLabel:'LEVEL 7',
+    bg:'#f0f4ff', surface:'#e8eeff', surface2:'#dde4ff',
+    colors:['#6600ff','#0066ff','#ff0066','#00ccff','#cc00cc','#ff6600','#0099ff'],
+    boardBg:'#e8eeff', boardBorder:'rgba(100,100,255,0.4)',
+    preview:['#6600ff','#0066ff','#ff0066','#00ccff','#cc00cc'],
+    emoji:'💿'
+  },
+  {
+    id:'retro', name:'RETRO', req:8, reqLabel:'LEVEL 8',
+    bg:'#000800', surface:'#001200', surface2:'#001a00',
+    colors:['#00ff00','#00cc00','#00ee00','#33ff33','#00ff44','#00dd00','#11ff11'],
+    boardBg:'#001200', boardBorder:'rgba(0,255,0,0.25)',
+    preview:['#00ff00','#00cc00','#33ff33','#00ee00','#11ff11'],
+    emoji:'👾'
+  },
+  {
+    id:'ice', name:'ICE', req:9, reqLabel:'LEVEL 9',
+    bg:'#000d1f', surface:'#001428', surface2:'#001e38',
+    colors:['#96deff','#b8ecff','#70c8ff','#d4f4ff','#50b0ff','#aae0ff','#c8f0ff'],
+    boardBg:'#001428', boardBorder:'rgba(150,220,255,0.25)',
+    preview:['#96deff','#b8ecff','#70c8ff','#d4f4ff','#50b0ff'],
+    emoji:'❄️'
   },
 ];
 
 
 
 // XP / Level system
-const XP_THRESHOLDS = [0,500,1200,2500,4500,7000,10000,14000,19000,25000,35000,50000,70000,100000];
+// Level thresholds based on cumulative total score
+const XP_THRESHOLDS = [0,1000,3000,6000,10000,18000,30000,50000,75000,100000,150000,200000,300000,500000];
 
 let activeTheme   = localStorage.getItem('bb_theme')   || 'arcade';
-let totalXP       = parseInt(localStorage.getItem('bb_xp') || '0');
 let seenUnlocks   = JSON.parse(localStorage.getItem('bb_seen_unlocks') || '[]');
 
+function getTotalScore() {
+  return getStat('total_score');
+}
+
 function getLevel() {
+  const total = getTotalScore();
   for(let i = XP_THRESHOLDS.length-1; i >= 0; i--) {
-    if(totalXP >= XP_THRESHOLDS[i]) return i+1;
+    if(total >= XP_THRESHOLDS[i]) return i+1;
   }
   return 1;
 }
 
 function getXPProgress() {
+  const total = getTotalScore();
   const lvl = getLevel();
   const current = XP_THRESHOLDS[lvl-1] || 0;
   const next = XP_THRESHOLDS[lvl] || XP_THRESHOLDS[XP_THRESHOLDS.length-1];
-  const pct = Math.min(100, ((totalXP - current) / (next - current)) * 100);
-  return { lvl, current: totalXP - current, needed: next - current, pct };
+  const pct = Math.min(100, ((total - current) / (next - current)) * 100);
+  return { lvl, current: total - current, needed: next - current, pct };
 }
 
 function addXP(amount) {
+  // XP is now just total score — check for level up after score is recorded
   const oldLevel = getLevel();
-  totalXP += amount;
-  localStorage.setItem('bb_xp', totalXP);
+  // Score already recorded via incStat in addScore, just check level
   const newLevel = getLevel();
-  if(newLevel > oldLevel) showToast('★ LEVEL UP! LEVEL ' + newLevel + ' ★');
+  if(newLevel > oldLevel) {
+    showToast('★ LEVEL UP! LEVEL ' + newLevel + ' ★');
+    sfxLevelUp();
+  }
   updateXPBar();
   checkNewUnlocks();
   updatePowerUI();
-  // Show tutorial for first-time players
 }
 
 function updateXPBar() {
   const {lvl, current, needed, pct} = getXPProgress();
   const bar = $id('xp-bar'); if(bar) bar.style.width = pct + '%';
   const lbl = $id('xp-level'); if(lbl) lbl.textContent = lvl;
-  const xlbl = $id('xp-label'); if(xlbl) xlbl.textContent = current.toLocaleString() + ' / ' + needed.toLocaleString() + ' XP';
+  const xlbl = $id('xp-label'); if(xlbl) xlbl.textContent = current.toLocaleString() + ' / ' + needed.toLocaleString() + ' PTS';
 }
 
 function checkNewUnlocks() {
   const newOnes = [];
   THEMES.forEach(t => {
-    if(t.req > 0 && best >= t.req && !seenUnlocks.includes('theme_'+t.id)) {
+    if(t.req > 0 && getLevel() >= t.req && !seenUnlocks.includes('theme_'+t.id)) {
       newOnes.push(t.name + ' THEME');
       seenUnlocks.push('theme_'+t.id);
     }
@@ -3852,9 +4241,19 @@ function applyTheme(id) {
   root.style.setProperty('--bg', t.bg);
   root.style.setProperty('--surface', t.surface);
   root.style.setProperty('--surface2', t.surface2);
+  // Reset text/muted colors for light themes
+  if(id === 'hologram') {
+    root.style.setProperty('--text', '#0a0820');
+    root.style.setProperty('--muted', '#606090');
+  } else {
+    root.style.setProperty('--text', '#f0f0ff');
+    root.style.setProperty('--muted', '#606080');
+  }
+  // Apply body class for theme-specific CSS effects
+  document.body.className = document.body.className.replace(/theme-\S+/g, '').trim();
+  document.body.classList.add('theme-' + id);
   activeTheme = id;
   localStorage.setItem('bb_theme', id);
-  // Update active colors used for pieces
 }
 
 function getCurrentPalette() {
@@ -3882,22 +4281,23 @@ function renderThemeGrid() {
   if(!grid) return;
   grid.innerHTML = '';
   THEMES.forEach(theme => {
-    const unlocked = best >= theme.req;
+    const unlocked = theme.req === 0 || getLevel() >= theme.req;
     const isActive = activeTheme === theme.id;
     const isNew = unlocked && !seenUnlocks.includes('theme_'+theme.id);
     const card = document.createElement('div');
     card.className = 'unlock-card' + (unlocked ? ' unlocked' : ' locked') + (isActive ? ' active-theme' : '');
     card.innerHTML = `
       ${isNew ? '<div class="unlock-new-badge">NEW!</div>' : ''}
-      <div class="unlock-preview" style="background:${theme.boardBg};border:1px solid ${theme.boardBorder}">
-        ${theme.preview.map(c=>`<div class="unlock-preview-cell" style="background:${c};box-shadow:0 0 4px ${c}"></div>`).join('')}
-        ${theme.preview.map(c=>`<div class="unlock-preview-cell" style="background:${c};opacity:0.6"></div>`).join('')}
+      <div class="unlock-preview" style="background:${theme.bg};border:2px solid ${theme.boardBorder}">
+        <div style="font-size:1.6rem;line-height:1">${theme.emoji || '🎨'}</div>
+        <div style="display:flex;gap:3px;flex-wrap:wrap;justify-content:center;margin-top:4px">
+          ${theme.preview.map(c=>`<div style="width:10px;height:10px;border-radius:2px;background:${c};box-shadow:0 0 5px ${c}"></div>`).join('')}
+        </div>
       </div>
       <div class="unlock-name">${theme.name}</div>
       <div class="unlock-req">${unlocked ? (isActive ? '✓ ACTIVE' : 'TAP TO USE') : '🔒 ' + theme.reqLabel}</div>
-      <div class="unlock-badge">${unlocked ? (isActive ? '★' : '✓') : '🔒'}</div>
     `;
-    if(unlocked) card.onclick = () => { applyTheme(theme.id); renderThemeGrid(); };
+    if(unlocked) card.onclick = () => { applyTheme(theme.id); sfxMenu(); renderThemeGrid(); };
     grid.appendChild(card);
   });
 }
