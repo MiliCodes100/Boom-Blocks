@@ -1736,7 +1736,6 @@ body.theme-ice #board {
   <button class="menu-btn ghost" onclick="showLeaderboard()">🏆 LEADERBOARD</button>
   <button class="menu-btn ghost" onclick="showStats()" style="border-color:var(--c4);color:var(--c4);box-shadow:0 0 15px rgba(10,245,255,0.15)">📊 STATS</button>
   <button class="menu-btn ghost" onclick="showUnlocks()" style="border-color:var(--c3);color:var(--c3);box-shadow:0 0 15px rgba(48,209,88,0.15)">🔓 UNLOCKS</button>
-  <a href="/privacy.html" style="font-family:'Press Start 2P',monospace;font-size:0.3rem;color:#404060;letter-spacing:1px;margin-top:8px;text-decoration:none">PRIVACY POLICY</a>
 </div>
 
 
@@ -1911,6 +1910,21 @@ body.theme-ice #board {
     color:#606080;
     letter-spacing:1px;
   ">CONTINUE IN 5...</div>
+</div>
+
+<!-- ══ PRIVACY LINK (fixed, always tappable) ══ -->
+<div id="footer-links" style="
+  position:fixed;
+  bottom:12px;
+  left:50%;
+  transform:translateX(-50%);
+  display:flex;
+  gap:20px;
+  z-index:50;
+  white-space:nowrap;
+">
+  <a href="/privacy.html" style="font-family:'Press Start 2P',monospace;font-size:0.32rem;color:#303050;letter-spacing:1px;text-decoration:none;padding:10px;-webkit-tap-highlight-color:transparent;">PRIVACY</a>
+  <a href="/terms.html" style="font-family:'Press Start 2P',monospace;font-size:0.32rem;color:#303050;letter-spacing:1px;text-decoration:none;padding:10px;-webkit-tap-highlight-color:transparent;">TERMS</a>
 </div>
 
 <!-- ══ GAME SCREEN ══ -->
@@ -2481,6 +2495,8 @@ function todaySeed() {
 //  SCREENS
 // ════════════════════════════════════
 function showScreen(id) {
+  const privacyLink = document.getElementById('footer-links');
+  if(privacyLink) privacyLink.style.display = id === 'menu-screen' ? 'flex' : 'none';
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   const el = $id(id);
   if(el) el.classList.add('active');
