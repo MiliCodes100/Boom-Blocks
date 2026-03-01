@@ -5,6 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>BOOM BLOCKS</title>
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Boom Blocks">
+<meta name="theme-color" content="#080810">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon.png">
 <style>
 * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
 
@@ -2351,12 +2357,12 @@ function finishDaily() {
 //  NAME
 // ════════════════════════════════════
 function saveName() {
-  const val=$id('name-input').value.trim().toUpperCase();
-  playerName=val||'PLAYER1';
-  localStorage.setItem('bb_name',playerName);
+  const val = $id('name-input').value.trim().toUpperCase();
+  playerName = val || 'PLAYER1';
+  localStorage.setItem('bb_name', playerName);
   $id('name-modal').classList.remove('show');
-  saveClassicScore(playerName,pendingScore);
-  $id('gameover').classList.add('show');
+  saveClassicScore(playerName, pendingScore);
+  showGameOverSequence(pendingScore, pendingScore >= best && pendingScore > 0);
 }
 
 // ════════════════════════════════════
@@ -3128,6 +3134,14 @@ document.addEventListener('DOMContentLoaded', function() {
   updateMenuStats();
   document.addEventListener('touchmove', e=>e.preventDefault(), {passive:false});
 });
+</script>
+
+<script>
+if('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(()=>{});
+  });
+}
 </script>
 </body>
 </html>
