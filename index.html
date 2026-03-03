@@ -1841,6 +1841,141 @@ body.theme-onyx header {
   border-bottom: 1px solid rgba(255,255,255,0.06);
 }
 
+
+/* ── LEVEL UP STAMP ── */
+.levelup-stamp {
+  position:fixed;
+  top:50%;
+  left:50%;
+  transform:translate(-50%,-50%) scale(0.5) rotate(-8deg);
+  background:rgba(10,10,20,0.92);
+  border:3px solid var(--c2);
+  border-radius:12px;
+  padding:18px 28px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:6px;
+  z-index:999;
+  pointer-events:none;
+  animation:levelStampIn 0.4s cubic-bezier(0.175,0.885,0.32,1.275) forwards;
+}
+
+.levelup-stamp.out {
+  animation:levelStampOut 0.35s ease-in forwards;
+}
+
+.levelup-title {
+  font-family:'Press Start 2P',monospace;
+  font-size:clamp(0.5rem,3vw,0.75rem);
+  color:var(--c2);
+  letter-spacing:3px;
+  text-shadow:0 0 12px var(--glow2);
+}
+
+.levelup-number {
+  font-family:'Press Start 2P',monospace;
+  font-size:clamp(1.2rem,7vw,2rem);
+  color:#fff;
+  letter-spacing:2px;
+  text-shadow:0 0 20px var(--glow2);
+}
+
+.levelup-sub {
+  font-family:'Press Start 2P',monospace;
+  font-size:clamp(0.3rem,2vw,0.42rem);
+  color:var(--c3);
+  letter-spacing:2px;
+  text-align:center;
+  text-shadow:0 0 8px rgba(48,209,88,0.6);
+}
+
+@keyframes levelStampIn {
+  0%   { opacity:0; transform:translate(-50%,-50%) scale(0.4) rotate(-8deg); }
+  60%  { opacity:1; transform:translate(-50%,-50%) scale(1.08) rotate(2deg); }
+  100% { opacity:1; transform:translate(-50%,-50%) scale(1) rotate(0deg); }
+}
+@keyframes levelStampOut {
+  0%   { opacity:1; transform:translate(-50%,-50%) scale(1); }
+  100% { opacity:0; transform:translate(-50%,-50%) scale(0.8); }
+}
+
+
+/* BLOOD MOON — dark red horror */
+body.theme-bloodmoon {
+  --text: #ffcccc;
+  --muted: #993333;
+}
+body.theme-bloodmoon #board {
+  box-shadow: 0 0 40px rgba(200,0,0,0.2), inset 0 0 30px rgba(100,0,0,0.4) !important;
+  border-color: rgba(200,0,0,0.3) !important;
+}
+body.theme-bloodmoon .cell.filled {
+  box-shadow: 0 0 8px rgba(200,0,0,0.6), inset 0 1px 0 rgba(255,100,100,0.2) !important;
+}
+
+
+/* WOOD — warm natural wood grain */
+body.theme-wood {
+  --text: #f5deb3;
+  --muted: #a0784a;
+}
+body.theme-wood #board {
+  box-shadow: 0 0 30px rgba(139,69,19,0.3), inset 0 0 20px rgba(80,40,0,0.4) !important;
+  border-color: rgba(139,69,19,0.4) !important;
+  background: repeating-linear-gradient(
+    92deg,
+    transparent, transparent 8px,
+    rgba(0,0,0,0.04) 8px, rgba(0,0,0,0.04) 9px
+  ) !important;
+}
+body.theme-wood .cell.filled {
+  box-shadow: 0 2px 4px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,220,150,0.3), inset 0 -1px 0 rgba(0,0,0,0.3) !important;
+  border-radius: 2px;
+}
+
+
+/* RAINBOW — full spectrum celebration */
+body.theme-rainbow #board {
+  box-shadow: 0 0 30px rgba(255,100,255,0.2), inset 0 0 20px rgba(100,0,100,0.3) !important;
+  border-color: rgba(255,100,255,0.3) !important;
+}
+body.theme-rainbow .cell.filled {
+  box-shadow: 0 0 8px currentColor, inset 0 1px 0 rgba(255,255,255,0.3) !important;
+  border-radius: 3px;
+}
+
+
+/* BLOSSOM — soft sakura pinks */
+body.theme-blossom {
+  --text: #ffe0ee;
+  --muted: #cc6699;
+}
+body.theme-blossom #board {
+  box-shadow: 0 0 30px rgba(255,100,180,0.2), inset 0 0 20px rgba(150,0,80,0.3) !important;
+  border-color: rgba(255,100,180,0.3) !important;
+}
+body.theme-blossom .cell.filled {
+  box-shadow: 0 0 8px rgba(255,100,180,0.5), inset 0 1px 0 rgba(255,220,235,0.4) !important;
+  border-radius: 3px;
+}
+
+
+/* VOID — deep purple glow */
+body.theme-void #board {
+  box-shadow: 0 0 40px rgba(191,90,242,0.2), inset 0 0 30px rgba(100,0,150,0.3) !important;
+  border-color: rgba(191,90,242,0.3) !important;
+}
+body.theme-void .cell.filled {
+  box-shadow: 0 0 8px rgba(191,90,242,0.5), inset 0 1px 0 rgba(220,150,255,0.2) !important;
+}
+
+/* EMOJI — bright and colourful */
+body.theme-emoji #board {
+  box-shadow: 0 0 30px rgba(255,200,0,0.15), inset 0 0 20px rgba(0,0,0,0.3) !important;
+  border-color: rgba(255,200,100,0.3) !important;
+}
+
 </style>
 <!-- AdMob -->
 <meta name="google-adsense-account" content="ca-app-pub-9829984726595934~6205970481">
@@ -2554,10 +2689,33 @@ const PIECES_T3=[
 ];
 
 // Build active piece pool based on lines cleared this session
+
+// ── NEW T2 PIECES (level gated) ──
+const PODIUM_PIECE =   [[0,0,1,0,0],[0,1,1,1,0],[1,1,1,1,1]];
+const ARROW_PIECE =    [[0,0,1,0,0],[0,1,1,1,0],[1,1,1,1,1],[0,0,1,0,0],[0,0,1,0,0]];
+const CORNER_PIECE =   [[1,1,1,1,1],[1,0,0,0,0],[1,0,0,0,0],[1,0,0,0,0],[1,1,1,1,1]];
+const TETRISS_PIECE =  [[0,1,1,1],[1,1,0,0],[1,0,0,0]];
+
+const PIECES_T2B_L5 = [PODIUM_PIECE, ARROW_PIECE];   // level 5+
+const PIECES_T2B_L10 = [CORNER_PIECE, TETRISS_PIECE]; // level 10+
+
+// ── NEW T3 PIECES (level gated) ──
+const MUSHROOM_PIECE = [[0,1,1,1,0],[1,1,1,1,1],[1,1,1,1,1],[0,1,0,1,0],[0,1,0,1,0]];
+const DIAMOND_PIECE =  [[0,0,1,0,0],[0,1,1,1,0],[1,1,1,1,1],[0,1,1,1,0],[0,0,1,0,0]];
+const FLAG_PIECE =     [[1,1,1,1,1],[1,1,1,1,0],[1,1,1,0,0],[1,0,0,0,0],[1,0,0,0,0]];
+const CROWN_PIECE =    [[1,0,1,0,1],[1,1,1,1,1],[1,1,1,1,1]];
+
+const PIECES_T3B_L5 =  [DIAMOND_PIECE, MUSHROOM_PIECE]; // level 5+
+const PIECES_T3B_L10 = [FLAG_PIECE, CROWN_PIECE];       // level 10+
+
 function getActivePieces() {
   let pool = [...PIECES_T1, ...PIECES_T1]; // T1 double weight always
   if (sessionLinesCleared >= 10) pool = [...pool, ...PIECES_T2];
+  if (sessionLinesCleared >= 10 && getLevel() >= 5)  pool = [...pool, ...PIECES_T2B_L5];
+  if (sessionLinesCleared >= 10 && getLevel() >= 10) pool = [...pool, ...PIECES_T2B_L10];
   if (sessionLinesCleared >= 30) pool = [...pool, ...PIECES_T3];
+  if (sessionLinesCleared >= 30 && getLevel() >= 5)  pool = [...pool, ...PIECES_T3B_L5];
+  if (sessionLinesCleared >= 30 && getLevel() >= 10) pool = [...pool, ...PIECES_T3B_L10];
   if (sessionLinesCleared >= 50) pool = [...pool, ...PIECES_T4];
   if (sessionLinesCleared >= 100 && getLevel() >= 10) pool = [...pool, ...PIECES_T5, ...PIECES_T5];
   if (getLevel() >= 15) pool = [...pool, ...PIECES_FRAME];
@@ -2756,26 +2914,7 @@ const PIECES_FRAME = [STAIRS_PIECE]; // unlocks at level 15, no lines requiremen
 
 
 // CIRCLE PIECES - round is not a Tetris shape >:)
-const CIRCLE_SMALL = [
-  [0,1,1,1,0],
-  [1,1,1,1,1],
-  [1,1,1,1,1],
-  [1,1,1,1,1],
-  [0,1,1,1,0],
-];
-
-const CIRCLE_LARGE = [
-  [0,0,1,1,1,0,0],
-  [0,1,1,1,1,1,0],
-  [1,1,1,1,1,1,1],
-  [1,1,1,1,1,1,1],
-  [1,1,1,1,1,1,1],
-  [0,1,1,1,1,1,0],
-  [0,0,1,1,1,0,0],
-];
-
-PIECES_T5.push(CIRCLE_SMALL);
-PIECES_T5.push(CIRCLE_LARGE);
+// CIRCLE_SMALL and CIRCLE_LARGE removed (duplicates of BLOB_PIECE and CIRCLE_PIECE)
 
 // Keep PIECES as alias for canPlaceAny checks
 const PIECES = [...PIECES_T1, ...PIECES_T2, ...PIECES_T3, ...PIECES_T4, ...PIECES_T5];
@@ -3355,6 +3494,10 @@ function addScore(pts,lines,combo) {
     best=score;
     localStorage.setItem('bb_best',best);
   }
+  if(score>=500000 && !localStorage.getItem('bb_score500k')) {
+    localStorage.setItem('bb_score500k','1');
+    setTimeout(()=>showToast('🌈 RAINBOW UNLOCKED!'), 600);
+  }
   incStat('total_score', pts);
 
   // Popup
@@ -3386,7 +3529,7 @@ function addScore(pts,lines,combo) {
   // Check for level up in real time
   const newLevel = getLevel();
   if(newLevel > oldLevel) {
-    showToast('★ LEVEL UP! LEVEL ' + newLevel + ' ★');
+    showLevelUpStamp(newLevel);
     sfxLevelUp();
     updateXPBar();
     checkNewUnlocks();
@@ -3420,6 +3563,7 @@ function checkGameOver() {
   sfxGameOver(); hapticGameOver();
   gamesPlayed++;
   localStorage.setItem('bb_games', gamesPlayed);
+  if(gamesPlayed === 100) setTimeout(()=>showToast('🌸 BLOSSOM UNLOCKED!'), 2000);
   recordGameStats(score, sessionLinesCleared, sessionPiecesPlaced);
   deathFlood(() => isDaily ? finishDaily() : finishClassic());
 }
@@ -4661,6 +4805,22 @@ const THEMES = [
     emoji:'❄️'
   },
   {
+    id:'bloodmoon', name:'BLOOD MOON', req:15, reqLabel:'LEVEL 15',
+    bg:'#0d0000', surface:'#1a0000', surface2:'#240000',
+    colors:['#cc0000','#990000','#ff1a1a','#800000','#e60000','#b30000','#ff3333'],
+    boardBg:'#110000', boardBorder:'rgba(200,0,0,0.4)',
+    preview:['#cc0000','#990000','#ff1a1a','#800000','#e60000'],
+    emoji:'🩸'
+  },
+  {
+    id:'wood', name:'WOOD', req:25, reqLabel:'LEVEL 25',
+    bg:'#1a0f00', surface:'#2d1a00', surface2:'#3d2400',
+    colors:['#8B4513','#A0522D','#CD853F','#DEB887','#D2691E','#8B6914','#C68642'],
+    boardBg:'#2d1a00', boardBorder:'rgba(139,69,19,0.5)',
+    preview:['#8B4513','#A0522D','#CD853F','#DEB887','#D2691E'],
+    emoji:'🪵'
+  },
+  {
     id:'emoji', name:'EMOJI', req:20, reqLabel:'LEVEL 20',
     bg:'#0d0d1a', surface:'#13132a', surface2:'#1a1a38',
     colors:['#ff6b6b','#ffd93d','#6bcb77','#4d96ff','#ff6bff','#ffb347','#b8f0ff'],
@@ -4676,7 +4836,22 @@ const THEMES = [
     preview:['#ffffff','#e0e0e0','#cccccc','#aaaaaa','#888888'],
     emoji:'🖤'
   },
-
+  {
+    id:'blossom', name:'BLOSSOM', req:'games100', reqLabel:'PLAY 100 GAMES',
+    bg:'#1a0010', surface:'#2a0018', surface2:'#380020',
+    colors:['#ff99bb','#ff66aa','#ffb3cc','#ff4d94','#ffd6e8','#cc3377','#ffcce0'],
+    boardBg:'#200015', boardBorder:'rgba(255,100,180,0.35)',
+    preview:['#ff99bb','#ff66aa','#ffb3cc','#ff4d94','#ffd6e8'],
+    emoji:'🌸'
+  },
+  {
+    id:'rainbow', name:'RAINBOW', req:'score500k', reqLabel:'GET 500,000 SCORE',
+    bg:'#0d0010', surface:'#130018', surface2:'#1a0020',
+    colors:['#ff0000','#ff7700','#ffee00','#00cc00','#0099ff','#7700ff','#ff00cc'],
+    boardBg:'#100015', boardBorder:'rgba(255,100,255,0.3)',
+    preview:['#ff0000','#ff7700','#ffee00','#00cc00','#0099ff'],
+    emoji:'🌈'
+  },
 ];
 
 
@@ -4868,9 +5043,14 @@ function getEmojiForColor(color) {
 const ALL_PIECES_DEX = [
   ...PIECES_T1.map((s,i) => ({ id:'t1_'+i, shape:s, tier:1 })),
   ...PIECES_T2.map((s,i) => ({ id:'t2_'+i, shape:s, tier:2 })),
+  ...PIECES_T2B_L5.map((s,i) => ({ id:'t2b5_'+i, shape:s, tier:2 })),
+  ...PIECES_T2B_L10.map((s,i) => ({ id:'t2b10_'+i, shape:s, tier:2 })),
   ...PIECES_T3.map((s,i) => ({ id:'t3_'+i, shape:s, tier:3 })),
+  ...PIECES_T3B_L5.map((s,i) => ({ id:'t3b5_'+i, shape:s, tier:3 })),
+  ...PIECES_T3B_L10.map((s,i) => ({ id:'t3b10_'+i, shape:s, tier:3 })),
   ...PIECES_T4.map((s,i) => ({ id:'t4_'+i, shape:s, tier:4 })),
   ...PIECES_T5.map((s,i) => ({ id:'t5_'+i, shape:s, tier:5 })),
+  ...PIECES_FRAME.map((s,i) => ({ id:'tf_'+i, shape:s, tier:5 })),
 ];
 
 // Deduplicate by shape fingerprint
@@ -4946,6 +5126,32 @@ function showBlockDex() {
   sfxMenu();
   showScreen('blockdex-screen');
   renderBlockDex();
+}
+
+
+function showLevelUpStamp(level) {
+  const newBlockLevels = {
+    5:  '🆕 NEW BLOCKS UNLOCKED',
+    10: '🆕 NEW BLOCKS UNLOCKED',
+    15: '🆕 SECRET BLOCK UNLOCKED',
+    20: '🆕 EMOJI THEME UNLOCKED',
+    25: '🆕 WOOD THEME UNLOCKED',
+  };
+  const sub = newBlockLevels[level] || '';
+
+  const stamp = document.createElement('div');
+  stamp.className = 'levelup-stamp';
+  stamp.innerHTML = `
+    <div class="levelup-title">★ LEVEL UP ★</div>
+    <div class="levelup-number">LVL ${level}</div>
+    ${sub ? `<div class="levelup-sub">${sub}</div>` : ''}
+  `;
+  document.body.appendChild(stamp);
+
+  setTimeout(() => {
+    stamp.classList.add('out');
+    setTimeout(() => stamp.remove(), 350);
+  }, 2200);
 }
 
 function showUnlocks() {
