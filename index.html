@@ -2,6 +2,9 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>BOOM BOOM BLOCKS</title>
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
@@ -46,27 +49,6 @@ html, body {
   user-select: none;
 }
 
-/* Only block default touch on the game board, not the whole page */
-#game-screen {
-  touch-action: none;
-}
-
-/* Ensure all buttons and links are always tappable */
-button, a {
-  touch-action: auto;
-  pointer-events: auto;
-  cursor: pointer;
-}
-
-/* Menu scroll container */
-#menu-screen {
-  overflow-y: scroll !important;
-  -webkit-overflow-scrolling: touch !important;
-  touch-action: pan-y !important;
-  height: 100vh;
-  max-height: 100vh;
-}
-
 /* ── CRT OVERLAY ── */
 body::before {
   content:'';
@@ -101,7 +83,8 @@ body::after {
 #app {
   width:100%; height:100%;
   display:flex; flex-direction:column; align-items:center;
-  overflow: hidden;
+  overflow-y:auto; overflow-x:hidden;
+  scroll-behavior:smooth;
 }
 
 .screen { display:none; width:100%; max-width:440px; flex-direction:column; align-items:center; min-height:100vh; }
@@ -109,9 +92,9 @@ body::after {
 
 /* ── MENU ── */
 #menu-screen {
-  justify-content:flex-start;
+  justify-content:center;
   gap:16px;
-  padding:24px 20px 80px;
+  padding:24px 20px 40px;
   position:relative;
 }
 
@@ -334,6 +317,7 @@ header {
 .board-wrap { width:100%; max-width:440px; padding:0 12px; margin-top:4px; }
 
 #board {
+  touch-action: none;
   width:100%; aspect-ratio:1;
   display:grid;
   grid-template-columns:repeat(8,1fr);
@@ -1626,6 +1610,7 @@ body.theme-neon-city {
   --surface2: #1a0030;
 }
 body.theme-neon-city #board {
+  touch-action: none;
   box-shadow: 0 0 30px rgba(255,0,200,0.3), 0 0 60px rgba(0,200,255,0.2) !important;
 }
 body.theme-neon-city #app {
@@ -1639,6 +1624,7 @@ body.theme-toxic {
   --surface2: #082008;
 }
 body.theme-toxic #board {
+  touch-action: none;
   box-shadow: 0 0 40px rgba(0,255,65,0.25), inset 0 0 30px rgba(0,255,65,0.05) !important;
 }
 
@@ -1656,6 +1642,7 @@ body.theme-midnight {
   --surface2: #0a0a1a;
 }
 body.theme-midnight #board {
+  touch-action: none;
   box-shadow: 0 0 20px rgba(100,100,255,0.1) !important;
 }
 
@@ -1666,6 +1653,7 @@ body.theme-lava {
   --surface2: #250500;
 }
 body.theme-lava #board {
+  touch-action: none;
   box-shadow: 0 0 40px rgba(255,60,0,0.3), 0 0 80px rgba(255,120,0,0.15) !important;
 }
 body.theme-lava #app {
@@ -1681,6 +1669,7 @@ body.theme-hologram {
   --muted: #606090;
 }
 body.theme-hologram #board {
+  touch-action: none;
   box-shadow: 0 0 30px rgba(100,100,255,0.3) !important;
 }
 body.theme-hologram .cell.filled {
@@ -1694,6 +1683,7 @@ body.theme-retro {
   --surface2: #251800;
 }
 body.theme-retro #board {
+  touch-action: none;
   box-shadow: 0 0 30px rgba(255,170,0,0.25), inset 0 0 20px rgba(255,140,0,0.08) !important;
   filter: sepia(0.4);
 }
@@ -1708,6 +1698,7 @@ body.theme-ice {
   --surface2: #001e38;
 }
 body.theme-ice #board {
+  touch-action: none;
   box-shadow: 0 0 40px rgba(150,220,255,0.2), inset 0 0 20px rgba(150,220,255,0.05) !important;
 }
 
@@ -1758,9 +1749,9 @@ body.theme-ice #board {
   <button class="menu-btn ghost" onclick="showLeaderboard()">🏆 LEADERBOARD</button>
   <button class="menu-btn ghost" onclick="showStats()" style="border-color:var(--c4);color:var(--c4);box-shadow:0 0 15px rgba(10,245,255,0.15)">📊 STATS</button>
   <button class="menu-btn ghost" onclick="showUnlocks()" style="border-color:var(--c3);color:var(--c3);box-shadow:0 0 15px rgba(48,209,88,0.15)">🔓 UNLOCKS</button>
-  <div style="display:flex;flex-direction:column;align-items:center;width:100%;gap:0">
-    <button onclick="window.location.href='/privacy.html'" style="font-family:'Press Start 2P',monospace;font-size:0.28rem;color:#8080a0;letter-spacing:1px;background:none;border:none;padding:10px 20px;cursor:pointer">PRIVACY POLICY</button>
-    <button onclick="window.location.href='/terms.html'" style="font-family:'Press Start 2P',monospace;font-size:0.28rem;color:#8080a0;letter-spacing:1px;background:none;border:none;padding:10px 20px;cursor:pointer">TERMS OF SERVICE</button>
+  <div style="display:flex;gap:12px;justify-content:center;margin-top:4px">
+    <button class="menu-btn ghost" onclick="window.open('/privacy.html','_blank')" style="font-size:0.35rem;padding:10px 16px;min-width:0;border-color:#404060;color:#606080">PRIVACY</button>
+    <button class="menu-btn ghost" onclick="window.open('/terms.html','_blank')" style="font-size:0.35rem;padding:10px 16px;min-width:0;border-color:#404060;color:#606080">TERMS</button>
   </div>
 </div>
 </div>
