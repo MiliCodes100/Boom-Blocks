@@ -1816,6 +1816,29 @@ body.theme-ice #board {
   font-size:0.5rem;
 }
 
+
+/* ONYX — glossy jet black */
+body.theme-onyx {
+  --text: #e8e8e8;
+  --muted: #666666;
+}
+body.theme-onyx #board {
+  box-shadow: 0 0 40px rgba(255,255,255,0.06), inset 0 0 30px rgba(0,0,0,0.8) !important;
+  background: #050505 !important;
+  border-color: rgba(255,255,255,0.08) !important;
+}
+body.theme-onyx .cell.filled {
+  filter: brightness(1.1) contrast(1.05);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.8), inset 0 1px 0 rgba(255,255,255,0.25), inset 0 -1px 0 rgba(0,0,0,0.5) !important;
+  border-radius: 3px;
+}
+body.theme-onyx .menu-btn {
+  box-shadow: 0 2px 8px rgba(0,0,0,0.8), inset 0 1px 0 rgba(255,255,255,0.1) !important;
+}
+body.theme-onyx header {
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+
 </style>
 <!-- AdMob -->
 <meta name="google-adsense-account" content="ca-app-pub-9829984726595934~6205970481">
@@ -1867,11 +1890,10 @@ body.theme-ice #board {
   <button class="menu-btn ghost" onclick="showLeaderboard()">🏆 LEADERBOARD</button>
   <button class="menu-btn ghost" onclick="showStats()" style="border-color:var(--c4);color:var(--c4);box-shadow:0 0 15px rgba(10,245,255,0.15)">📊 STATS</button>
   <button class="menu-btn ghost" onclick="showUnlocks()" style="border-color:var(--c3);color:var(--c3);box-shadow:0 0 15px rgba(48,209,88,0.15)">🔓 UNLOCKS</button>
+  <button class="menu-btn ghost" onclick="showBlockDex()" style="border-color:var(--c4);color:var(--c4);box-shadow:0 0 15px rgba(10,245,255,0.15)">🧩 BLOCK DEX</button>
 
 </div>
 
-
-<!-- ══ TUTORIAL SCREEN ══ -->
 <div id="tutorial-screen" class="screen">
 
   <!-- Slide 1: The Goal -->
@@ -1986,65 +2008,6 @@ body.theme-ice #board {
 
 </div>
 
-
-<!-- ══ AD INTERSTITIAL ══ -->
-<div id="ad-interstitial" style="
-  display:none;
-  position:fixed;
-  inset:0;
-  z-index:9999;
-  background:rgba(0,0,0,0.92);
-  flex-direction:column;
-  align-items:center;
-  justify-content:center;
-  gap:16px;
-">
-  <div style="
-    font-family:'Press Start 2P',monospace;
-    font-size:0.35rem;
-    color:#606080;
-    letter-spacing:2px;
-    margin-bottom:4px;
-  ">ADVERTISEMENT</div>
-  <div style="
-    background:#0e0e1e;
-    border:1px solid rgba(10,245,255,0.15);
-    border-radius:6px;
-    padding:8px;
-    min-width:300px;
-    min-height:250px;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-  ">
-    <ins class="adsbygoogle"
-      style="display:block;width:300px;height:250px"
-      data-ad-client="ca-app-pub-9829984726595934"
-      data-ad-slot="4948729132"
-      data-ad-format="fixed"
-      data-full-width-responsive="false"></ins>
-  </div>
-  <button id="ad-skip-btn" onclick="dismissAdInterstitial()" style="
-    font-family:'Press Start 2P',monospace;
-    font-size:0.4rem;
-    background:transparent;
-    border:1px solid rgba(255,255,255,0.2);
-    color:#606080;
-    padding:10px 20px;
-    border-radius:4px;
-    cursor:pointer;
-    letter-spacing:1px;
-    display:none;
-  ">▶ CONTINUE</button>
-  <div id="ad-countdown" style="
-    font-family:'Press Start 2P',monospace;
-    font-size:0.35rem;
-    color:#606080;
-    letter-spacing:1px;
-  ">CONTINUE IN 5...</div>
-</div>
-
-<!-- ══ GAME SCREEN ══ -->
 <div id="game-screen" class="screen">
   <header>
     <button class="back-btn" onclick="goMenu()">◀ BACK</button>
@@ -2092,7 +2055,6 @@ body.theme-ice #board {
   <div class="hint-text" id="hint-text">HOLD + DRAG TO PLACE</div>
 </div>
 
-<!-- ══ LEADERBOARD ══ -->
 <div id="lb-screen" class="screen">
   <div style="width:100%;display:flex;align-items:center;gap:12px;padding:4px 0 8px">
     <button class="back-btn" onclick="showScreen('menu-screen')">◀ BACK</button>
@@ -2105,8 +2067,6 @@ body.theme-ice #board {
   <div class="lb-list" id="lb-list"></div>
 </div>
 
-
-<!-- ══ STATS SCREEN ══ -->
 <div id="stats-screen" class="screen">
   <div style="width:100%;display:flex;align-items:center;gap:12px;padding:4px 0 8px">
     <button class="back-btn" onclick="showScreen('menu-screen')">◀ BACK</button>
@@ -2115,7 +2075,6 @@ body.theme-ice #board {
   <div id="stats-content" style="width:100%;display:flex;flex-direction:column;gap:8px;"></div>
 </div>
 
-<!-- ══ UNLOCKS SCREEN ══ -->
 <div id="unlocks-screen" class="screen">
   <div style="width:100%;display:flex;align-items:center;gap:12px;padding:4px 0 4px">
     <button class="back-btn" onclick="showScreen('menu-screen')">◀ BACK</button>
@@ -2124,9 +2083,16 @@ body.theme-ice #board {
   <div class="unlock-section-label">🎨 THEMES — LEVEL UP TO UNLOCK</div>
   <div class="unlock-grid" id="theme-grid"></div>
 
-  <div class="unlock-section-label" style="margin-top:8px">🧩 BLOCK DEX — <span id="blockdex-count">0</span> / <span id="blockdex-total">0</span> DISCOVERED</div>
-  <div class="blockdex-grid" id="blockdex-grid"></div>
 
+</div>
+
+<div id="blockdex-screen" class="screen">
+  <div style="width:100%;display:flex;align-items:center;gap:12px;padding:4px 0 8px">
+    <button class="back-btn" onclick="showScreen('menu-screen')">◀ BACK</button>
+    <div class="unlocks-title" style="color:var(--c4)">BLOCK DEX</div>
+  </div>
+  <div class="unlock-section-label">🧩 <span id="blockdex-count">0</span> / <span id="blockdex-total">0</span> BLOCKS DISCOVERED</div>
+  <div class="blockdex-grid" id="blockdex-grid"></div>
 </div>
 
 </div>
@@ -2591,7 +2557,8 @@ function getActivePieces() {
   if (sessionLinesCleared >= 10) pool = [...pool, ...PIECES_T2];
   if (sessionLinesCleared >= 30) pool = [...pool, ...PIECES_T3];
   if (sessionLinesCleared >= 50) pool = [...pool, ...PIECES_T4];
-  if (sessionLinesCleared >= 100) pool = [...pool, ...PIECES_T5, ...PIECES_T5]; // double weight at 100
+  if (sessionLinesCleared >= 100 && getLevel() >= 10) pool = [...pool, ...PIECES_T5, ...PIECES_T5];
+  if (getLevel() >= 15) pool = [...pool, ...PIECES_FRAME];
 
   return pool;
 }
@@ -2644,6 +2611,169 @@ const PIECES_T5=[
   // Hollow square
   [[1,1,1,1,1],[1,0,0,0,1],[1,0,0,0,1],[1,0,0,0,1],[1,1,1,1,1]],
 ];
+
+// THE CURSED TETROMINO - a 6x6 checkerboard of doom
+// Looks like it should fit but never quite does
+const CURSED_PIECE = [
+  [1,0,1,0,1,0],
+  [0,1,0,1,0,1],
+  [1,0,1,0,1,0],
+  [0,1,0,1,0,1],
+  [1,0,1,0,1,0],
+  [0,1,0,1,0,1],
+];
+PIECES_T5.push(CURSED_PIECE);
+
+// THE CIRCLE — 7x7 circle of doom, only appears after level 10 when placeable
+const CIRCLE_PIECE = [
+  [0,0,1,1,1,0,0],
+  [0,1,1,1,1,1,0],
+  [1,1,1,1,1,1,1],
+  [1,1,1,1,1,1,1],
+  [1,1,1,1,1,1,1],
+  [0,1,1,1,1,1,0],
+  [0,0,1,1,1,0,0],
+];
+PIECES_T5.push(CIRCLE_PIECE);
+
+// ── 5 EXTRA INSANE PIECES ──
+const LIGHTNING_PIECE = [
+  [0,0,1,1,1],
+  [0,1,1,1,0],
+  [0,1,1,0,0],
+  [1,1,1,0,0],
+  [1,1,0,0,0],
+];
+const DONUT_PIECE = [
+  [0,1,1,1,0],
+  [1,1,0,1,1],
+  [1,0,0,0,1],
+  [1,1,0,1,1],
+  [0,1,1,1,0],
+];
+const PLUSPLUS_PIECE = [
+  [0,0,1,0,0],
+  [0,1,1,1,0],
+  [1,1,1,1,1],
+  [0,1,1,1,0],
+  [0,0,1,0,0],
+];
+const SNAKE_PIECE = [
+  [1,1,0,0,0,0,0,0],
+  [0,1,1,0,0,0,0,0],
+  [0,0,1,1,0,0,0,0],
+  [0,0,0,1,1,0,0,0],
+  [0,0,0,0,1,1,0,0],
+  [0,0,0,0,0,1,1,0],
+  [0,0,0,0,0,0,1,1],
+];
+const PYRAMID_PIECE = [
+  [0,0,0,1,0,0,0],
+  [0,0,1,1,1,0,0],
+  [0,1,1,1,1,1,0],
+  [1,1,1,1,1,1,1],
+];
+PIECES_T5.push(LIGHTNING_PIECE, DONUT_PIECE, PLUSPLUS_PIECE, SNAKE_PIECE, PYRAMID_PIECE);
+
+// ── 10 SUPER DUPER INSANE PIECES ──
+const COMB_PIECE = [
+  [1,0,1,0,1,0,1,0],
+  [1,0,1,0,1,0,1,0],
+  [1,0,1,0,1,0,1,0],
+  [1,1,1,1,1,1,1,1],
+];
+const CROSS_PIECE = [
+  [0,0,0,1,1,0,0,0],
+  [0,0,0,1,1,0,0,0],
+  [1,1,1,1,1,1,1,1],
+  [1,1,1,1,1,1,1,1],
+  [0,0,0,1,1,0,0,0],
+  [0,0,0,1,1,0,0,0],
+];
+const STAIRS_PIECE = [
+  [1,1,1,1,1,1,1,1],
+  [1,1,1,1,1,1,1,1],
+  [1,1,0,0,0,0,1,1],
+  [1,1,0,0,0,0,1,1],
+  [1,1,0,0,0,0,1,1],
+  [1,1,0,0,0,0,1,1],
+  [1,1,1,1,1,1,1,1],
+  [1,1,1,1,1,1,1,1],
+];
+const PITCHFORK_PIECE = [
+  [1,0,1,0,1,0,1],
+  [1,0,1,0,1,0,1],
+  [1,1,1,1,1,1,1],
+  [0,0,1,0,1,0,0],
+  [0,0,1,0,1,0,0],
+];
+const HASHTAG_PIECE = [
+  [0,1,0,1,0],
+  [1,1,1,1,1],
+  [0,1,0,1,0],
+  [1,1,1,1,1],
+  [0,1,0,1,0],
+];
+const BOWTIE_PIECE = [
+  [1,1,0,0,0,1,1],
+  [0,1,1,0,1,1,0],
+  [0,0,1,1,1,0,0],
+  [0,1,1,0,1,1,0],
+  [1,1,0,0,0,1,1],
+];
+const ANCHOR_PIECE = [
+  [0,0,1,1,0,0],
+  [0,1,1,1,1,0],
+  [0,0,1,1,0,0],
+  [1,0,1,1,0,1],
+  [1,1,1,1,1,1],
+  [0,1,0,0,1,0],
+];
+const TEETH_PIECE = [
+  [1,1,1,1,1,1,1,1],
+  [1,0,1,0,1,0,1,0],
+  [1,0,1,0,1,0,1,0],
+  [1,0,1,0,1,0,1,0],
+];
+const ZSTACK_PIECE = [
+  [1,1,1,1,0,0],
+  [0,0,1,1,0,0],
+  [0,0,1,1,0,0],
+  [0,0,1,1,1,1],
+];
+const BLOB_PIECE = [
+  [0,1,1,1,1,0],
+  [1,1,1,1,1,1],
+  [1,1,1,1,1,1],
+  [1,1,1,1,1,1],
+  [0,1,1,1,1,0],
+];
+PIECES_T5.push(COMB_PIECE, CROSS_PIECE, PITCHFORK_PIECE, HASHTAG_PIECE, BOWTIE_PIECE, ANCHOR_PIECE, TEETH_PIECE, ZSTACK_PIECE, BLOB_PIECE);
+const PIECES_FRAME = [STAIRS_PIECE]; // unlocks at level 15, no lines requirement
+
+
+
+// CIRCLE PIECES - round is not a Tetris shape >:)
+const CIRCLE_SMALL = [
+  [0,1,1,1,0],
+  [1,1,1,1,1],
+  [1,1,1,1,1],
+  [1,1,1,1,1],
+  [0,1,1,1,0],
+];
+
+const CIRCLE_LARGE = [
+  [0,0,1,1,1,0,0],
+  [0,1,1,1,1,1,0],
+  [1,1,1,1,1,1,1],
+  [1,1,1,1,1,1,1],
+  [1,1,1,1,1,1,1],
+  [0,1,1,1,1,1,0],
+  [0,0,1,1,1,0,0],
+];
+
+PIECES_T5.push(CIRCLE_SMALL);
+PIECES_T5.push(CIRCLE_LARGE);
 
 // Keep PIECES as alias for canPlaceAny checks
 const PIECES = [...PIECES_T1, ...PIECES_T2, ...PIECES_T3, ...PIECES_T4, ...PIECES_T5];
@@ -2758,7 +2888,18 @@ function initGame() {
   board=Array.from({length:ROWS},()=>Array(COLS).fill(null));
   if(!isDaily && gamesPlayed>=5) addStartingObstacles();
   renderBoard();
-  pieces=[rngPieceEasy(),rngPieceEasy(),rngPieceEasy()];
+  if (isDaily) {
+    const insanePieces = [CURSED_PIECE, CIRCLE_PIECE, LIGHTNING_PIECE, DONUT_PIECE, PLUSPLUS_PIECE, SNAKE_PIECE, PYRAMID_PIECE, COMB_PIECE, CROSS_PIECE, STAIRS_PIECE, PITCHFORK_PIECE, HASHTAG_PIECE, BOWTIE_PIECE, ANCHOR_PIECE, TEETH_PIECE, ZSTACK_PIECE, BLOB_PIECE];
+    const pick = insanePieces[Math.floor(rng() * insanePieces.length)];
+    const colors = getActivePieces().map(s => COLORS[Math.floor(rng()*COLORS.length)]);
+    const insane = { shape: pick, color: colors[0], hex: colors[0] };
+    const slot = Math.floor(rng() * 3);
+    pieces = [rngPieceEasy(), rngPieceEasy(), rngPieceEasy()];
+    pieces[slot] = insane;
+  } else {
+    pieces=[rngPieceEasy(),rngPieceEasy(),rngPieceEasy()];
+  }
+
   renderTray();
 }
 
@@ -2898,6 +3039,15 @@ function renderBoard() {
     if(board[r][c]){
       cell.style.background=board[r][c];
       cell.style.boxShadow=`0 0 6px ${board[r][c]}, inset 0 0 3px rgba(255,255,255,0.1)`;
+      const em = getEmojiForColor(board[r][c]);
+      if (em) {
+        cell.style.display = 'flex';
+        cell.style.alignItems = 'center';
+        cell.style.justifyContent = 'center';
+        cell.style.fontSize = '0.75em';
+        cell.style.lineHeight = '1';
+        cell.textContent = em;
+      }
     }
     cell.dataset.r=r; cell.dataset.c=c;
     el.appendChild(cell);
@@ -2934,6 +3084,15 @@ function renderTray() {
         if(val) {
           pc.style.background=piece.color;
           pc.style.boxShadow=`0 0 4px ${piece.color}`;
+          const em = getEmojiForColor(piece.color);
+          if (em) {
+            pc.style.display='flex';
+            pc.style.alignItems='center';
+            pc.style.justifyContent='center';
+            pc.style.fontSize='0.65em';
+            pc.style.lineHeight='1';
+            pc.textContent=em;
+          }
         }
         pg.appendChild(pc);
       }));
@@ -4459,7 +4618,7 @@ const THEMES = [
     emoji:'🌋'
   },
   {
-    id:'midnight', name:'MIDNIGHT', req:6, reqLabel:'LEVEL 6',
+    id:'midnight', name:'MIDNIGHT', req:7, reqLabel:'LEVEL 7',
     bg:'#000005', surface:'#05050f', surface2:'#0a0a1a',
     colors:['#4040ff','#6060ff','#3030cc','#8080ff','#5050ee','#2020bb','#7070ff'],
     boardBg:'#05050f', boardBorder:'rgba(80,80,255,0.2)',
@@ -4467,7 +4626,7 @@ const THEMES = [
     emoji:'🌙'
   },
   {
-    id:'hologram', name:'HOLOGRAM', req:7, reqLabel:'LEVEL 7',
+    id:'hologram', name:'HOLOGRAM', req:8, reqLabel:'LEVEL 8',
     bg:'#f0f4ff', surface:'#e8eeff', surface2:'#dde4ff',
     colors:['#6600ff','#0066ff','#ff0066','#00ccff','#cc00cc','#ff6600','#0099ff'],
     boardBg:'#e8eeff', boardBorder:'rgba(100,100,255,0.4)',
@@ -4475,15 +4634,16 @@ const THEMES = [
     emoji:'💿'
   },
   {
-    id:'retro', name:'RETRO', req:8, reqLabel:'LEVEL 8',
-    bg:'#000800', surface:'#001200', surface2:'#001a00',
-    colors:['#00ff00','#00cc00','#00ee00','#33ff33','#00ff44','#00dd00','#11ff11'],
-    boardBg:'#001200', boardBorder:'rgba(0,255,0,0.25)',
-    preview:['#00ff00','#00cc00','#33ff33','#00ee00','#11ff11'],
-    emoji:'👾'
+    id:'void', name:'THE VOID', req:9, reqLabel:'LEVEL 9',
+    bg:'#000000', surface:'#050005', surface2:'#0a000a',
+    colors:['#ffffff','#cc00ff','#ff00ff','#aa00ff','#ee00ee','#ff44ff','#dd00dd'],
+    boardBg:'#050005', boardBorder:'rgba(200,0,255,0.4)',
+    preview:['#ffffff','#cc00ff','#ff00ff','#aa00ff','#ee00ee'],
+    emoji:'🌌'
   },
+
   {
-    id:'ice', name:'ICE', req:9, reqLabel:'LEVEL 9',
+    id:'ice', name:'ICE', req:10, reqLabel:'LEVEL 10',
     bg:'#000d1f', surface:'#001428', surface2:'#001e38',
     colors:['#96deff','#b8ecff','#70c8ff','#d4f4ff','#50b0ff','#aae0ff','#c8f0ff'],
     boardBg:'#001428', boardBorder:'rgba(150,220,255,0.25)',
@@ -4491,13 +4651,22 @@ const THEMES = [
     emoji:'❄️'
   },
   {
-    id:'void', name:'THE VOID', req:'lines100', reqLabel:'CLEAR 100 LINES IN 1 GAME',
-    bg:'#000000', surface:'#050005', surface2:'#0a000a',
-    colors:['#ffffff','#cc00ff','#ff00ff','#aa00ff','#ee00ee','#ff44ff','#dd00dd'],
-    boardBg:'#050005', boardBorder:'rgba(200,0,255,0.4)',
-    preview:['#ffffff','#cc00ff','#ff00ff','#aa00ff','#ee00ee'],
-    emoji:'🌌'
+    id:'emoji', name:'EMOJI', req:20, reqLabel:'LEVEL 20',
+    bg:'#0d0d1a', surface:'#13132a', surface2:'#1a1a38',
+    colors:['#ff6b6b','#ffd93d','#6bcb77','#4d96ff','#ff6bff','#ffb347','#b8f0ff'],
+    boardBg:'#13132a', boardBorder:'rgba(255,255,255,0.15)',
+    preview:['#ff6b6b','#ffd93d','#6bcb77','#4d96ff','#ff6bff'],
+    emoji:'😀'
   },
+  {
+    id:'onyx', name:'ONYX', req:'lines100', reqLabel:'CLEAR 100 LINES IN 1 GAME',
+    bg:'#000000', surface:'#0a0a0a', surface2:'#111111',
+    colors:['#e8e8e8','#cccccc','#aaaaaa','#ffffff','#d0d0d0','#b8b8b8','#f0f0f0'],
+    boardBg:'#080808', boardBorder:'rgba(255,255,255,0.12)',
+    preview:['#ffffff','#e0e0e0','#cccccc','#aaaaaa','#888888'],
+    emoji:'🖤'
+  },
+
 ];
 
 
@@ -4649,6 +4818,38 @@ function getCurrentPalette() {
 
 
 
+
+// ── EMOJI THEME ──
+const EMOJI_SETS = [
+  ['🔥','❤️','🍎','🌹','💋'],  // red (#ff6b6b)
+  ['⭐','🌟','🌞','🍋','🏆'],  // yellow (#ffd93d)
+  ['🍀','🌲','🐸','🍃','🌿'],  // green (#6bcb77)
+  ['💙','💧','🌊','🐟','🔷'],  // blue (#4d96ff)
+  ['🌸','💗','🎀','🌺','💕'],  // pink (#ff6bff)
+  ['🍊','🎃','🦁','🌅','🔶'],  // orange (#ffb347)
+  ['❄️','🌬','💎','🔹','🐬'],  // light blue (#b8f0ff)
+];
+
+// Direct color → emoji set mapping (matches emoji theme colors exactly)
+const EMOJI_COLOR_MAP = {
+  '#ff6b6b': 0,  // red
+  '#ffd93d': 1,  // yellow
+  '#6bcb77': 2,  // green
+  '#4d96ff': 3,  // blue
+  '#ff6bff': 4,  // pink
+  '#ffb347': 5,  // orange
+  '#b8f0ff': 6,  // light blue
+};
+
+function getEmojiForColor(color) {
+  if (activeTheme !== 'emoji') return null;
+  const idx = EMOJI_COLOR_MAP[color];
+  if (idx === undefined) return null;
+  const set = EMOJI_SETS[idx];
+  const seed = color.split('').reduce((a,c)=>a+c.charCodeAt(0),0);
+  return set[seed % set.length];
+}
+
 // ════════════════════════════════════
 //  BLOCK DEX
 // ════════════════════════════════════
@@ -4719,7 +4920,7 @@ function renderBlockDex() {
       pieceHtml += '</div>';
       card.innerHTML = pieceHtml + `<div class="blockdex-count" style="color:${color}">T${p.tier}</div>`;
     } else {
-      card.innerHTML = '<div style="font-size:1rem">?</div>';
+      card.innerHTML = '<div style="font-family:\'Press Start 2P\',monospace;font-size:0.6rem;color:rgba(255,255,255,0.2)">?</div>';
     }
 
     grid.appendChild(card);
@@ -4729,6 +4930,12 @@ function renderBlockDex() {
   const totalEl = $id('blockdex-total');
   if (countEl) countEl.textContent = seenCount;
   if (totalEl) totalEl.textContent = PIECE_DEX.length;
+}
+
+function showBlockDex() {
+  sfxMenu();
+  showScreen('blockdex-screen');
+  renderBlockDex();
 }
 
 function showUnlocks() {
@@ -4756,10 +4963,13 @@ function renderThemeGrid() {
     card.className = 'unlock-card' + (unlocked ? ' unlocked' : ' locked') + (isActive ? ' active-theme' : '');
     card.innerHTML = `
       ${isNew ? '<div class="unlock-new-badge">NEW!</div>' : ''}
-      <div class="unlock-preview" style="background:${theme.bg};border:2px solid ${theme.boardBorder}">
-        <div style="font-size:1.6rem;line-height:1">${theme.emoji || '🎨'}</div>
-        <div style="display:flex;gap:3px;flex-wrap:wrap;justify-content:center;margin-top:4px">
-          ${theme.preview.map(c=>`<div style="width:10px;height:10px;border-radius:2px;background:${c};box-shadow:0 0 5px ${c}"></div>`).join('')}
+      <div style="width:100%;height:50px;border-radius:4px;background:${theme.bg};border:2px solid ${theme.boardBorder};display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:4px">
+        <div style="font-size:1.2rem;line-height:1">${theme.emoji || '🎨'}</div>
+        <div style="display:flex;gap:3px;justify-content:center;flex-wrap:nowrap">
+          ${theme.id === 'emoji'
+            ? ['🔥','⭐','🍀','💧','🍇'].map(e=>`<div style="font-size:0.7rem;line-height:1">${e}</div>`).join('')
+            : theme.preview.map(c=>`<div style="width:8px;height:8px;border-radius:2px;background:${c};box-shadow:0 0 4px ${c}"></div>`).join('')
+          }
         </div>
       </div>
       <div class="unlock-name">${theme.name}</div>
