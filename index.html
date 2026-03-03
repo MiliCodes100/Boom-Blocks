@@ -2528,6 +2528,7 @@ function getActivePieces() {
   if (sessionLinesCleared >= 30) pool = [...pool, ...PIECES_T3];
   if (sessionLinesCleared >= 50) pool = [...pool, ...PIECES_T4];
   if (sessionLinesCleared >= 100) pool = [...pool, ...PIECES_T5, ...PIECES_T5]; // double weight at 100
+
   return pool;
 }
 
@@ -4424,6 +4425,14 @@ const THEMES = [
     preview:['#96deff','#b8ecff','#70c8ff','#d4f4ff','#50b0ff'],
     emoji:'❄️'
   },
+  {
+    id:'void', name:'THE VOID', req:'lines100', reqLabel:'CLEAR 100 LINES IN 1 GAME',
+    bg:'#000000', surface:'#050005', surface2:'#0a000a',
+    colors:['#ffffff','#cc00ff','#ff00ff','#aa00ff','#ee00ee','#ff44ff','#dd00dd'],
+    boardBg:'#050005', boardBorder:'rgba(200,0,255,0.4)',
+    preview:['#ffffff','#cc00ff','#ff00ff','#aa00ff','#ee00ee'],
+    emoji:'🌌'
+  },
 ];
 
 
@@ -4480,7 +4489,8 @@ function updateXPBar() {
 function checkNewUnlocks() {
   const newOnes = [];
   THEMES.forEach(t => {
-    if(t.req > 0 && getLevel() >= t.req && !seenUnlocks.includes('theme_'+t.id)) {
+    const tUnlocked = t.req === 0 ? true : t.req === 'lines100' ? !!localStorage.getItem('bb_cleared_100') : getLevel() >= t.req;
+    if(t.req !== 0 && tUnlocked && !seenUnlocks.includes('theme_'+t.id)) {
       newOnes.push(t.name + ' THEME');
       seenUnlocks.push('theme_'+t.id);
     }
@@ -4506,6 +4516,10 @@ function checkTierStamp() {
     if (sessionLinesCleared >= t && lastTierShown < t) {
       lastTierShown = t;
       showTierStamp(TIER_STAMPS[t]);
+      if (t === 100 && !localStorage.getItem('bb_cleared_100')) {
+        localStorage.setItem('bb_cleared_100', '1');
+        setTimeout(() => showToast('🌌 THE VOID UNLOCKED!'), 2600);
+      }
       break;
     }
   }
@@ -4584,7 +4598,10 @@ function renderThemeGrid() {
   if(!grid) return;
   grid.innerHTML = '';
   THEMES.forEach(theme => {
-    const unlocked = theme.req === 0 || getLevel() >= theme.req;
+    let unlocked;
+    if (theme.req === 0) unlocked = true;
+    else if (theme.req === 'lines100') unlocked = !!localStorage.getItem('bb_cleared_100');
+    else unlocked = getLevel() >= theme.req;
     const isActive = activeTheme === theme.id;
     const isNew = unlocked && !seenUnlocks.includes('theme_'+theme.id);
     const card = document.createElement('div');
