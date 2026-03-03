@@ -27,35 +27,35 @@
   "screenshots": [
     {
       "src": "screenshot1.jpg",
-      "sizes": "1080x1920",
+      "sizes": "1206x2038",
       "type": "image/jpeg",
       "form_factor": "narrow",
       "label": "Boom Boom Blocks gameplay"
     },
     {
       "src": "screenshot2.jpg",
-      "sizes": "1080x1920",
+      "sizes": "1206x2025",
       "type": "image/jpeg",
       "form_factor": "narrow",
       "label": "Boom Boom Blocks insane pieces"
     },
     {
       "src": "screenshot3.jpg",
-      "sizes": "1080x1920",
+      "sizes": "1206x2028",
       "type": "image/jpeg",
       "form_factor": "narrow",
       "label": "Boom Boom Blocks themes"
     },
     {
       "src": "screenshot4.jpg",
-      "sizes": "1080x1920",
+      "sizes": "1206x2052",
       "type": "image/jpeg",
       "form_factor": "narrow",
       "label": "Boom Boom Blocks block dex"
     },
     {
       "src": "screenshot5.jpg",
-      "sizes": "1080x1920",
+      "sizes": "1206x2028",
       "type": "image/jpeg",
       "form_factor": "narrow",
       "label": "Boom Boom Blocks high score"
