@@ -84,6 +84,8 @@ body::after {
   display:flex; flex-direction:column; align-items:center;
   overflow-y:auto; overflow-x:hidden;
   scroll-behavior:smooth;
+  -webkit-overflow-scrolling:touch;
+  touch-action:pan-y;
 }
 
 .screen { display:none; width:100%; max-width:440px; flex-direction:column; align-items:center; min-height:100vh; }
@@ -798,7 +800,7 @@ header {
 .dc-streak-val { font-family:'Press Start 2P', monospace; font-size:1rem; color:var(--c2); text-shadow:0 0 12px var(--glow2); }
 
 /* ── LEADERBOARD ── */
-#lb-screen { min-height:100vh; padding:20px; gap:12px; }
+#lb-screen { touch-action:pan-y; -webkit-overflow-scrolling:touch; min-height:100vh; padding:20px; gap:12px; }
 
 .lb-title {
   font-family:'Press Start 2P', monospace;
@@ -922,7 +924,7 @@ header {
 }
 
 /* ── PROGRESSION / UNLOCKS ── */
-#unlocks-screen { min-height:100vh; padding:20px; gap:14px; overflow-y:auto; }
+#unlocks-screen { min-height:100vh; padding:20px; gap:14px; overflow-y:auto; -webkit-overflow-scrolling:touch; touch-action:pan-y; }
 
 .unlocks-title {
   font-family:'Press Start 2P', monospace;
@@ -1208,7 +1210,7 @@ header {
 
 
 /* ── STATS SCREEN ── */
-#stats-screen {
+#stats-screen { touch-action:pan-y; -webkit-overflow-scrolling:touch;
   min-height:100vh;
   padding:20px;
   gap:12px;
@@ -3092,7 +3094,7 @@ function clearLines() {
     flashScreen(flashColors[Math.min(lines-2,2)]);
   }
 
-  const pts=lines*lines*80*Math.max(1,consecutiveClearCount);
+  const pts=lines*lines*800*Math.max(1,consecutiveClearCount);
   addScore(pts,lines,consecutiveClearCount);
 
   sfxClear(lines);
@@ -3958,7 +3960,7 @@ function triggerBombExplosion(centerRow, centerCol, hex) {
     affected.forEach(({r, c}) => {
       board[r][c] = null;
     });
-    const pts = affected.length * 50;
+    const pts = affected.length * 500;
     addScore(pts, affected.length, 1);
     renderBoard();
     clearLines();
@@ -4317,7 +4319,7 @@ function onWildfireClick(e) {
   hapticCombo();
   shakeBoard(3);
 
-  const pts = count * 80;
+  const pts = count * 800;
   addScore(pts, count, 1);
 
   setTimeout(() => {
@@ -4439,7 +4441,7 @@ const THEMES = [
 
 // XP / Level system
 // Level thresholds based on cumulative total score
-const XP_THRESHOLDS = [0,1000,3000,6000,10000,18000,30000,50000,75000,100000,150000,200000,300000,500000];
+const XP_THRESHOLDS = [0,10000,30000,60000,100000,180000,300000,500000,750000,1000000,1500000,2000000,3000000,5000000];
 
 let activeTheme   = localStorage.getItem('bb_theme')   || 'arcade';
 let seenUnlocks   = JSON.parse(localStorage.getItem('bb_seen_unlocks') || '[]');
@@ -4644,7 +4646,12 @@ document.addEventListener('DOMContentLoaded', function() {
   const bd = $id('best-display');
   if(bd) bd.textContent = best.toLocaleString();
   updateMenuStats();
-  document.addEventListener('touchmove', e=>e.preventDefault(), {passive:false});
+  document.addEventListener('touchmove', e => {
+    // Only block scroll when actively dragging a piece on the game screen
+    const gameScreen = $id('game-screen');
+    const isGameActive = gameScreen && gameScreen.classList.contains('active');
+    if (isGameActive && dragPiece) e.preventDefault();
+  }, {passive:false});
 });
 </script>
 
