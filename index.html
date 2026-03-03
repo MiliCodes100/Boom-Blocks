@@ -4470,7 +4470,10 @@ document.addEventListener('DOMContentLoaded', function() {
   const bd = $id('best-display');
   if(bd) bd.textContent = best.toLocaleString();
   updateMenuStats();
-  document.addEventListener('touchmove', e=>e.preventDefault(), {passive:false});
+  document.addEventListener('touchmove', e => {
+    // Only block default scroll behaviour when actively dragging a piece
+    if(dragPiece) e.preventDefault();
+  }, {passive:false});
 });
 </script>
 
