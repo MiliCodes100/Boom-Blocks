@@ -1757,6 +1757,65 @@ body.theme-ice #board {
   to   { opacity:0; transform:translate(-50%,-50%) scale(0.8) rotate(-4deg); }
 }
 
+
+/* ── BLOCK DEX ── */
+.blockdex-grid {
+  display:grid;
+  grid-template-columns:repeat(5,1fr);
+  gap:6px;
+  width:100%;
+}
+
+.blockdex-card {
+  background:var(--surface);
+  border:1px solid rgba(255,255,255,0.06);
+  border-radius:6px;
+  padding:6px 4px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:4px;
+  aspect-ratio:1;
+  justify-content:center;
+  position:relative;
+}
+
+.blockdex-card.seen {
+  border-color:var(--c4);
+  box-shadow:0 0 8px rgba(10,245,255,0.15);
+}
+
+.blockdex-card.unseen {
+  opacity:0.35;
+}
+
+.blockdex-piece {
+  display:grid;
+  gap:2px;
+}
+
+.blockdex-cell {
+  width:8px; height:8px;
+  border-radius:1px;
+}
+
+.blockdex-cell.off {
+  background:transparent;
+}
+
+.blockdex-count {
+  font-family:'Press Start 2P',monospace;
+  font-size:0.28rem;
+  color:var(--muted);
+  letter-spacing:1px;
+}
+
+.blockdex-new {
+  position:absolute;
+  top:3px; right:3px;
+  font-size:0.5rem;
+}
+
 </style>
 <!-- AdMob -->
 <meta name="google-adsense-account" content="ca-app-pub-9829984726595934~6205970481">
@@ -2062,8 +2121,11 @@ body.theme-ice #board {
     <button class="back-btn" onclick="showScreen('menu-screen')">◀ BACK</button>
     <div class="unlocks-title">UNLOCKS</div>
   </div>
-  <div class="unlock-section-label">🎨 THEMES — unlock by best score</div>
+  <div class="unlock-section-label">🎨 THEMES — LEVEL UP TO UNLOCK</div>
   <div class="unlock-grid" id="theme-grid"></div>
+
+  <div class="unlock-section-label" style="margin-top:8px">🧩 BLOCK DEX — <span id="blockdex-count">0</span> / <span id="blockdex-total">0</span> DISCOVERED</div>
+  <div class="blockdex-grid" id="blockdex-grid"></div>
 
 </div>
 
@@ -3029,6 +3091,7 @@ function placePiece(piece,startRow,startCol) {
   const slots=document.querySelectorAll('.piece-slot');
   if(slots[dragSlot]) slots[dragSlot].classList.remove('dragging-source');
   sessionPiecesPlaced++;
+  if(dragPiece) markPieceSeen(dragPiece.shape);
   resetPowerHintTimer();
   if(piece.isBomb) {
     placeBombPiece(piece, startRow, startCol);
@@ -4584,6 +4647,89 @@ function getCurrentPalette() {
 
 
 
+
+
+// ════════════════════════════════════
+//  BLOCK DEX
+// ════════════════════════════════════
+
+// All pieces across all tiers with a unique ID
+const ALL_PIECES_DEX = [
+  ...PIECES_T1.map((s,i) => ({ id:'t1_'+i, shape:s, tier:1 })),
+  ...PIECES_T2.map((s,i) => ({ id:'t2_'+i, shape:s, tier:2 })),
+  ...PIECES_T3.map((s,i) => ({ id:'t3_'+i, shape:s, tier:3 })),
+  ...PIECES_T4.map((s,i) => ({ id:'t4_'+i, shape:s, tier:4 })),
+  ...PIECES_T5.map((s,i) => ({ id:'t5_'+i, shape:s, tier:5 })),
+];
+
+// Deduplicate by shape fingerprint
+const PIECE_DEX = [];
+const _seenShapes = new Set();
+ALL_PIECES_DEX.forEach(p => {
+  const key = p.shape.map(r=>r.join('')).join('|');
+  if (!_seenShapes.has(key)) {
+    _seenShapes.add(key);
+    PIECE_DEX.push(p);
+  }
+});
+
+function getSeenPieces() {
+  try { return JSON.parse(localStorage.getItem('bb_seen_pieces') || '[]'); }
+  catch { return []; }
+}
+
+function markPieceSeen(shape) {
+  const key = shape.map(r=>r.join('')).join('|');
+  const seen = getSeenPieces();
+  if (!seen.includes(key)) {
+    seen.push(key);
+    localStorage.setItem('bb_seen_pieces', JSON.stringify(seen));
+  }
+}
+
+function renderBlockDex() {
+  const grid = $id('blockdex-grid');
+  if (!grid) return;
+  const seen = getSeenPieces();
+  const seenKeys = new Set(seen);
+
+  grid.innerHTML = '';
+  let seenCount = 0;
+
+  const tierColors = { 1:'#0af5ff', 2:'#ffd60a', 3:'#ff6030', 4:'#ff2d55', 5:'#bf5af2' };
+
+  PIECE_DEX.forEach(p => {
+    const key = p.shape.map(r=>r.join('')).join('|');
+    const isSeen = seenKeys.has(key);
+    if (isSeen) seenCount++;
+
+    const card = document.createElement('div');
+    card.className = 'blockdex-card ' + (isSeen ? 'seen' : 'unseen');
+
+    if (isSeen) {
+      const color = tierColors[p.tier];
+      const cols = p.shape[0].length;
+      const cellSize = Math.min(8, Math.floor(36 / Math.max(cols, p.shape.length)));
+      let pieceHtml = `<div class="blockdex-piece" style="grid-template-columns:repeat(${cols},1fr);gap:2px">`;
+      p.shape.forEach(row => {
+        row.forEach(cell => {
+          pieceHtml += `<div class="blockdex-cell${cell?'':' off'}" style="width:${cellSize}px;height:${cellSize}px;background:${cell?color:'transparent'};box-shadow:${cell?'0 0 4px '+color:'none'}"></div>`;
+        });
+      });
+      pieceHtml += '</div>';
+      card.innerHTML = pieceHtml + `<div class="blockdex-count" style="color:${color}">T${p.tier}</div>`;
+    } else {
+      card.innerHTML = '<div style="font-size:1rem">?</div>';
+    }
+
+    grid.appendChild(card);
+  });
+
+  const countEl = $id('blockdex-count');
+  const totalEl = $id('blockdex-total');
+  if (countEl) countEl.textContent = seenCount;
+  if (totalEl) totalEl.textContent = PIECE_DEX.length;
+}
 
 function showUnlocks() {
   sfxMenu();
