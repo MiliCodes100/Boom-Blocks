@@ -6,11 +6,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>BOOM BOOM BLOCKS</title>
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
-<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Boom Boom Blocks">
 <meta name="theme-color" content="#080810">
 <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/png" href="icon-192.png">
 <meta property="og:title" content="Boom Boom Blocks">
 <meta property="og:description" content="Free arcade block puzzle game">
 <meta property="og:url" content="https://boomboomblocks.com">
@@ -2898,6 +2900,14 @@ function initGame() {
     pieces[slot] = insane;
   } else {
     pieces=[rngPieceEasy(),rngPieceEasy(),rngPieceEasy()];
+    const insaneChance = getLevel() >= 10 ? 0.75 : getLevel() >= 5 ? 0.5 : 0;
+    if (insaneChance > 0 && Math.random() < insaneChance) {
+      const insanePieces = [CURSED_PIECE, CIRCLE_PIECE, LIGHTNING_PIECE, DONUT_PIECE, PLUSPLUS_PIECE, SNAKE_PIECE, PYRAMID_PIECE, COMB_PIECE, CROSS_PIECE, STAIRS_PIECE, PITCHFORK_PIECE, HASHTAG_PIECE, BOWTIE_PIECE, ANCHOR_PIECE, TEETH_PIECE, ZSTACK_PIECE, BLOB_PIECE];
+      const pick = insanePieces[Math.floor(Math.random() * insanePieces.length)];
+      const color = COLORS[Math.floor(Math.random() * COLORS.length)];
+      const slot = Math.floor(Math.random() * 3);
+      pieces[slot] = { shape: pick, color, hex: color };
+    }
   }
 
   renderTray();
