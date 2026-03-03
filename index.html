@@ -1705,6 +1705,10 @@ body.theme-ice #board {
 <!-- ══ MENU ══ -->
 <div id="app">
 <div id="menu-screen" class="screen active">
+  <div style="display:flex;gap:20px;justify-content:center;padding-top:8px">
+    <button onclick="window.open('/privacy.html','_blank')" style="font-family:'Press Start 2P',monospace;font-size:0.28rem;color:#303050;letter-spacing:1px;background:none;border:none;padding:8px 12px;cursor:pointer">PRIVACY</button>
+    <button onclick="window.open('/terms.html','_blank')" style="font-family:'Press Start 2P',monospace;font-size:0.28rem;color:#303050;letter-spacing:1px;background:none;border:none;padding:8px 12px;cursor:pointer">TERMS</button>
+  </div>
   <div class="menu-bg-grid"></div>
 
   <div class="logo-wrap">
@@ -1740,10 +1744,7 @@ body.theme-ice #board {
   <button class="menu-btn ghost" onclick="showLeaderboard()">🏆 LEADERBOARD</button>
   <button class="menu-btn ghost" onclick="showStats()" style="border-color:var(--c4);color:var(--c4);box-shadow:0 0 15px rgba(10,245,255,0.15)">📊 STATS</button>
   <button class="menu-btn ghost" onclick="showUnlocks()" style="border-color:var(--c3);color:var(--c3);box-shadow:0 0 15px rgba(48,209,88,0.15)">🔓 UNLOCKS</button>
-  <div style="display:flex;gap:12px;justify-content:center;margin-top:4px">
-    <button class="menu-btn ghost" onclick="window.open('/privacy.html','_blank')" style="font-size:0.35rem;padding:10px 16px;min-width:0;border-color:#404060;color:#606080">PRIVACY</button>
-    <button class="menu-btn ghost" onclick="window.open('/terms.html','_blank')" style="font-size:0.35rem;padding:10px 16px;min-width:0;border-color:#404060;color:#606080">TERMS</button>
-  </div>
+
 </div>
 
 
@@ -2432,22 +2433,69 @@ function hapticGameOver() { haptic([80,40,80,40,180]); }
 const COLS=8, ROWS=8;
 const COLORS=['var(--c1)','var(--c2)','var(--c3)','var(--c4)','var(--c5)','var(--c6)','var(--c7)'];
 
-const PIECES=[
-  [[1]],[[1,1]],[[1],[1]],
+// Pieces split by difficulty tier
+// TIER 1: always available (small, easy to place)
+const PIECES_T1=[
+  [[1]],
+  [[1,1]],[[1],[1]],
   [[1,1,1]],[[1],[1],[1]],
   [[1,1],[1,1]],
+];
+// TIER 2: unlocks after 10 lines cleared (medium pieces)
+const PIECES_T2=[
   [[1,0],[1,0],[1,1]],[[0,1],[0,1],[1,1]],
   [[1,1],[1,0],[1,0]],[[1,1],[0,1],[0,1]],
   [[1,1,1],[0,1,0]],[[0,1],[1,1],[0,1]],
   [[0,1,1],[1,1,0]],[[1,1,0],[0,1,1]],
+  [[1,1,1,1]],[[1],[1],[1],[1]],
+];
+// TIER 3: unlocks after 30 lines cleared (hard pieces)
+const PIECES_T3=[
   [[1,1],[1,1],[1,1]],[[1,1,1],[1,1,1]],
   [[1,0,0],[1,0,0],[1,1,1]],[[1,1,1],[1,0,0],[1,0,0]],
   [[1,1,1],[0,0,1],[0,0,1]],[[0,0,1],[0,0,1],[1,1,1]],
   [[0,1,0],[1,1,1],[0,1,0]],
-  [[1,1,1,1]],[[1],[1],[1],[1]],
   [[1,1,1,1,1]],
   [[1,0],[1,1],[0,1]],[[1,1,1],[1,0,0]],[[1,1,1],[0,0,1]],
 ];
+
+// Build active piece pool based on lines cleared this session
+function getActivePieces() {
+  let pool = [...PIECES_T1, ...PIECES_T1]; // T1 double weight always
+  if (sessionLinesCleared >= 10) pool = [...pool, ...PIECES_T2];
+  if (sessionLinesCleared >= 30) pool = [...pool, ...PIECES_T3];
+  if (sessionLinesCleared >= 50) pool = [...pool, ...PIECES_T4];
+  return pool;
+}
+
+// TIER 4: unlocks after 50 lines cleared (CRAZY pieces)
+const PIECES_T4=[
+  // 6-cell monsters
+  [[1,1,1,1,1,1]],[[1],[1],[1],[1],[1],[1]],
+  // Huge L
+  [[1,0,0,0],[1,0,0,0],[1,0,0,0],[1,1,1,1]],
+  [[1,1,1,1],[1,0,0,0],[1,0,0,0],[1,0,0,0]],
+  // 3x3 full block
+  [[1,1,1],[1,1,1],[1,1,1]],
+  // T-rex (wide T)
+  [[1,1,1,1,1],[0,0,1,0,0]],
+  // Zigzag
+  [[1,0,0],[1,1,0],[0,1,1],[0,0,1]],
+  [[0,0,1],[0,1,1],[1,1,0],[1,0,0]],
+  // Plus sign (big)
+  [[0,1,0],[0,1,0],[1,1,1],[0,1,0],[0,1,0]],
+  // U shape
+  [[1,0,1],[1,0,1],[1,1,1]],
+  // S-snake long
+  [[0,0,1,1],[0,1,1,0],[1,1,0,0]],
+  // Diagonal staircase
+  [[1,0,0,0],[1,1,0,0],[0,1,1,0],[0,0,1,1]],
+  // 4x4 square
+  [[1,1,1,1],[1,1,1,1],[1,1,1,1],[1,1,1,1]],
+];
+
+// Keep PIECES as alias for canPlaceAny checks
+const PIECES = [...PIECES_T1, ...PIECES_T2, ...PIECES_T3, ...PIECES_T4];
 
 let board=[], score=0;
 let best=parseInt(localStorage.getItem('bb_best')||'0');
@@ -2564,7 +2612,7 @@ function initGame() {
 }
 
 function addStartingObstacles() {
-  const count=Math.min(Math.floor(gamesPlayed/5),10);
+  const count=Math.min(Math.floor(gamesPlayed/8),6);
   for(let i=0;i<count;i++){
     const r=Math.floor(Math.random()*ROWS), c=Math.floor(Math.random()*COLS);
     if(!board[r][c]) board[r][c]=COLORS[Math.floor(Math.random()*COLORS.length)];
@@ -2648,13 +2696,14 @@ function rngPiece() {
   const theme = THEMES.find(t => t.id === activeTheme) || THEMES[0];
   const palette = theme.colors;
 
-  // Filter to only placeable pieces
-  const playable = PIECES.filter(shape => canPlaceAny({ shape }));
-  const pool = playable.length > 0 ? playable : PIECES;
+  // Filter to only placeable pieces from active tier pool
+  const activePieces = getActivePieces();
+  const playable = activePieces.filter(shape => canPlaceAny({ shape }));
+  const pool = playable.length > 0 ? playable : activePieces;
 
   // Score each piece and build a weighted pool
   // 70% chance to pick from high-scoring pieces, 30% pure random (keeps game fair not too easy)
-  const useSmartPick = rng() < 0.70;
+  const useSmartPick = rng() < 0.90;
   let shape;
 
   if (useSmartPick) {
