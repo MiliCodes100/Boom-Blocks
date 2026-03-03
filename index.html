@@ -2527,6 +2527,7 @@ function getActivePieces() {
   if (sessionLinesCleared >= 10) pool = [...pool, ...PIECES_T2];
   if (sessionLinesCleared >= 30) pool = [...pool, ...PIECES_T3];
   if (sessionLinesCleared >= 50) pool = [...pool, ...PIECES_T4];
+  if (sessionLinesCleared >= 100) pool = [...pool, ...PIECES_T5, ...PIECES_T5]; // double weight at 100
   return pool;
 }
 
@@ -2556,8 +2557,31 @@ const PIECES_T4=[
   [[1,1,1,1],[1,1,1,1],[1,1,1,1],[1,1,1,1]],
 ];
 
+// TIER 5: unlocks after 100 lines — THE IMPOSSIBLE ZONE
+const PIECES_T5=[
+  // 7-cell monsters
+  [[1,1,1,1,1,1,1]],[[1],[1],[1],[1],[1],[1],[1]],
+  // 5x5 full block
+  [[1,1,1,1,1],[1,1,1,1,1],[1,1,1,1,1],[1,1,1,1,1],[1,1,1,1,1]],
+  // 4x4 L
+  [[1,0,0,0],[1,0,0,0],[1,0,0,0],[1,0,0,0],[1,1,1,1,1]],
+  // Mega cross
+  [[0,0,1,0,0],[0,0,1,0,0],[1,1,1,1,1],[0,0,1,0,0],[0,0,1,0,0]],
+  // Mega S/Z
+  [[0,0,1,1,1],[0,1,1,0,0],[1,1,0,0,0]],
+  [[1,1,0,0,0],[0,1,1,0,0],[0,0,1,1,1]],
+  // Staircase of doom
+  [[1,0,0,0,0],[1,1,0,0,0],[0,1,1,0,0],[0,0,1,1,0],[0,0,0,1,1]],
+  // U monster
+  [[1,0,0,0,1],[1,0,0,0,1],[1,0,0,0,1],[1,1,1,1,1]],
+  // T-rex 5 wide
+  [[1,1,1,1,1],[0,0,1,0,0],[0,0,1,0,0],[0,0,1,0,0]],
+  // Hollow square
+  [[1,1,1,1,1],[1,0,0,0,1],[1,0,0,0,1],[1,0,0,0,1],[1,1,1,1,1]],
+];
+
 // Keep PIECES as alias for canPlaceAny checks
-const PIECES = [...PIECES_T1, ...PIECES_T2, ...PIECES_T3, ...PIECES_T4];
+const PIECES = [...PIECES_T1, ...PIECES_T2, ...PIECES_T3, ...PIECES_T4, ...PIECES_T5];
 
 let board=[], score=0;
 let best=parseInt(localStorage.getItem('bb_best')||'0');
@@ -3095,7 +3119,6 @@ function addScore(pts,lines,combo) {
   if(!isDaily&&score>best){
     best=score;
     localStorage.setItem('bb_best',best);
-    const ld=$id('lines-display'); if(ld) ld.textContent='0';
   }
   incStat('total_score', pts);
 
@@ -4470,14 +4493,15 @@ function checkNewUnlocks() {
 
 
 const TIER_STAMPS = {
-  10: { label:'DIFFICULTY UP', name:'TIER 2', sub:'PIECES UNLOCKED', color:'#ffcc00' },
-  30: { label:'DANGER ZONE',   name:'TIER 3', sub:'HARDER PIECES',   color:'#ff6030' },
-  50: { label:'NIGHTMARE MODE',name:'TIER 4', sub:'CHAOS PIECES',    color:'#ff2d55' },
+  10:  { label:'DIFFICULTY UP',   name:'TIER 2',           sub:'PIECES UNLOCKED',   color:'#ffcc00' },
+  30:  { label:'DANGER ZONE',     name:'TIER 3',           sub:'HARDER PIECES',     color:'#ff6030' },
+  50:  { label:'NIGHTMARE MODE',  name:'TIER 4',           sub:'CHAOS PIECES',      color:'#ff2d55' },
+  100: { label:'ARE YOU INSANE?', name:'IMPOSSIBLE ZONE',  sub:'YOU ASKED FOR THIS', color:'#bf5af2' },
 };
 let lastTierShown = 0;
 
 function checkTierStamp() {
-  const thresholds = [10, 30, 50];
+  const thresholds = [10, 30, 50, 100];
   for (const t of thresholds) {
     if (sessionLinesCleared >= t && lastTierShown < t) {
       lastTierShown = t;
