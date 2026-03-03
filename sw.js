@@ -1,4 +1,4 @@
-const CACHE = 'boomboomblocks-v1';
+const CACHE = 'boomboomblocks-v2';
 const ASSETS = [
   '/',
   '/index.html',
