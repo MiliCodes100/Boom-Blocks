@@ -1693,6 +1693,68 @@ body.theme-ice #board {
   box-shadow: 0 0 40px rgba(150,220,255,0.2), inset 0 0 20px rgba(150,220,255,0.05) !important;
 }
 
+
+/* ── TIER STAMP ── */
+.tier-stamp {
+  position:fixed;
+  top:50%;
+  left:50%;
+  transform:translate(-50%,-50%) scale(0) rotate(-12deg);
+  z-index:2000;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:4px;
+  background:transparent;
+  pointer-events:none;
+  animation:stampIn 0.5s cubic-bezier(0.175,0.885,0.32,1.275) forwards,
+            stampOut 0.4s ease 1.8s forwards;
+}
+
+.tier-stamp-border {
+  border:4px solid currentColor;
+  border-radius:4px;
+  padding:14px 24px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:6px;
+  box-shadow:0 0 30px currentColor, inset 0 0 20px rgba(255,255,255,0.05);
+  background:rgba(8,8,16,0.92);
+}
+
+.tier-stamp-label {
+  font-family:'Press Start 2P',monospace;
+  font-size:0.45rem;
+  letter-spacing:3px;
+  opacity:0.8;
+}
+
+.tier-stamp-name {
+  font-family:'Press Start 2P',monospace;
+  font-size:1.1rem;
+  letter-spacing:2px;
+  text-shadow:0 0 20px currentColor;
+}
+
+.tier-stamp-sub {
+  font-family:'Press Start 2P',monospace;
+  font-size:0.38rem;
+  opacity:0.6;
+  letter-spacing:1px;
+}
+
+@keyframes stampIn {
+  0%   { transform:translate(-50%,-50%) scale(0) rotate(-12deg); opacity:0; }
+  60%  { transform:translate(-50%,-50%) scale(1.1) rotate(2deg); opacity:1; }
+  100% { transform:translate(-50%,-50%) scale(1) rotate(-4deg); opacity:1; }
+}
+@keyframes stampOut {
+  from { opacity:1; transform:translate(-50%,-50%) scale(1) rotate(-4deg); }
+  to   { opacity:0; transform:translate(-50%,-50%) scale(0.8) rotate(-4deg); }
+}
+
 </style>
 <!-- AdMob -->
 <meta name="google-adsense-account" content="ca-app-pub-9829984726595934~6205970481">
@@ -1932,8 +1994,8 @@ body.theme-ice #board {
         <div class="score-val" id="score">0</div>
       </div>
       <div class="score-box">
-        <div class="score-label">BEST</div>
-        <div class="score-val" id="best-display">0</div>
+        <div class="score-label">LINES</div>
+        <div class="score-val" id="lines-display">0</div>
       </div>
     </div>
     <button class="sound-btn" onclick="toggleSound()" id="sound-btn">🔊</button>
@@ -2601,9 +2663,9 @@ function initGame() {
   score=0; consecutiveClearCount=0;
   resetPowers();
   clearPowerHintTimer();
-  sessionBestCombo=0; sessionBestLines=0; sessionPiecesPlaced=0; sessionLinesCleared=0;
+  sessionBestCombo=0; sessionBestLines=0; sessionPiecesPlaced=0; sessionLinesCleared=0; lastTierShown=0;
   $id('score').textContent='0';
-  $id('best-display').textContent=best.toLocaleString();
+  const ld=$id('lines-display'); if(ld) ld.textContent='0';
   board=Array.from({length:ROWS},()=>Array(COLS).fill(null));
   if(!isDaily && gamesPlayed>=5) addStartingObstacles();
   renderBoard();
@@ -2976,6 +3038,8 @@ function clearLines() {
   consecutiveClearCount++;
   const lines=rowsToClear.length+colsToClear.length;
   sessionLinesCleared+=lines;
+  const ld=$id('lines-display'); if(ld) ld.textContent=sessionLinesCleared;
+  checkTierStamp();
   if(lines>sessionBestLines) sessionBestLines=lines;
   if(consecutiveClearCount>sessionBestCombo) sessionBestCombo=consecutiveClearCount;
   const toClear=new Set();
@@ -3031,7 +3095,7 @@ function addScore(pts,lines,combo) {
   if(!isDaily&&score>best){
     best=score;
     localStorage.setItem('bb_best',best);
-    $id('best-display').textContent=best.toLocaleString();
+    const ld=$id('lines-display'); if(ld) ld.textContent='0';
   }
   incStat('total_score', pts);
 
@@ -4402,6 +4466,42 @@ function checkNewUnlocks() {
     localStorage.setItem('bb_seen_unlocks', JSON.stringify(seenUnlocks));
     setTimeout(() => { showToast('🔓 UNLOCKED: ' + newOnes[0]); sfxUnlock(); }, 600);
   }
+}
+
+
+const TIER_STAMPS = {
+  10: { label:'DIFFICULTY UP', name:'TIER 2', sub:'PIECES UNLOCKED', color:'#ffcc00' },
+  30: { label:'DANGER ZONE',   name:'TIER 3', sub:'HARDER PIECES',   color:'#ff6030' },
+  50: { label:'NIGHTMARE MODE',name:'TIER 4', sub:'CHAOS PIECES',    color:'#ff2d55' },
+};
+let lastTierShown = 0;
+
+function checkTierStamp() {
+  const thresholds = [10, 30, 50];
+  for (const t of thresholds) {
+    if (sessionLinesCleared >= t && lastTierShown < t) {
+      lastTierShown = t;
+      showTierStamp(TIER_STAMPS[t]);
+      break;
+    }
+  }
+}
+
+function showTierStamp(tier) {
+  const old = document.querySelector('.tier-stamp');
+  if(old) old.remove();
+  const el = document.createElement('div');
+  el.className = 'tier-stamp';
+  el.style.color = tier.color;
+  el.innerHTML = `
+    <div class="tier-stamp-border" style="border-color:${tier.color}">
+      <div class="tier-stamp-label" style="color:${tier.color}">${tier.label}</div>
+      <div class="tier-stamp-name" style="color:${tier.color}">${tier.name}</div>
+      <div class="tier-stamp-sub">${tier.sub}</div>
+    </div>`;
+  document.body.appendChild(el);
+  sfxLevelUp();
+  setTimeout(() => el.remove(), 2400);
 }
 
 function showToast(msg) {
