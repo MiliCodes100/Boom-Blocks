@@ -1,12 +1,15 @@
 {
+  "id": "com.boomboomblocks.app",
   "name": "Boom Boom Blocks",
-  "short_name": "BOOM BOOM BLOCKS",
-  "description": "Boom Boom Blocks - Arcade block puzzle",
+  "short_name": "BBB",
+  "description": "Boom Boom Blocks - Arcade block puzzle game",
   "start_url": "/",
   "display": "fullscreen",
   "orientation": "portrait",
   "background_color": "#080810",
   "theme_color": "#080810",
+  "categories": ["games", "puzzle"],
+  "prefer_related_applications": false,
   "icons": [
     {
       "src": "icon-192.png",
@@ -19,6 +22,22 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "screenshot1.png",
+      "sizes": "1080x1920",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Boom Boom Blocks gameplay"
+    },
+    {
+      "src": "screenshot2.png",
+      "sizes": "1080x1920",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Boom Boom Blocks unlocks screen"
     }
   ]
 }
