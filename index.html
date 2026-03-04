@@ -844,7 +844,7 @@ header {
 .lb-rank { font-family:'Press Start 2P', monospace; font-size:0.7rem; width:28px; text-align:center; flex-shrink:0; }
 .lb-name { flex:1; font-family:'Press Start 2P', monospace; font-size:0.45rem; color:var(--text); }
 .lb-you-tag { color:var(--c4); font-size:0.35rem; display:block; margin-top:3px; }
-.lb-score { font-family:'Press Start 2P', monospace; font-size:0.7rem; color:var(--c2); text-shadow:0 0 8px var(--glow2); }
+.lb-score { font-family:'Press Start 2P', monospace; font-size:0.55rem; color:var(--c2); text-shadow:0 0 8px var(--glow2); white-space:nowrap; }
 .lb-date { font-family:'Press Start 2P', monospace; font-size:0.3rem; color:var(--muted); display:block; margin-top:3px; }
 
 .lb-empty { font-family:'Press Start 2P', monospace; font-size:0.5rem; color:var(--muted); text-align:center; padding:30px; line-height:2; }
@@ -1987,6 +1987,40 @@ body.theme-emoji #board {
   100% { opacity:0; transform:translate(-50%,-50%) scale(0.85); }
 }
 
+
+#combo-box { transition: opacity 0.3s; }
+#combo-box.pop { animation: comboPop 0.25s ease; }
+@keyframes comboPop {
+  0%   { transform: scale(1); }
+  50%  { transform: scale(1.4); }
+  100% { transform: scale(1); }
+}
+
+
+/* PASTEL — light dreamy theme */
+body.theme-pastel {
+  --text: #4a4a6a;
+  --muted: #8a8aaa;
+}
+body.theme-pastel #board {
+  box-shadow: 0 0 30px rgba(181,213,245,0.3), inset 0 0 20px rgba(200,220,255,0.2) !important;
+  border-color: rgba(181,213,245,0.5) !important;
+}
+body.theme-pastel .cell.filled {
+  box-shadow: 0 0 6px rgba(200,210,255,0.4), inset 0 1px 0 rgba(255,255,255,0.5) !important;
+}
+body.theme-pastel .btn, body.theme-pastel .menu-btn {
+  color: #4a4a6a !important;
+}
+
+
+#turbo-toggle-btn.active {
+  background: rgba(255,214,10,0.1);
+  border-color: #ffd60a !important;
+  color: #ffd60a !important;
+  box-shadow: 0 0 20px rgba(255,214,10,0.3) !important;
+}
+
 </style>
 <!-- AdMob -->
 <meta name="google-adsense-account" content="ca-app-pub-9829984726595934~6205970481">
@@ -2032,6 +2066,7 @@ body.theme-emoji #board {
 
   <div class="xp-bar-wrap"><div class="xp-bar-label"><span>LEVEL <span id="xp-level">1</span></span><span id="xp-label">0 / 500 XP</span></div><div class="xp-bar-bg"><div class="xp-bar-fill" id="xp-bar" style="width:0%"></div></div></div>
   <button class="menu-btn primary" onclick="startClassic()">▶ PLAY</button>
+  <button class="menu-btn ghost" id="turbo-toggle-btn" onclick="toggleTurboTray()" style="display:none;border-color:#ffd60a;color:#ffd60a;box-shadow:0 0 15px rgba(255,214,10,0.15)">⚡ TURBO TRAY: OFF</button>
   <button class="menu-btn daily" onclick="startDaily()">
     ★ DAILY CHALLENGE
     <span class="daily-done-tag" id="daily-badge">TODAY</span>
@@ -2048,7 +2083,7 @@ body.theme-emoji #board {
 
   <!-- Slide 1: The Goal -->
   <div class="tut-slide active" id="tut-slide-0">
-    <div class="tut-step">1 / 5</div>
+    <div class="tut-step">1 / 7</div>
     <div class="tut-title">THE <span>GOAL</span></div>
     <div class="tut-body">
       Fill <b>complete rows</b> or<br>
@@ -2067,7 +2102,7 @@ body.theme-emoji #board {
 
   <!-- Slide 2: Placing Pieces -->
   <div class="tut-slide" id="tut-slide-1">
-    <div class="tut-step">2 / 5</div>
+    <div class="tut-step">2 / 7</div>
     <div class="tut-title">PLACING <span>PIECES</span></div>
     <div class="tut-body">
       You have <b>3 pieces</b> in your tray.<br><br>
@@ -2086,7 +2121,7 @@ body.theme-emoji #board {
 
   <!-- Slide 3: Game Over -->
   <div class="tut-slide" id="tut-slide-2">
-    <div class="tut-step">3 / 5</div>
+    <div class="tut-step">3 / 7</div>
     <div class="tut-title">GAME <span>OVER</span></div>
     <div class="tut-body">
       The game ends when <b>none</b><br>
@@ -2105,7 +2140,7 @@ body.theme-emoji #board {
 
   <!-- Slide 4: Power-Ups -->
   <div class="tut-slide" id="tut-slide-3">
-    <div class="tut-step">4 / 5</div>
+    <div class="tut-step">4 / 7</div>
     <div class="tut-title">POWER<span>-UPS</span></div>
     <div class="tut-body">
       Clear lines to earn powers.<br>
@@ -2137,19 +2172,62 @@ body.theme-emoji #board {
     </div>
   </div>
 
-  <!-- Slide 5: Tips -->
+  <!-- Slide 5: Blocks & Tiers -->
   <div class="tut-slide" id="tut-slide-4">
-    <div class="tut-step">5 / 5</div>
+    <div class="tut-step">5 / 7</div>
+    <div class="tut-title">BLOCK <span>TIERS</span></div>
+    <div class="tut-body">
+      As you level up, <b>rarer blocks</b><br>
+      appear in your tray!<br><br>
+      <em>COMMON</em> → easy to place<br>
+      <em>UNCOMMON</em> → slightly tricky<br>
+      <em>RARE</em> → getting harder<br>
+      <em>EPIC</em> → big & challenging<br>
+      <em>NIGHTMARE</em> → massive pieces<br>
+      <em>LEGENDARY</em> → the Glory Block!
+    </div>
+    <div class="tut-dots" id="tut-dots-4"></div>
+    <div class="tut-nav">
+      <button class="tut-btn prev" onclick="tutNav(-1)">◀</button>
+      <button class="tut-btn next" onclick="tutNav(1)">NEXT ▶</button>
+    </div>
+  </div>
+
+  <!-- Slide 6: Special Blocks -->
+  <div class="tut-slide" id="tut-slide-5">
+    <div class="tut-step">6 / 7</div>
+    <div class="tut-title">SPECIAL <span>BLOCKS</span></div>
+    <div class="tut-body">
+      <b>🌟 DAILY CHALLENGE</b><br>
+      A unique daily challenge<br>
+      the same for everyone<br>
+      worldwide!<br><br>
+      <b>🧩 BLOCK DEX</b><br>
+      Discover & collect every<br>
+      piece in the game!
+    </div>
+    <div class="tut-dots" id="tut-dots-5"></div>
+    <div class="tut-nav">
+      <button class="tut-btn prev" onclick="tutNav(-1)">◀</button>
+      <button class="tut-btn next" onclick="tutNav(1)">NEXT ▶</button>
+    </div>
+  </div>
+
+  <!-- Slide 7: Tips -->
+  <div class="tut-slide" id="tut-slide-6">
+    <div class="tut-step">7 / 7</div>
     <div class="tut-title">PRO <span>TIPS</span></div>
     <div class="tut-body">
       <b>★</b> Clear multiple lines at<br>
-      once for a combo bonus<br><br>
-      <b>★</b> Do the <em>Daily Challenge</em><br>
-      to build your streak<br><br>
-      <b>★</b> Reach score milestones<br>
-      to unlock new themes
+      once for a <em>combo bonus</em><br><br>
+      <b>★</b> Daily challenge builds<br>
+      your <em>streak</em> — don't break it!<br><br>
+      <b>★</b> Level up to unlock<br>
+      <em>themes</em> &amp; rarer blocks<br><br>
+      <b>★</b> Hit 500k score to unlock<br>
+      the <em>Rainbow theme!</em>
     </div>
-    <div class="tut-dots" id="tut-dots-4"></div>
+    <div class="tut-dots" id="tut-dots-6"></div>
     <div class="tut-nav">
       <button class="tut-btn prev" onclick="tutNav(-1)">◀</button>
       <button class="tut-btn finish" onclick="finishTutorial()">▶ PLAY!</button>
@@ -2171,6 +2249,10 @@ body.theme-emoji #board {
         <div class="score-label">LINES</div>
         <div class="score-val" id="lines-display">0</div>
       </div>
+      <div class="score-box" id="combo-box" style="display:none">
+        <div class="score-label" style="color:#ff6030">COMBO</div>
+        <div class="score-val" id="combo-display" style="color:#ff6030">x1</div>
+      </div>
     </div>
     <button class="sound-btn" onclick="toggleSound()" id="sound-btn">🔊</button>
   </header>
@@ -2178,6 +2260,7 @@ body.theme-emoji #board {
   <div class="daily-bar-wrap" id="daily-bar-wrap" style="display:none">
     <div class="daily-bar-bg"><div class="daily-bar-fill" id="daily-bar"></div></div>
   </div>
+  <div id="yesterday-banner" style="display:none;text-align:center;font-family:'Press Start 2P',monospace;font-size:0.38rem;color:var(--muted);padding:4px 0;letter-spacing:1px"></div>
 
   <div class="board-wrap">
     <div id="board"></div>
@@ -2617,10 +2700,9 @@ function sfxGloryBlock() {
 function sfxLevelUp() {
   const fanfare = [523, 659, 784, 1047, 1319];
   fanfare.forEach((f, i) => {
-    note(f, 'square', 0.005, 0.12, 0.15, 0.28, i * 0.08);
-    note(f, 'sine', 0.005, 0.1, 0.2, 0.12, i * 0.08);
+    note(f, 'sine', 0.003, 0.08, 0.15, 0.22, i * 0.09);
   });
-  note(1319 * 1.5, 'sine', 0.01, 0.3, 0.4, 0.25, fanfare.length * 0.08);
+  note(1319 * 1.5, 'sine', 0.005, 0.2, 0.35, 0.2, fanfare.length * 0.09);
 }
 
 // ── UNLOCK ──
@@ -3020,6 +3102,7 @@ function closeOverlays() {
 }
 
 function updateMenuStats() {
+  checkTurboUnlock();
   $id('menu-best').textContent=best.toLocaleString();
   $id('menu-streak').textContent=streak;
   $id('menu-games').textContent=gamesPlayed;
@@ -3052,6 +3135,19 @@ function startDaily() {
   $id('mode-label').className='mode-label daily-mode';
   const dbw2=$id('daily-bar-wrap'); if(dbw2) dbw2.style.display='';
   const db0=$id('daily-bar'); if(db0) db0.style.width='0%';
+  // Show yesterday's score
+  const ybanner = $id('yesterday-banner');
+  if(ybanner) {
+    const yday = new Date(); yday.setDate(yday.getDate()-1);
+    const yk = yday.getFullYear()+'-'+(yday.getMonth()+1)+'-'+yday.getDate();
+    const yScore = localStorage.getItem('bb_daily_score_'+yk);
+    if(yScore) {
+      ybanner.textContent = "YESTERDAY: " + parseInt(yScore).toLocaleString();
+      ybanner.style.display = 'block';
+    } else {
+      ybanner.style.display = 'none';
+    }
+  }
   initGame(); showScreen('game-screen');
 }
 
@@ -3081,7 +3177,8 @@ function initGame() {
     pieces = [rngPieceEasy(), rngPieceEasy(), rngPieceEasy()];
     pieces[slot] = insane;
   } else {
-    pieces=[rngPieceEasy(),rngPieceEasy(),rngPieceEasy()];
+    const traySize = getTraySize();
+    pieces = Array.from({length: traySize}, () => rngPieceEasy());
 
     // TEMP TEST - force glory block
     // 1% chance of GLORY BLOCK on very first tray (board must be empty)
@@ -3475,7 +3572,7 @@ function refillPieces() {
     // Keep regenerating until at least one piece can be placed
     let attempts = 0;
     do {
-      pieces = [gen(), gen(), gen()];
+      const ts = getTraySize(); pieces = Array.from({length: ts}, () => gen());
       attempts++;
     } while(attempts < 20 && !pieces.some(p => canPlaceAny(p)));
   }
@@ -3488,9 +3585,22 @@ function clearLines() {
   const rowsToClear=[], colsToClear=[];
   for(let r=0;r<ROWS;r++) if(board[r].every(c=>c)) rowsToClear.push(r);
   for(let c=0;c<COLS;c++) if(board.every(r=>r[c])) colsToClear.push(c);
-  if(!rowsToClear.length&&!colsToClear.length){ consecutiveClearCount=0; return; }
+  if(!rowsToClear.length&&!colsToClear.length){
+    consecutiveClearCount=0;
+    const cb=$id('combo-box'); if(cb) cb.style.display='none';
+    return;
+  }
 
   consecutiveClearCount++;
+  const comboBox = $id('combo-box');
+  const comboDisp = $id('combo-display');
+  if(comboBox && comboDisp) {
+    comboBox.style.display = 'block';
+    comboDisp.textContent = 'x' + consecutiveClearCount;
+    comboBox.classList.remove('pop');
+    void comboBox.offsetWidth;
+    comboBox.classList.add('pop');
+  }
   const lines=rowsToClear.length+colsToClear.length;
   sessionLinesCleared+=lines;
   const ld=$id('lines-display'); if(ld) ld.textContent=sessionLinesCleared;
@@ -3621,6 +3731,7 @@ function checkGameOver() {
   gamesPlayed++;
   localStorage.setItem('bb_games', gamesPlayed);
   if(gamesPlayed === 100) setTimeout(()=>showToast('🌸 BLOSSOM UNLOCKED!'), 2000);
+  checkTurboUnlock();
   recordGameStats(score, sessionLinesCleared, sessionPiecesPlaced);
   deathFlood(() => isDaily ? finishDaily() : finishClassic());
 }
@@ -3819,6 +3930,7 @@ function finishDaily() {
   const dk=todayKey();
   localStorage.setItem('bb_daily_done',dk);
   localStorage.setItem('bb_daily_score',score);
+  localStorage.setItem('bb_daily_score_'+dk, score);
   const yesterday=new Date(); yesterday.setDate(yesterday.getDate()-1);
   const yk=`${yesterday.getFullYear()}-${yesterday.getMonth()+1}-${yesterday.getDate()}`;
   if(lastPlayedDay===yk||lastPlayedDay===dk){ if(lastPlayedDay!==dk) streak++; }
@@ -3994,7 +4106,7 @@ function dismissAdInterstitial() {
 //  TUTORIAL
 // ════════════════════════════════════
 let tutCurrent = 0;
-const TUT_TOTAL = 5;
+const TUT_TOTAL = 7;
 
 function showTutorial() {
   sfxMenu();
@@ -4889,15 +5001,15 @@ const THEMES = [
     emoji:'🩸'
   },
   {
-    id:'wood', name:'WOOD', req:25, reqLabel:'LEVEL 25',
+    id:'wood', name:'WOOD', req:20, reqLabel:'LEVEL 20',
     bg:'#1a0f00', surface:'#2d1a00', surface2:'#3d2400',
     colors:['#8B4513','#A0522D','#CD853F','#DEB887','#D2691E','#8B6914','#C68642'],
     boardBg:'#2d1a00', boardBorder:'rgba(139,69,19,0.5)',
     preview:['#8B4513','#A0522D','#CD853F','#DEB887','#D2691E'],
-    emoji:'🪵'
+    emoji:'🌳'
   },
   {
-    id:'emoji', name:'EMOJI', req:20, reqLabel:'LEVEL 20',
+    id:'emoji', name:'EMOJI', req:'streak30', reqLabel:'30 DAY STREAK',
     bg:'#0d0d1a', surface:'#13132a', surface2:'#1a1a38',
     colors:['#ff6b6b','#ffd93d','#6bcb77','#4d96ff','#ff6bff','#ffb347','#b8f0ff'],
     boardBg:'#13132a', boardBorder:'rgba(255,255,255,0.15)',
@@ -4919,6 +5031,18 @@ const THEMES = [
     boardBg:'#200015', boardBorder:'rgba(255,100,180,0.35)',
     preview:['#ff99bb','#ff66aa','#ffb3cc','#ff4d94','#ffd6e8'],
     emoji:'🌸'
+  },
+  {
+    id:'pastel', name:'CHILL', req:'streak7', reqLabel:'7 DAY STREAK',
+    bg:'#d0d4de', surface:'#bec3cf', surface2:'#acb1be',
+    emoji:'☁️',
+    colors:['#b5d5f5','#f5b5d5','#b5f5d5','#f5e6b5','#d5b5f5','#b5f0e6','#f5c8b5'],
+    boardBg:'#c8ccd8', boardBorder:'rgba(160,170,200,0.5)',
+    preview:['#b5d5f5','#f5b5d5','#b5f5d5','#f5e6b5'],
+    c1:'#b5d5f5', c2:'#f5b5d5', c3:'#b5f5d5', c4:'#f5e6b5', c5:'#d5b5f5', c6:'#b5f0e6', c7:'#f5c8b5',
+    surface:'#e2eaff', surface2:'#d4dcff',
+    glow1:'rgba(181,213,245,0.4)', glow2:'rgba(245,181,213,0.4)', glow3:'rgba(181,245,213,0.4)',
+    glow4:'rgba(245,230,181,0.4)', glow5:'rgba(213,181,245,0.4)',
   },
   {
     id:'rainbow', name:'RAINBOW', req:'score500k', reqLabel:'GET 500,000 SCORE',
@@ -5054,9 +5178,9 @@ function applyTheme(id) {
   root.style.setProperty('--surface', t.surface);
   root.style.setProperty('--surface2', t.surface2);
   // Reset text/muted colors for light themes
-  if(id === 'hologram') {
-    root.style.setProperty('--text', '#0a0820');
-    root.style.setProperty('--muted', '#606090');
+  if(id === 'hologram' || id === 'pastel') {
+    root.style.setProperty('--text', '#4a4a6a');
+    root.style.setProperty('--muted', '#8a8aaa');
   } else {
     root.style.setProperty('--text', '#f0f0ff');
     root.style.setProperty('--muted', '#606080');
@@ -5239,8 +5363,7 @@ function showLevelUpStamp(level) {
     5:  '🆕 NEW BLOCKS UNLOCKED',
     10: '🆕 NEW BLOCKS UNLOCKED',
     15: '🆕 SECRET BLOCK UNLOCKED',
-    20: '🆕 EMOJI THEME UNLOCKED',
-    25: '🆕 WOOD THEME UNLOCKED',
+    20: '🆕 WOOD THEME UNLOCKED',
   };
   const sub = newBlockLevels[level] || '';
 
@@ -5259,6 +5382,38 @@ function showLevelUpStamp(level) {
   }, 2200);
 }
 
+
+
+// ── TURBO TRAY ──
+let turboTrayUnlocked = !!localStorage.getItem('bb_turbo_unlocked');
+let turboTrayActive = localStorage.getItem('bb_turbo_active') === '1';
+const TURBO_TRAY_GAMES = 1000;
+
+function checkTurboUnlock() {
+  if(!turboTrayUnlocked && gamesPlayed >= TURBO_TRAY_GAMES) {
+    turboTrayUnlocked = true;
+    localStorage.setItem('bb_turbo_unlocked', '1');
+    setTimeout(() => showToast('⚡ TURBO TRAY UNLOCKED!'), 2000);
+  }
+  const btn = document.getElementById('turbo-toggle-btn');
+  if(btn) {
+    btn.style.display = turboTrayUnlocked ? '' : 'none';
+    btn.textContent = '⚡ TURBO TRAY: ' + (turboTrayActive ? 'ON' : 'OFF');
+    btn.classList.toggle('active', turboTrayActive);
+  }
+}
+
+function toggleTurboTray() {
+  if(!turboTrayUnlocked) return;
+  turboTrayActive = !turboTrayActive;
+  localStorage.setItem('bb_turbo_active', turboTrayActive ? '1' : '0');
+  sfxMenu();
+  checkTurboUnlock();
+}
+
+function getTraySize() {
+  return (!isDaily && turboTrayActive && turboTrayUnlocked) ? 4 : 3;
+}
 
 function showGloryPopup() {
   const popup = document.createElement('div');
@@ -5306,6 +5461,10 @@ function renderThemeGrid() {
     let unlocked;
     if (theme.req === 0) unlocked = true;
     else if (theme.req === 'lines100') unlocked = !!localStorage.getItem('bb_cleared_100');
+    else if (theme.req === 'score500k') unlocked = !!localStorage.getItem('bb_score500k');
+    else if (theme.req === 'games100') unlocked = !!localStorage.getItem('bb_games100') || gamesPlayed >= 100;
+    else if (theme.req === 'streak7') unlocked = !!localStorage.getItem('bb_streak7') || streak >= 7;
+    else if (theme.req === 'streak30') unlocked = !!localStorage.getItem('bb_streak30') || streak >= 30;
     else unlocked = getLevel() >= theme.req;
     const isActive = activeTheme === theme.id;
     const isNew = unlocked && !seenUnlocks.includes('theme_'+theme.id);
