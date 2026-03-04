@@ -766,8 +766,10 @@ header {
   background:rgba(8,8,16,0.95);
   backdrop-filter:blur(10px);
   z-index:800;
-  flex-direction:column; align-items:center; justify-content:center;
-  gap:16px; padding:30px;
+  flex-direction:column; align-items:center; justify-content:flex-start;
+  gap:16px; padding:30px 30px 40px;
+  overflow-y:auto;
+  padding-top:max(40px, 10vh);
 }
 #daily-complete.show { display:flex; }
 
@@ -2376,7 +2378,7 @@ body.theme-pastel .btn, body.theme-pastel .menu-btn {
     <div class="dc-streak-val">🔥 <span id="dc-streak">0</span> DAYS</div>
   </div>
   <div class="go-btns" style="max-width:280px;width:100%">
-    <button class="btn primary" onclick="goMenu()">MENU</button>
+    <button class="btn primary" onclick="goMenu()" style="min-width:200px;padding:14px">◀ BACK TO MENU</button>
   </div>
 </div>
 
@@ -3310,8 +3312,8 @@ function rngPiece() {
   const pool = playable.length > 0 ? playable : activePieces;
 
   // Score each piece and build a weighted pool
-  // 70% chance to pick from high-scoring pieces, 30% pure random (keeps game fair not too easy)
-  const useSmartPick = rng() < 0.90;
+  // 75% chance to pick from high-scoring pieces, 25% pure random
+  const useSmartPick = rng() < 0.75;
   let shape;
 
   if (useSmartPick) {
@@ -3721,8 +3723,7 @@ function addScore(pts,lines,combo) {
   // Check for level up in real time
   const newLevel = getLevel();
   if(newLevel > oldLevel) {
-    showLevelUpStamp(newLevel);
-    sfxLevelUp();
+    queueStamp(() => { showLevelUpStamp(newLevel); sfxLevelUp(); });
     updateXPBar();
     checkNewUnlocks();
   }
@@ -4640,29 +4641,30 @@ let powerInventory = { laser:0, shatter:0, wildfire:0, bomb:0 };
 let activePower = null; // currently selected power waiting for board tap
 
 function awardPower(lines, combo) {
-  if(lines >= 4 || combo >= 4) {
-    // 60% chance (was 80%)
-    if(Math.random() > 0.60) return;
+  // Combos are more rewarding than multi-line clears
+  if(combo >= 4 || lines >= 4) {
+    const chance = combo >= 4 ? 0.60 : 0.35; // combo 60%, lines-only 35%
+    if(Math.random() > chance) return;
     const roll = Math.random();
     if(roll < 0.35) givePower('bomb');
     else if(roll < 0.65) givePower('wildfire');
     else if(roll < 0.85) givePower('laser');
     else givePower('shatter');
-  } else if(lines >= 3 || combo >= 3) {
-    // 35% chance (was 55%)
-    if(Math.random() > 0.35) return;
+  } else if(combo >= 3 || lines >= 3) {
+    const chance = combo >= 3 ? 0.35 : 0.18; // combo 35%, lines-only 18%
+    if(Math.random() > chance) return;
     const roll = Math.random();
     if(roll < 0.5) givePower('wildfire');
     else if(roll < 0.8) givePower('laser');
     else givePower('shatter');
-  } else if(lines >= 2 || combo >= 2) {
-    // 15% chance (was 25%)
-    if(Math.random() > 0.15) return;
+  } else if(combo >= 2 || lines >= 2) {
+    const chance = combo >= 2 ? 0.15 : 0.07; // combo 15%, lines-only 7%
+    if(Math.random() > chance) return;
     const roll = Math.random();
     if(roll < 0.5) givePower('laser');
     else givePower('shatter');
   } else if(Math.random() < 0.03) {
-    // 3% on single line (was 7%)
+    // 3% on single line
     givePower('laser');
   }
 }
@@ -5159,7 +5161,7 @@ function checkTierStamp() {
   for (const t of thresholds) {
     if (sessionLinesCleared >= t && lastTierShown < t) {
       lastTierShown = t;
-      showTierStamp(TIER_STAMPS[t]);
+      queueStamp(() => showTierStamp(TIER_STAMPS[t]));
       if (t === 100 && !localStorage.getItem('bb_cleared_100')) {
         localStorage.setItem('bb_cleared_100', '1');
         setTimeout(() => showToast('🌌 THE VOID UNLOCKED!'), 2600);
@@ -5408,6 +5410,24 @@ function showLevelUpStamp(level) {
 }
 
 
+
+
+// ── STAMP QUEUE ──
+let _stampQueue = [];
+let _stampRunning = false;
+
+function queueStamp(fn) {
+  _stampQueue.push(fn);
+  if(!_stampRunning) runNextStamp();
+}
+
+function runNextStamp() {
+  if(_stampQueue.length === 0) { _stampRunning = false; return; }
+  _stampRunning = true;
+  const fn = _stampQueue.shift();
+  fn();
+  setTimeout(runNextStamp, 2600);
+}
 
 // ── TURBO TRAY ──
 let turboTrayUnlocked = !!localStorage.getItem('bb_turbo_unlocked');
