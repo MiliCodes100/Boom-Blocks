@@ -1879,6 +1879,8 @@ body.theme-onyx header {
   color:#fff;
   letter-spacing:2px;
   text-shadow:0 0 20px var(--glow2);
+  text-align:center;
+  width:100%;
 }
 
 .levelup-sub {
@@ -2019,6 +2021,17 @@ body.theme-pastel .btn, body.theme-pastel .menu-btn {
   border-color: #ffd60a !important;
   color: #ffd60a !important;
   box-shadow: 0 0 20px rgba(255,214,10,0.3) !important;
+}
+
+
+@keyframes clearBonusIn {
+  0%   { opacity:0; transform:translate(-50%,-50%) scale(0.5); }
+  70%  { opacity:1; transform:translate(-50%,-50%) scale(1.05); }
+  100% { opacity:1; transform:translate(-50%,-50%) scale(1); }
+}
+@keyframes clearBonusOut {
+  0%   { opacity:1; transform:translate(-50%,-50%) scale(1); }
+  100% { opacity:0; transform:translate(-50%,-50%) scale(0.85) translateY(-20px); }
 }
 
 </style>
@@ -2772,8 +2785,8 @@ const COLORS=['var(--c1)','var(--c2)','var(--c3)','var(--c4)','var(--c5)','var(-
 
 // Pieces split by difficulty tier
 // TIER 1: always available (small, easy to place)
+const SINGLE_BLOCK = [[[1]]];
 const PIECES_T1=[
-  [[1]],
   [[1,1]],[[1],[1]],
   [[1,1,1]],[[1],[1],[1]],
   [[1,1],[1,1]],
@@ -2832,16 +2845,16 @@ const PIECES_T3B_L5 =  [DIAMOND_PIECE, MUSHROOM_PIECE]; // level 5+
 const PIECES_T3B_L10 = [FLAG_PIECE, CROWN_PIECE];       // level 10+
 
 function getActivePieces() {
-  let pool = [...PIECES_T1, ...PIECES_T1]; // T1 double weight always
-  if (sessionLinesCleared >= 10) pool = [...pool, ...PIECES_T2];
-  if (sessionLinesCleared >= 10 && getLevel() >= 5)  pool = [...pool, ...PIECES_T2B_L5];
-  if (sessionLinesCleared >= 10 && getLevel() >= 10) pool = [...pool, ...PIECES_T2B_L10];
-  if (sessionLinesCleared >= 30) pool = [...pool, ...PIECES_T3];
-  if (sessionLinesCleared >= 30 && getLevel() >= 5)  pool = [...pool, ...PIECES_T3B_L5];
-  if (sessionLinesCleared >= 30 && getLevel() >= 10) pool = [...pool, ...PIECES_T3B_L10];
-  if (sessionLinesCleared >= 50) pool = [...pool, ...PIECES_T4];
-  if (sessionLinesCleared >= 100 && getLevel() >= 10) pool = [...pool, ...PIECES_T5, ...PIECES_T5];
-  if (getLevel() >= 15) pool = [...pool, ...PIECES_FRAME];
+  let pool = [...PIECES_T1, ...PIECES_T1, ...SINGLE_BLOCK]; // T1 double weight, single block low weight
+  if (sessionLinesCleared >= 6)  pool = [...pool, ...PIECES_T2];
+  if (sessionLinesCleared >= 6  && getLevel() >= 4)  pool = [...pool, ...PIECES_T2B_L5];
+  if (sessionLinesCleared >= 6  && getLevel() >= 8)  pool = [...pool, ...PIECES_T2B_L10];
+  if (sessionLinesCleared >= 20) pool = [...pool, ...PIECES_T3];
+  if (sessionLinesCleared >= 20 && getLevel() >= 4)  pool = [...pool, ...PIECES_T3B_L5];
+  if (sessionLinesCleared >= 20 && getLevel() >= 8)  pool = [...pool, ...PIECES_T3B_L10];
+  if (sessionLinesCleared >= 35) pool = [...pool, ...PIECES_T4];
+  if (sessionLinesCleared >= 70 && getLevel() >= 8)  pool = [...pool, ...PIECES_T5, ...PIECES_T5];
+  if (getLevel() >= 12) pool = [...pool, ...PIECES_FRAME];
 
   return pool;
 }
@@ -3166,7 +3179,11 @@ function initGame() {
   board=Array.from({length:ROWS},()=>Array(COLS).fill(null));
   // Check for glory block BEFORE obstacles are added
   const _gloryRoll = !isDaily && Math.random() < 0.01;
-  if(!isDaily && gamesPlayed>=5 && !_gloryRoll) addStartingObstacles();
+  // Pre-roll insane piece so we know if board needs to be clear
+  const _insaneChance = !isDaily && (getLevel() >= 10 ? 0.75 : getLevel() >= 5 ? 0.5 : 0);
+  const _insaneRoll = _insaneChance > 0 && Math.random() < _insaneChance;
+  // Skip obstacles if glory or insane piece will spawn
+  if(!isDaily && gamesPlayed>=5 && !_gloryRoll && !_insaneRoll) addStartingObstacles();
   renderBoard();
   if (isDaily) {
     const insanePieces = [CURSED_PIECE, CIRCLE_PIECE, LIGHTNING_PIECE, DONUT_PIECE, PLUSPLUS_PIECE, SNAKE_PIECE, PYRAMID_PIECE, COMB_PIECE, CROSS_PIECE, STAIRS_PIECE, PITCHFORK_PIECE, HASHTAG_PIECE, BOWTIE_PIECE, ANCHOR_PIECE, TEETH_PIECE, ZSTACK_PIECE, BLOB_PIECE];
@@ -3183,15 +3200,16 @@ function initGame() {
     // TEMP TEST - force glory block
     // 1% chance of GLORY BLOCK on very first tray (board must be empty)
     if (_gloryRoll) {
-      const gloryColor = COLORS[Math.floor(Math.random() * COLORS.length)];
+      const _gt = THEMES.find(t=>t.id===activeTheme)||THEMES[0];
+      const gloryColor = _gt.colors[Math.floor(Math.random() * _gt.colors.length)];
       pieces[0] = { shape: GLORY_BLOCK, color: gloryColor, hex: gloryColor, isGlory: true };
       setTimeout(() => { showGloryPopup(); sfxGloryBlock(); }, 300);
     } else {
-      const insaneChance = getLevel() >= 10 ? 0.75 : getLevel() >= 5 ? 0.5 : 0;
-      if (insaneChance > 0 && Math.random() < insaneChance) {
+      if (_insaneRoll) {
         const insanePieces = [CURSED_PIECE, CIRCLE_PIECE, LIGHTNING_PIECE, DONUT_PIECE, PLUSPLUS_PIECE, SNAKE_PIECE, PYRAMID_PIECE, COMB_PIECE, CROSS_PIECE, STAIRS_PIECE, PITCHFORK_PIECE, HASHTAG_PIECE, BOWTIE_PIECE, ANCHOR_PIECE, TEETH_PIECE, ZSTACK_PIECE, BLOB_PIECE];
         const pick = insanePieces[Math.floor(Math.random() * insanePieces.length)];
-        const color = COLORS[Math.floor(Math.random() * COLORS.length)];
+        const _theme = THEMES.find(t=>t.id===activeTheme)||THEMES[0];
+        const color = _theme.colors[Math.floor(Math.random() * _theme.colors.length)];
         const slot = Math.floor(Math.random() * 3);
         pieces[slot] = { shape: pick, color, hex: color };
       }
@@ -3650,6 +3668,13 @@ function clearLines() {
     rowsToClear.forEach(r=>{for(let c=0;c<COLS;c++) board[r][c]=null;});
     colsToClear.forEach(c=>{for(let r=0;r<ROWS;r++) board[r][c]=null;});
     renderBoard();
+    // Check for full board clear bonus
+    const boardCleared = board.every(row => row.every(c => c === null));
+    if(boardCleared) {
+      const bonus = 1000;
+      addScore(bonus, 0, 0);
+      showClearBonus();
+    }
   },400);
 }
 
@@ -4616,28 +4641,28 @@ let activePower = null; // currently selected power waiting for board tap
 
 function awardPower(lines, combo) {
   if(lines >= 4 || combo >= 4) {
-    // 80% chance
-    if(Math.random() > 0.80) return;
+    // 60% chance (was 80%)
+    if(Math.random() > 0.60) return;
     const roll = Math.random();
     if(roll < 0.35) givePower('bomb');
     else if(roll < 0.65) givePower('wildfire');
     else if(roll < 0.85) givePower('laser');
     else givePower('shatter');
   } else if(lines >= 3 || combo >= 3) {
-    // 55% chance
-    if(Math.random() > 0.55) return;
+    // 35% chance (was 55%)
+    if(Math.random() > 0.35) return;
     const roll = Math.random();
     if(roll < 0.5) givePower('wildfire');
     else if(roll < 0.8) givePower('laser');
     else givePower('shatter');
   } else if(lines >= 2 || combo >= 2) {
-    // 25% chance
-    if(Math.random() > 0.25) return;
+    // 15% chance (was 25%)
+    if(Math.random() > 0.15) return;
     const roll = Math.random();
     if(roll < 0.5) givePower('laser');
     else givePower('shatter');
-  } else if(Math.random() < 0.07) {
-    // 7% on single line
+  } else if(Math.random() < 0.03) {
+    // 3% on single line (was 7%)
     givePower('laser');
   }
 }
@@ -5413,6 +5438,35 @@ function toggleTurboTray() {
 
 function getTraySize() {
   return (!isDaily && turboTrayActive && turboTrayUnlocked) ? 4 : 3;
+}
+
+
+function showClearBonus() {
+  const messages = ['NICE JOB! ✨', 'CLEAN SWEEP! 🧹', 'FLAWLESS! ⭐', 'BOARD CLEAR! 💥', 'PERFECT! 🎯'];
+  const msg = messages[Math.floor(Math.random() * messages.length)];
+
+  const popup = document.createElement('div');
+  popup.style.cssText = `
+    position:fixed; top:40%; left:50%;
+    transform:translate(-50%,-50%) scale(0.5);
+    background:rgba(8,8,16,0.95);
+    border:2px solid var(--c2);
+    border-radius:12px;
+    padding:16px 24px;
+    display:flex; flex-direction:column; align-items:center; gap:6px;
+    z-index:9998; pointer-events:none; text-align:center;
+    box-shadow:0 0 30px rgba(255,214,10,0.3);
+    animation:clearBonusIn 0.4s cubic-bezier(0.175,0.885,0.32,1.275) forwards;
+  `;
+  popup.innerHTML = `
+    <div style="font-family:'Press Start 2P',monospace;font-size:0.55rem;color:var(--c2);letter-spacing:2px">${msg}</div>
+    <div style="font-family:'Press Start 2P',monospace;font-size:0.4rem;color:var(--c1)">+1,000 BONUS</div>
+  `;
+  document.body.appendChild(popup);
+  setTimeout(() => {
+    popup.style.animation = 'clearBonusOut 0.35s ease-in forwards';
+    setTimeout(() => popup.remove(), 350);
+  }, 1800);
 }
 
 function showGloryPopup() {
