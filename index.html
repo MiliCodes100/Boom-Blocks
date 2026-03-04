@@ -2036,6 +2036,10 @@ body.theme-pastel .btn, body.theme-pastel .menu-btn {
   100% { opacity:0; transform:translate(-50%,-50%) scale(0.85) translateY(-20px); }
 }
 
+
+#music-btn { opacity: 0.4; }
+#music-btn.active { opacity: 1; }
+
 </style>
 <!-- AdMob -->
 <meta name="google-adsense-account" content="ca-app-pub-9829984726595934~6205970481">
@@ -2270,6 +2274,7 @@ body.theme-pastel .btn, body.theme-pastel .menu-btn {
       </div>
     </div>
     <button class="sound-btn" onclick="toggleSound()" id="sound-btn">🔊</button>
+    <button class="sound-btn" onclick="toggleMusic()" id="music-btn">🎵</button>
   </header>
 
   <div class="daily-bar-wrap" id="daily-bar-wrap" style="display:none">
@@ -2492,8 +2497,11 @@ function getAudioCtx() {
 
 // ── Core synth primitives ──
 
+const SFX_VOLUME = 0.4; // master sfx volume multiplier
+
 function note(freq, type, attack, sustain, release, vol, delay=0, freqEnd=null, detune=0) {
   if(!soundOn) return;
+  vol = vol * SFX_VOLUME;
   try {
     const ctx = getAudioCtx();
     const t = ctx.currentTime + delay;
@@ -3129,6 +3137,7 @@ function updateMenuStats() {
 //  GAME START
 // ════════════════════════════════════
 function startClassic() {
+  initMusic();
   sfxMenu(); isDaily=false;
   $id('mode-label').textContent='CLASSIC';
   $id('mode-label').className='mode-label';
@@ -3138,6 +3147,7 @@ function startClassic() {
 }
 
 function startDaily() {
+  initMusic();
   sfxMenu();
   const dk=todayKey();
   if(localStorage.getItem('bb_daily_done')===dk){
@@ -3763,6 +3773,7 @@ function checkGameOver() {
 }
 
 function deathFlood(callback) {
+  fadeMusicOut(2000);
   const cells = document.querySelectorAll('#board .cell');
   const totalCells = ROWS * COLS;
 
@@ -5411,6 +5422,58 @@ function showLevelUpStamp(level) {
 
 
 
+
+
+// ── BACKGROUND MUSIC ──
+let musicEnabled = localStorage.getItem('bb_music') !== '0';
+let bgMusic = null;
+
+function initMusic() {
+  if(bgMusic) return;
+  bgMusic = new Audio('rendezvous.mp3');
+  bgMusic.loop = true;
+  bgMusic.volume = 0.35;
+  updateMusicBtn();
+  if(musicEnabled) bgMusic.play().catch(() => {});
+}
+
+function toggleMusic() {
+  musicEnabled = !musicEnabled;
+  localStorage.setItem('bb_music', musicEnabled ? '1' : '0');
+  if(musicEnabled) {
+    bgMusic.play().catch(() => {});
+  } else {
+    bgMusic.pause();
+  }
+  updateMusicBtn();
+}
+
+function updateMusicBtn() {
+  const btn = document.getElementById('music-btn');
+  if(btn) btn.classList.toggle('active', musicEnabled);
+}
+
+function fadeMusicOut(duration = 2000) {
+  if(!bgMusic || bgMusic.paused) return;
+  const start = bgMusic.volume;
+  const steps = 30;
+  const decrement = start / steps;
+  const interval = duration / steps;
+  const fade = setInterval(() => {
+    if(bgMusic.volume > decrement) {
+      bgMusic.volume -= decrement;
+    } else {
+      bgMusic.volume = 0;
+      bgMusic.pause();
+      clearInterval(fade);
+      // Reset volume for next game
+      setTimeout(() => {
+        bgMusic.volume = 0.35;
+        if(musicEnabled) bgMusic.play().catch(() => {});
+      }, 1500);
+    }
+  }, interval);
+}
 
 // ── STAMP QUEUE ──
 let _stampQueue = [];
