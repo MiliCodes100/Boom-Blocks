@@ -1976,10 +1976,22 @@ body.theme-emoji #board {
   border-color: rgba(255,200,100,0.3) !important;
 }
 
+
+@keyframes gloryPopIn {
+  0%   { opacity:0; transform:translate(-50%,-50%) scale(0.4) rotate(-5deg); }
+  60%  { opacity:1; transform:translate(-50%,-50%) scale(1.05) rotate(1deg); }
+  100% { opacity:1; transform:translate(-50%,-50%) scale(1) rotate(0deg); }
+}
+@keyframes gloryPopOut {
+  0%   { opacity:1; transform:translate(-50%,-50%) scale(1); }
+  100% { opacity:0; transform:translate(-50%,-50%) scale(0.85); }
+}
+
 </style>
 <!-- AdMob -->
 <meta name="google-adsense-account" content="ca-app-pub-9829984726595934~6205970481">
 <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-app-pub-9829984726595934" crossorigin="anonymous"></script>
+  <meta name="google-play-app" content="app-id=com.boomboomblocks.app">
 </head>
 <body>
 
@@ -2588,6 +2600,19 @@ function sfxBombExplode() {
 }
 
 // ── LEVEL UP ──
+
+function sfxGloryBlock() {
+  // Magical shimmering arpeggio + big finale
+  const arp = [523, 659, 784, 1047, 1319, 1568, 2093, 2637];
+  arp.forEach((f, i) => {
+    note(f, 'sine',   0.01, 0.15, 0.3, 0.2, i * 0.07);
+    note(f, 'square', 0.003, 0.08, 0.1, 0.15, i * 0.07);
+  });
+  // Big chime at the end
+  note(2637, 'sine', 0.02, 0.4, 0.6, 0.4, arp.length * 0.07);
+  note(2637 * 1.5, 'sine', 0.01, 0.3, 0.5, 0.3, arp.length * 0.07 + 0.1);
+}
+
 function sfxLevelUp() {
   const fanfare = [523, 659, 784, 1047, 1319];
   fanfare.forEach((f, i) => {
@@ -2689,6 +2714,21 @@ const PIECES_T3=[
 ];
 
 // Build active piece pool based on lines cleared this session
+
+
+// ── TIER 6: THE GLORY BLOCK ──
+// Full 8x8 grid — only appears on first tray when board is empty, 1% chance
+const GLORY_BLOCK = [
+  [1,1,1,1,1,1,1,1],
+  [1,1,1,1,1,1,1,1],
+  [1,1,1,1,1,1,1,1],
+  [1,1,1,1,1,1,1,1],
+  [1,1,1,1,1,1,1,1],
+  [1,1,1,1,1,1,1,1],
+  [1,1,1,1,1,1,1,1],
+  [1,1,1,1,1,1,1,1],
+];
+const PIECES_T6 = [GLORY_BLOCK];
 
 // ── NEW T2 PIECES (level gated) ──
 const PODIUM_PIECE =   [[0,0,1,0,0],[0,1,1,1,0],[1,1,1,1,1]];
@@ -3027,7 +3067,9 @@ function initGame() {
   $id('score').textContent='0';
   const ld=$id('lines-display'); if(ld) ld.textContent='0';
   board=Array.from({length:ROWS},()=>Array(COLS).fill(null));
-  if(!isDaily && gamesPlayed>=5) addStartingObstacles();
+  // Check for glory block BEFORE obstacles are added
+  const _gloryRoll = !isDaily && Math.random() < 0.01;
+  if(!isDaily && gamesPlayed>=5 && !_gloryRoll) addStartingObstacles();
   renderBoard();
   if (isDaily) {
     const insanePieces = [CURSED_PIECE, CIRCLE_PIECE, LIGHTNING_PIECE, DONUT_PIECE, PLUSPLUS_PIECE, SNAKE_PIECE, PYRAMID_PIECE, COMB_PIECE, CROSS_PIECE, STAIRS_PIECE, PITCHFORK_PIECE, HASHTAG_PIECE, BOWTIE_PIECE, ANCHOR_PIECE, TEETH_PIECE, ZSTACK_PIECE, BLOB_PIECE];
@@ -3039,13 +3081,22 @@ function initGame() {
     pieces[slot] = insane;
   } else {
     pieces=[rngPieceEasy(),rngPieceEasy(),rngPieceEasy()];
-    const insaneChance = getLevel() >= 10 ? 0.75 : getLevel() >= 5 ? 0.5 : 0;
-    if (insaneChance > 0 && Math.random() < insaneChance) {
-      const insanePieces = [CURSED_PIECE, CIRCLE_PIECE, LIGHTNING_PIECE, DONUT_PIECE, PLUSPLUS_PIECE, SNAKE_PIECE, PYRAMID_PIECE, COMB_PIECE, CROSS_PIECE, STAIRS_PIECE, PITCHFORK_PIECE, HASHTAG_PIECE, BOWTIE_PIECE, ANCHOR_PIECE, TEETH_PIECE, ZSTACK_PIECE, BLOB_PIECE];
-      const pick = insanePieces[Math.floor(Math.random() * insanePieces.length)];
-      const color = COLORS[Math.floor(Math.random() * COLORS.length)];
-      const slot = Math.floor(Math.random() * 3);
-      pieces[slot] = { shape: pick, color, hex: color };
+
+    // TEMP TEST - force glory block
+    // 1% chance of GLORY BLOCK on very first tray (board must be empty)
+    if (_gloryRoll) {
+      const gloryColor = COLORS[Math.floor(Math.random() * COLORS.length)];
+      pieces[0] = { shape: GLORY_BLOCK, color: gloryColor, hex: gloryColor, isGlory: true };
+      setTimeout(() => { showGloryPopup(); sfxGloryBlock(); }, 300);
+    } else {
+      const insaneChance = getLevel() >= 10 ? 0.75 : getLevel() >= 5 ? 0.5 : 0;
+      if (insaneChance > 0 && Math.random() < insaneChance) {
+        const insanePieces = [CURSED_PIECE, CIRCLE_PIECE, LIGHTNING_PIECE, DONUT_PIECE, PLUSPLUS_PIECE, SNAKE_PIECE, PYRAMID_PIECE, COMB_PIECE, CROSS_PIECE, STAIRS_PIECE, PITCHFORK_PIECE, HASHTAG_PIECE, BOWTIE_PIECE, ANCHOR_PIECE, TEETH_PIECE, ZSTACK_PIECE, BLOB_PIECE];
+        const pick = insanePieces[Math.floor(Math.random() * insanePieces.length)];
+        const color = COLORS[Math.floor(Math.random() * COLORS.length)];
+        const slot = Math.floor(Math.random() * 3);
+        pieces[slot] = { shape: pick, color, hex: color };
+      }
     }
   }
 
@@ -3404,6 +3455,11 @@ function placePiece(piece,startRow,startCol) {
   if(piece.isBomb) {
     placeBombPiece(piece, startRow, startCol);
     return;
+  }
+  // Glory Block special handling
+  if(piece.isGlory) {
+    showToast('✨ GLORY BLOCK! ✨');
+    setTimeout(()=>showToast('🏆 LEGENDARY!'), 700);
   }
   piece.shape.forEach((row,r)=>row.forEach((val,c)=>{
     if(val) board[startRow+r][startCol+c]=piece.color;
@@ -3869,12 +3925,32 @@ function shouldShowAd() {
   return gamesPlayed % AD_EVERY_N_GAMES === 0;
 }
 
+
+// ── AD CONFIGURATION ──
+const ADMOB_APP_ID = 'ca-app-pub-9829984726595934~6205970481';
+const ADMOB_UNIT_ID = 'ca-app-pub-9829984726595934/4948729132';
+const isAndroidApp = /; wv\)/.test(navigator.userAgent) || typeof window.Android !== 'undefined';
+
 function showAdInterstitial(callback) {
-  // Skip ad if AdSense not loaded or shouldn't show
-  if(!shouldShowAd() || typeof adsbygoogle === 'undefined') {
-    callback();
+  if(!shouldShowAd()) { callback(); return; }
+
+  if(isAndroidApp) {
+    // ── AdMob path (Android WebView) ──
+    try {
+      if(window.AdMob) {
+        window.AdMob.showInterstitial();
+        // AdMob fires a callback via Android bridge; fall through after short delay
+        setTimeout(callback, 1500);
+      } else {
+        // AdMob bridge not ready — skip ad
+        callback();
+      }
+    } catch(e) { callback(); }
     return;
   }
+
+  // ── AdSense path (web browser) ──
+  if(typeof adsbygoogle === 'undefined') { callback(); return; }
 
   adCallback = callback;
   const overlay = document.getElementById('ad-interstitial');
@@ -3884,12 +3960,10 @@ function showAdInterstitial(callback) {
 
   overlay.style.display = 'flex';
 
-  // Push the ad
   try {
     (adsbygoogle = window.adsbygoogle || []).push({});
   } catch(e) {}
 
-  // Countdown from 5
   let secs = 5;
   countdown.textContent = 'CONTINUE IN ' + secs + '...';
   adCountdownTimer = setInterval(() => {
@@ -5052,6 +5126,7 @@ const ALL_PIECES_DEX = [
   ...PIECES_T4.map((s,i) => ({ id:'t4_'+i, shape:s, tier:4 })),
   ...PIECES_T5.map((s,i) => ({ id:'t5_'+i, shape:s, tier:5 })),
   ...PIECES_FRAME.map((s,i) => ({ id:'tf_'+i, shape:s, tier:5 })),
+  ...PIECES_T6.map((s,i) => ({ id:'t6_'+i, shape:s, tier:6 })),
 ];
 
 // Deduplicate by shape fingerprint
@@ -5088,33 +5163,60 @@ function renderBlockDex() {
   grid.innerHTML = '';
   let seenCount = 0;
 
-  const tierColors = { 1:'#0af5ff', 2:'#ffd60a', 3:'#ff6030', 4:'#ff2d55', 5:'#bf5af2' };
+  const tierColors = { 1:'#0af5ff', 2:'#ffd60a', 3:'#ff6030', 4:'#ff2d55', 5:'#bf5af2', 6:'#ffd700' };
+  const tierNames  = { 1:'COMMON', 2:'UNCOMMON', 3:'RARE', 4:'EPIC', 5:'NIGHTMARE', 6:'LEGENDARY' };
 
+  // Group pieces by tier
+  const tiers = {};
   PIECE_DEX.forEach(p => {
-    const key = p.shape.map(r=>r.join('')).join('|');
-    const isSeen = seenKeys.has(key);
-    if (isSeen) seenCount++;
+    if (!tiers[p.tier]) tiers[p.tier] = [];
+    tiers[p.tier].push(p);
+  });
 
-    const card = document.createElement('div');
-    card.className = 'blockdex-card ' + (isSeen ? 'seen' : 'unseen');
+  Object.keys(tiers).sort((a,b)=>a-b).forEach(tier => {
+    const color = tierColors[tier];
+    const name  = tierNames[tier] || 'TIER ' + tier;
 
-    if (isSeen) {
-      const color = tierColors[p.tier];
-      const cols = p.shape[0].length;
-      const cellSize = Math.min(8, Math.floor(36 / Math.max(cols, p.shape.length)));
-      let pieceHtml = `<div class="blockdex-piece" style="grid-template-columns:repeat(${cols},1fr);gap:2px">`;
-      p.shape.forEach(row => {
-        row.forEach(cell => {
-          pieceHtml += `<div class="blockdex-cell${cell?'':' off'}" style="width:${cellSize}px;height:${cellSize}px;background:${cell?color:'transparent'};box-shadow:${cell?'0 0 4px '+color:'none'}"></div>`;
+    // Section header
+    const header = document.createElement('div');
+    header.style.cssText = `
+      width:100%; grid-column:1/-1;
+      font-family:'Press Start 2P',monospace;
+      font-size:0.45rem; color:${color};
+      letter-spacing:2px; padding:10px 4px 4px;
+      border-bottom:1px solid ${color}44;
+      text-shadow:0 0 8px ${color};
+      margin-top:6px;
+    `;
+    header.textContent = name;
+    grid.appendChild(header);
+
+    // Pieces in this tier
+    tiers[tier].forEach(p => {
+      const key = p.shape.map(r=>r.join('')).join('|');
+      const isSeen = seenKeys.has(key);
+      if (isSeen) seenCount++;
+
+      const card = document.createElement('div');
+      card.className = 'blockdex-card ' + (isSeen ? 'seen' : 'unseen');
+
+      if (isSeen) {
+        const cols = p.shape[0].length;
+        const cellSize = Math.min(8, Math.floor(36 / Math.max(cols, p.shape.length)));
+        let pieceHtml = `<div class="blockdex-piece" style="grid-template-columns:repeat(${cols},1fr);gap:2px">`;
+        p.shape.forEach(row => {
+          row.forEach(cell => {
+            pieceHtml += `<div class="blockdex-cell${cell?'':' off'}" style="width:${cellSize}px;height:${cellSize}px;background:${cell?color:'transparent'};box-shadow:${cell?'0 0 4px '+color:'none'}"></div>`;
+          });
         });
-      });
-      pieceHtml += '</div>';
-      card.innerHTML = pieceHtml + `<div class="blockdex-count" style="color:${color}">T${p.tier}</div>`;
-    } else {
-      card.innerHTML = '<div style="font-family:\'Press Start 2P\',monospace;font-size:0.6rem;color:rgba(255,255,255,0.2)">?</div>';
-    }
+        pieceHtml += '</div>';
+        card.innerHTML = pieceHtml;
+      } else {
+        card.innerHTML = '<div style="font-family:\'Press Start 2P\',monospace;font-size:0.6rem;color:rgba(255,255,255,0.2)">?</div>';
+      }
 
-    grid.appendChild(card);
+      grid.appendChild(card);
+    });
   });
 
   const countEl = $id('blockdex-count');
@@ -5122,6 +5224,7 @@ function renderBlockDex() {
   if (countEl) countEl.textContent = seenCount;
   if (totalEl) totalEl.textContent = PIECE_DEX.length;
 }
+
 
 function showBlockDex() {
   sfxMenu();
@@ -5153,6 +5256,35 @@ function showLevelUpStamp(level) {
     stamp.classList.add('out');
     setTimeout(() => stamp.remove(), 350);
   }, 2200);
+}
+
+
+function showGloryPopup() {
+  const popup = document.createElement('div');
+  popup.style.cssText = `
+    position:fixed; top:50%; left:50%;
+    transform:translate(-50%,-50%) scale(0.5);
+    background:rgba(8,8,16,0.96);
+    border:2px solid gold;
+    border-radius:16px;
+    padding:24px 28px;
+    display:flex; flex-direction:column; align-items:center; gap:10px;
+    z-index:9999; pointer-events:none; text-align:center;
+    box-shadow:0 0 40px rgba(255,215,0,0.4);
+    animation:gloryPopIn 0.5s cubic-bezier(0.175,0.885,0.32,1.275) forwards;
+  `;
+  popup.innerHTML = `
+    <div style="font-size:2rem">✨</div>
+    <div style="font-family:'Press Start 2P',monospace;font-size:0.55rem;color:gold;letter-spacing:2px;line-height:1.8;text-shadow:0 0 12px gold">
+      YOU'RE ONE OF THE<br>LUCKY 1% TO FIND<br>THE GLORY BLOCK!
+    </div>
+    <div style="font-size:1.5rem">🏆</div>
+  `;
+  document.body.appendChild(popup);
+  setTimeout(() => {
+    popup.style.animation = 'gloryPopOut 0.4s ease-in forwards';
+    setTimeout(() => popup.remove(), 400);
+  }, 3500);
 }
 
 function showUnlocks() {
