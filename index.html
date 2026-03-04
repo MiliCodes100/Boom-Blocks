@@ -1992,12 +1992,12 @@ body.theme-emoji #board {
 }
 
 
-#combo-box { transition: opacity 0.3s; }
-#combo-box.pop { animation: comboPop 0.25s ease; }
-@keyframes comboPop {
-  0%   { transform: scale(1); }
-  50%  { transform: scale(1.4); }
-  100% { transform: scale(1); }
+#combo-popup { transition: opacity 0.3s; }
+#combo-popup.pop { animation: comboBoardPop 0.3s cubic-bezier(0.175,0.885,0.32,1.275); }
+@keyframes comboBoardPop {
+  0%   { transform: translate(-50%,-50%) scale(0.5); opacity:0; }
+  60%  { transform: translate(-50%,-50%) scale(1.15); opacity:1; }
+  100% { transform: translate(-50%,-50%) scale(1); opacity:1; }
 }
 
 
@@ -2268,10 +2268,7 @@ body.theme-pastel .btn, body.theme-pastel .menu-btn {
         <div class="score-label">LINES</div>
         <div class="score-val" id="lines-display">0</div>
       </div>
-      <div class="score-box" id="combo-box" style="display:none">
-        <div class="score-label" style="color:#ff6030">COMBO</div>
-        <div class="score-val" id="combo-display" style="color:#ff6030">x1</div>
-      </div>
+
     </div>
     <button class="sound-btn" onclick="toggleSound()" id="sound-btn">🔊</button>
     <button class="sound-btn" onclick="toggleMusic()" id="music-btn">🎵</button>
@@ -2283,7 +2280,24 @@ body.theme-pastel .btn, body.theme-pastel .menu-btn {
   <div id="yesterday-banner" style="display:none;text-align:center;font-family:'Press Start 2P',monospace;font-size:0.38rem;color:var(--muted);padding:4px 0;letter-spacing:1px"></div>
 
   <div class="board-wrap">
-    <div id="board"></div>
+    
+<div id="combo-popup" style="
+  display:none;
+  position:absolute;
+  top:50%;
+  left:50%;
+  transform:translate(-50%,-50%) scale(0.5);
+  font-family:'Press Start 2P',monospace;
+  font-size:clamp(1rem,6vw,1.6rem);
+  color:#ff6030;
+  text-shadow:0 0 20px rgba(255,96,48,0.8), 0 0 40px rgba(255,96,48,0.4);
+  pointer-events:none;
+  z-index:50;
+  white-space:nowrap;
+  letter-spacing:2px;
+">x1</div>
+
+<div id="board" style="position:relative"></div>
   </div>
 
   <div class="powerup-bar" id="powerup-bar">
@@ -2336,6 +2350,8 @@ body.theme-pastel .btn, body.theme-pastel .menu-btn {
   <div class="unlock-section-label">🎨 THEMES — LEVEL UP TO UNLOCK</div>
   <div class="unlock-grid" id="theme-grid"></div>
 
+  <div class="unlock-section-label" style="margin-top:12px">🎵 MUSIC — UNLOCK NEW TRACKS</div>
+  <div id="music-unlock-section" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;width:100%"></div>
 
 </div>
 
@@ -2492,10 +2508,25 @@ let soundOn = localStorage.getItem('bb_sound') !== 'off';
 
 function getAudioCtx() {
   if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  // Browsers auto-suspend AudioContext - resume it whenever we need it
+  if (audioCtx.state === 'suspended') audioCtx.resume();
   return audioCtx;
 }
 
 // ── Core synth primitives ──
+
+
+// Resume AudioContext on any user tap (required by browser autoplay policy)
+document.addEventListener('touchstart', () => {
+  if(audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+}, { passive: true });
+document.addEventListener('click', () => {
+  if(audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+}, { passive: true });
+// Also resume when page becomes visible again
+document.addEventListener('visibilitychange', () => {
+  if(!document.hidden && audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+});
 
 const SFX_VOLUME = 0.4; // master sfx volume multiplier
 
@@ -3126,6 +3157,10 @@ function closeOverlays() {
 
 function updateMenuStats() {
   checkTurboUnlock();
+  checkMusicUnlocks();
+  // Sync sound button state
+  const sb = $id('sound-btn');
+  if(sb) sb.textContent = soundOn ? '🔊' : '🔇';
   $id('menu-best').textContent=best.toLocaleString();
   $id('menu-streak').textContent=streak;
   $id('menu-games').textContent=gamesPlayed;
@@ -3209,7 +3244,6 @@ function initGame() {
     const traySize = getTraySize();
     pieces = Array.from({length: traySize}, () => rngPieceEasy());
 
-    // TEMP TEST - force glory block
     // 1% chance of GLORY BLOCK on very first tray (board must be empty)
     if (_gloryRoll) {
       const _gt = THEMES.find(t=>t.id===activeTheme)||THEMES[0];
@@ -3622,14 +3656,15 @@ function clearLines() {
   }
 
   consecutiveClearCount++;
-  const comboBox = $id('combo-box');
-  const comboDisp = $id('combo-display');
-  if(comboBox && comboDisp) {
-    comboBox.style.display = 'block';
-    comboDisp.textContent = 'x' + consecutiveClearCount;
-    comboBox.classList.remove('pop');
-    void comboBox.offsetWidth;
-    comboBox.classList.add('pop');
+  const comboPopup = $id('combo-popup');
+  if(comboPopup) {
+    comboPopup.style.display = 'block';
+    comboPopup.textContent = 'x' + consecutiveClearCount;
+    comboPopup.classList.remove('pop');
+    void comboPopup.offsetWidth;
+    comboPopup.classList.add('pop');
+    clearTimeout(comboPopup._hideTimer);
+    comboPopup._hideTimer = setTimeout(() => { comboPopup.style.display = 'none'; }, 1200);
   }
   const lines=rowsToClear.length+colsToClear.length;
   sessionLinesCleared+=lines;
@@ -3698,9 +3733,13 @@ function addScore(pts,lines,combo) {
     best=score;
     localStorage.setItem('bb_best',best);
   }
+  if(score>=250000 && !localStorage.getItem('bb_music_vibe')) {
+    localStorage.setItem('bb_music_vibe','1');
+    setTimeout(()=>showToast('🔥 VIBE UNLOCKED!'), 600);
+  }
   if(score>=500000 && !localStorage.getItem('bb_score500k')) {
     localStorage.setItem('bb_score500k','1');
-    setTimeout(()=>showToast('🌈 RAINBOW UNLOCKED!'), 600);
+    setTimeout(()=>showToast('🌈 RAINBOW UNLOCKED!'), 1200);
   }
   incStat('total_score', pts);
 
@@ -3766,8 +3805,13 @@ function checkGameOver() {
   sfxGameOver(); hapticGameOver();
   gamesPlayed++;
   localStorage.setItem('bb_games', gamesPlayed);
+  if(gamesPlayed === 25 && !localStorage.getItem('bb_music_chill')) {
+    localStorage.setItem('bb_music_chill','1');
+    setTimeout(()=>showToast('☁️ CHILL UNLOCKED!'), 2000);
+  }
   if(gamesPlayed === 100) setTimeout(()=>showToast('🌸 BLOSSOM UNLOCKED!'), 2000);
   checkTurboUnlock();
+  checkMusicUnlocks();
   recordGameStats(score, sessionLinesCleared, sessionPiecesPlaced);
   deathFlood(() => isDaily ? finishDaily() : finishClassic());
 }
@@ -5430,7 +5474,8 @@ let bgMusic = null;
 
 function initMusic() {
   if(bgMusic) return;
-  bgMusic = new Audio('rendezvous.mp3');
+  const track = MUSIC_TRACKS.find(t => t.id === activeTrackId) || MUSIC_TRACKS[0];
+  bgMusic = new Audio(track.file);
   bgMusic.loop = true;
   bgMusic.volume = 0.35;
   updateMusicBtn();
@@ -5475,6 +5520,90 @@ function fadeMusicOut(duration = 2000) {
   }, interval);
 }
 
+
+// ── MUSIC TRACKS ──
+const MUSIC_TRACKS = [
+  {
+    id: 'rendezvous',
+    name: 'RENDEZVOUS',
+    file: 'rendezvous.mp3',
+    req: null,
+    reqLabel: 'DEFAULT',
+    emoji: '🎵',
+    unlockKey: null,
+  },
+  {
+    id: 'chill',
+    name: 'CHILL',
+    file: 'Chill.mp3',
+    req: 'games25',
+    reqLabel: 'PLAY 25 GAMES',
+    emoji: '☁️',
+    unlockKey: 'bb_music_chill',
+  },
+  {
+    id: 'distant-star',
+    name: 'DISTANT STAR',
+    file: 'distant-star.mp3',
+    req: 'level15',
+    reqLabel: 'REACH LEVEL 15',
+    emoji: '⭐',
+    unlockKey: 'bb_music_distant',
+  },
+  {
+    id: 'lover',
+    name: 'LOVER',
+    file: 'Lover.mp3',
+    req: 'streak14',
+    reqLabel: '14 DAY STREAK',
+    emoji: '💜',
+    unlockKey: 'bb_music_lover',
+  },
+  {
+    id: 'vibe',
+    name: 'VIBE',
+    file: 'Vibe_.mp3',
+    req: 'score250k',
+    reqLabel: 'GET 250,000 SCORE',
+    emoji: '🔥',
+    unlockKey: 'bb_music_vibe',
+  },
+];
+
+let activeTrackId = localStorage.getItem('bb_active_track') || 'rendezvous';
+
+function isTrackUnlocked(track) {
+  if(!track.req) return true;
+  if(track.req === 'games25') return gamesPlayed >= 25 || !!localStorage.getItem(track.unlockKey);
+  if(track.req === 'level15') return getLevel() >= 15 || !!localStorage.getItem(track.unlockKey);
+  if(track.req === 'streak14') return streak >= 14 || !!localStorage.getItem(track.unlockKey);
+  if(track.req === 'score250k') return best >= 250000 || !!localStorage.getItem(track.unlockKey);
+  return false;
+}
+
+function checkMusicUnlocks() {
+  MUSIC_TRACKS.forEach(track => {
+    if(!track.unlockKey) return;
+    if(isTrackUnlocked(track) && !localStorage.getItem(track.unlockKey)) {
+      localStorage.setItem(track.unlockKey, '1');
+      setTimeout(() => showToast(track.emoji + ' ' + track.name + ' UNLOCKED!'), 2200);
+    }
+  });
+}
+
+function setActiveTrack(id) {
+  activeTrackId = id;
+  localStorage.setItem('bb_active_track', id);
+  const track = MUSIC_TRACKS.find(t => t.id === id);
+  if(bgMusic && track) {
+    const wasPlaying = !bgMusic.paused;
+    bgMusic.src = track.file;
+    bgMusic.load();
+    if(wasPlaying && musicEnabled) bgMusic.play().catch(() => {});
+  }
+  renderMusicSection();
+}
+
 // ── STAMP QUEUE ──
 let _stampQueue = [];
 let _stampRunning = false;
@@ -5517,6 +5646,7 @@ function toggleTurboTray() {
   localStorage.setItem('bb_turbo_active', turboTrayActive ? '1' : '0');
   sfxMenu();
   checkTurboUnlock();
+  checkMusicUnlocks();
 }
 
 function getTraySize() {
@@ -5552,6 +5682,26 @@ function showClearBonus() {
   }, 1800);
 }
 
+
+function renderMusicSection() {
+  const container = document.getElementById('music-unlock-section');
+  if(!container) return;
+  container.innerHTML = '';
+  MUSIC_TRACKS.forEach(track => {
+    const unlocked = isTrackUnlocked(track);
+    const isActive = activeTrackId === track.id;
+    const card = document.createElement('div');
+    card.className = 'unlock-card music-card' + (unlocked ? ' unlocked' : ' locked') + (isActive ? ' active-theme' : '');
+    card.innerHTML = `
+      <div style="font-size:1.8rem;margin-bottom:6px">${track.emoji}</div>
+      <div style="font-family:'Press Start 2P',monospace;font-size:0.4rem;color:${unlocked ? 'var(--c2)' : 'var(--muted)'};letter-spacing:1px;text-align:center;margin-bottom:4px">${track.name}</div>
+      <div style="font-family:'Press Start 2P',monospace;font-size:0.3rem;color:var(--muted);text-align:center">${unlocked ? (isActive ? '♪ NOW PLAYING' : 'TAP TO PLAY') : '🔒 ' + track.reqLabel}</div>
+    `;
+    if(unlocked) card.onclick = () => { sfxMenu(); setActiveTrack(track.id); };
+    container.appendChild(card);
+  });
+}
+
 function showGloryPopup() {
   const popup = document.createElement('div');
   popup.style.cssText = `
@@ -5581,6 +5731,7 @@ function showGloryPopup() {
 }
 
 function showUnlocks() {
+  renderMusicSection();
   sfxMenu();
   renderUnlockScreen();
   showScreen('unlocks-screen');
