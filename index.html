@@ -3770,6 +3770,7 @@ function finishDaily() {
   localStorage.setItem('bb_streak',streak);
   localStorage.setItem('bb_last_day',dk);
   if(score>dailyBest){ dailyBest=score; localStorage.setItem('bb_daily_best',dailyBest); }
+  if(score>best){ best=score; localStorage.setItem('bb_best',best); }
   showAdInterstitial(() => {
     $id('dc-score').textContent=score.toLocaleString();
     $id('dc-streak').textContent=streak;
