@@ -739,6 +739,10 @@ header {
   font-size:0.7rem;
   letter-spacing:2px;
   cursor:pointer;
+  text-align:center;
+  display:flex;
+  align-items:center;
+  justify-content:center;
   transition:transform 0.08s;
   text-transform:uppercase;
 }
@@ -2040,6 +2044,27 @@ body.theme-pastel .btn, body.theme-pastel .menu-btn {
 #music-btn { opacity: 0.4; }
 #music-btn.active { opacity: 1; }
 
+
+.btn.ad-retry {
+  background: rgba(255,214,10,0.12);
+  border: 2px solid #ffd60a;
+  color: #ffd60a;
+  font-size: 0.42rem;
+  letter-spacing: 1px;
+  padding: 12px;
+  box-shadow: 0 0 15px rgba(255,214,10,0.2);
+}
+.btn.ad-retry:active { transform: scale(0.97); }
+
+
+#banner-ad-container {
+  flex-shrink: 0;
+}
+/* Ensure game screen scrolls properly with banner */
+#game-screen {
+  padding-bottom: 4px;
+}
+
 </style>
 <!-- AdMob -->
 <meta name="google-adsense-account" content="ca-app-pub-9829984726595934~6205970481">
@@ -2320,6 +2345,16 @@ body.theme-pastel .btn, body.theme-pastel .menu-btn {
   </div>
   <div class="tray" id="tray"></div>
   <div class="hint-text" id="hint-text">HOLD + DRAG TO PLACE</div>
+
+  <!-- Banner Ad -->
+  <div id="banner-ad-container" style="width:100%;max-width:320px;min-height:50px;margin:4px auto 0;display:flex;align-items:center;justify-content:center;">
+    <ins class="adsbygoogle"
+      style="display:inline-block;width:320px;height:50px"
+      data-ad-client="ca-pub-9829984726595934"
+      data-ad-slot="4948729132"
+      data-ad-format="banner"
+      data-full-width-responsive="false"></ins>
+  </div>
 </div>
 
 <div id="lb-screen" class="screen">
@@ -2353,6 +2388,10 @@ body.theme-pastel .btn, body.theme-pastel .menu-btn {
   <div class="unlock-section-label" style="margin-top:12px">🎵 MUSIC — UNLOCK NEW TRACKS</div>
   <div id="music-unlock-section" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;width:100%"></div>
 
+  <div class="unlock-section-label" style="margin-top:12px">🎮 GAMEPLAY — SPECIAL MODES</div>
+  <div style="width:100%;height:1px;background:rgba(255,255,255,0.08);margin-bottom:4px"></div>
+  <div id="gameplay-unlock-section" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;width:100%"></div>
+
 </div>
 
 <div id="blockdex-screen" class="screen">
@@ -2385,8 +2424,11 @@ body.theme-pastel .btn, body.theme-pastel .menu-btn {
   <div class="go-new-best" id="new-best-label">★ NEW BEST! ★</div>
   <div class="go-stats" id="go-stats"></div>
   <div class="go-btns" id="go-btns">
-    <button class="btn primary" onclick="restartGame()">▶ PLAY AGAIN</button>
-    <button class="btn secondary" onclick="goMenu()">MENU</button>
+    <div style="display:flex;gap:8px;width:100%">
+      <button class="btn primary" onclick="restartGame()" style="flex:1">▶ PLAY AGAIN</button>
+      <button class="btn secondary" onclick="goMenu()" style="flex:1">⬡ MENU</button>
+    </div>
+    <button class="btn ad-retry" id="ad-retry-btn" onclick="adRetry()" style="display:none;width:100%">📺 WATCH AD TO CONTINUE</button>
   </div>
 </div>
 
@@ -3217,6 +3259,14 @@ function restartGame() {
 }
 
 function initGame() {
+  adRetryUsed = 0;
+  // Init banner ad
+  try {
+    const isAndroidApp = /; wv\)/.test(navigator.userAgent) || typeof window.Android !== 'undefined';
+    if(!isAndroidApp) {
+      (adsbygoogle = window.adsbygoogle || []).push({});
+    }
+  } catch(e) {}
   score=0; consecutiveClearCount=0;
   resetPowers();
   clearPowerHintTimer();
@@ -3901,6 +3951,14 @@ function countUp(el, target, duration) {
 }
 
 function showGameOverSequence(finalScore, isNew) {
+  // Show ad retry button only in classic mode with retries remaining
+  const retryBtn = $id('ad-retry-btn');
+  if(retryBtn) {
+    const canRetry = !isDaily && adRetryUsed < MAX_AD_RETRIES;
+    retryBtn.style.display = canRetry ? '' : 'none';
+    retryBtn.textContent = '📺 WATCH AD TO CONTINUE (' + (MAX_AD_RETRIES - adRetryUsed) + ' LEFT)';
+    retryBtn.disabled = false;
+  }
   const go = $id('gameover');
   if(!go) return;
 
@@ -5604,6 +5662,11 @@ function setActiveTrack(id) {
   renderMusicSection();
 }
 
+
+// ── AD RETRY ──
+let adRetryUsed = 0;
+const MAX_AD_RETRIES = 2;
+
 // ── STAMP QUEUE ──
 let _stampQueue = [];
 let _stampRunning = false;
@@ -5683,6 +5746,25 @@ function showClearBonus() {
 }
 
 
+
+function renderGameplaySection() {
+  const container = document.getElementById('gameplay-unlock-section');
+  if(!container) return;
+  const unlocked = turboTrayUnlocked;
+  const isActive = turboTrayActive;
+  container.innerHTML = '';
+
+  const card = document.createElement('div');
+  card.className = 'unlock-card' + (unlocked ? ' unlocked' : ' locked') + (isActive ? ' active-theme' : '');
+  card.innerHTML = `
+    <div style="font-size:1.8rem;margin-bottom:6px">⚡</div>
+    <div style="font-family:'Press Start 2P',monospace;font-size:0.4rem;color:${unlocked ? '#ffd60a' : 'var(--muted)'};letter-spacing:1px;text-align:center;margin-bottom:4px">TURBO TRAY</div>
+    <div style="font-family:'Press Start 2P',monospace;font-size:0.3rem;color:var(--muted);text-align:center">${unlocked ? (isActive ? '✅ ACTIVE' : 'TAP TO TOGGLE') : '🔒 PLAY 1,000 GAMES'}</div>
+  `;
+  if(unlocked) card.onclick = () => { toggleTurboTray(); renderGameplaySection(); };
+  container.appendChild(card);
+}
+
 function renderMusicSection() {
   const container = document.getElementById('music-unlock-section');
   if(!container) return;
@@ -5701,6 +5783,60 @@ function renderMusicSection() {
     container.appendChild(card);
   });
 }
+
+
+function adRetry() {
+  if(adRetryUsed >= MAX_AD_RETRIES || isDaily) return;
+
+  // Check if AdMob is available (Android WebView)
+  const isAndroidApp = /; wv\)/.test(navigator.userAgent) || typeof window.Android !== 'undefined';
+
+  if(isAndroidApp && window.Android && window.Android.showRewardedAd) {
+    // Native AdMob rewarded ad
+    const btn = $id('ad-retry-btn');
+    if(btn) { btn.textContent = '⏳ LOADING AD...'; btn.disabled = true; }
+    // Failsafe — if ad doesn't load in 8s, re-enable button
+    window._adRetryFailsafe = setTimeout(() => {
+      const b = $id('ad-retry-btn');
+      if(b && b.disabled) {
+        b.textContent = '📺 WATCH AD TO CONTINUE (' + (MAX_AD_RETRIES - adRetryUsed) + ' LEFT)';
+        b.disabled = false;
+        showToast('⚠️ AD FAILED TO LOAD. TRY AGAIN.');
+      }
+    }, 8000);
+    window.Android.showRewardedAd('retry');
+  } else {
+    // Web fallback — simulate ad with a short delay
+    const btn = $id('ad-retry-btn');
+    if(btn) { btn.textContent = '⏳ LOADING AD...'; btn.disabled = true; }
+    setTimeout(() => grantAdRetry(), 1500);
+  }
+}
+
+function grantAdRetry() {
+  // Clear failsafe timer if it's running
+  if(window._adRetryFailsafe) { clearTimeout(window._adRetryFailsafe); window._adRetryFailsafe = null; }
+  adRetryUsed++;
+  const remaining = MAX_AD_RETRIES - adRetryUsed;
+
+  // Hide game over overlay
+  const go = $id('gameover');
+  if(go) go.classList.remove('show');
+
+  // Give new pieces
+  const traySize = getTraySize();
+  pieces = Array.from({length: traySize}, () => rngPiece());
+  gameOver = false;
+  renderTray();
+  renderBoard();
+
+  showToast(remaining > 0 ? `✅ GOOD LUCK! (${remaining} RETRY LEFT)` : '✅ GOOD LUCK! (LAST RETRY)');
+}
+
+// Called from Android native when rewarded ad completes
+window.onAdRewarded = function(type) {
+  if(type === 'retry') grantAdRetry();
+};
 
 function showGloryPopup() {
   const popup = document.createElement('div');
@@ -5732,6 +5868,7 @@ function showGloryPopup() {
 
 function showUnlocks() {
   renderMusicSection();
+  renderGameplaySection();
   sfxMenu();
   renderUnlockScreen();
   showScreen('unlocks-screen');
