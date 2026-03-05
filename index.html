@@ -2425,7 +2425,7 @@ body.theme-pastel .btn, body.theme-pastel .menu-btn {
   <div class="go-stats" id="go-stats"></div>
   <div class="go-btns" id="go-btns">
     <div style="display:flex;gap:8px;width:100%">
-      <button class="btn primary" onclick="restartGame()" style="flex:1">▶ PLAY AGAIN</button>
+      <button class="btn primary" onclick="restartGame()" style="flex:1">PLAY AGAIN</button>
       <button class="btn secondary" onclick="goMenu()" style="flex:1">⬡ MENU</button>
     </div>
     <button class="btn ad-retry" id="ad-retry-btn" onclick="adRetry()" style="display:none;width:100%">📺 WATCH AD TO CONTINUE</button>
@@ -2443,6 +2443,29 @@ body.theme-pastel .btn, body.theme-pastel .menu-btn {
   <div class="go-btns" style="max-width:280px;width:100%">
     <button class="btn primary" onclick="goMenu()" style="min-width:200px;padding:14px">◀ BACK TO MENU</button>
   </div>
+</div>
+
+
+<div id="watch-ad-overlay" style="
+  display:none;
+  position:fixed;inset:0;
+  background:rgba(8,8,16,0.93);
+  backdrop-filter:blur(8px);
+  z-index:850;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:16px;
+">
+  <div style="font-family:'Press Start 2P',monospace;font-size:0.55rem;color:var(--muted);letter-spacing:2px">GAME OVER</div>
+  <div style="font-size:3rem">📺</div>
+  <div style="font-family:'Press Start 2P',monospace;font-size:0.65rem;color:#ffd60a;letter-spacing:2px;text-align:center;line-height:1.8">WATCH AD TO<br>SUPPORT THE GAME</div>
+  <div id="watch-ad-timer" style="font-family:'Press Start 2P',monospace;font-size:1.5rem;color:var(--c1);text-shadow:0 0 20px var(--glow1)">5</div>
+  <button id="watch-ad-skip" onclick="skipWatchAd()" style="
+    font-family:'Press Start 2P',monospace;font-size:0.38rem;
+    color:var(--muted);background:none;border:1px solid rgba(255,255,255,0.1);
+    border-radius:4px;padding:8px 16px;cursor:pointer;letter-spacing:1px;
+  ">SKIP</button>
 </div>
 
 <div id="name-modal">
@@ -2873,6 +2896,11 @@ const PIECES_T1=[
   [[1,1]],[[1],[1]],
   [[1,1,1]],[[1],[1],[1]],
   [[1,1],[1,1]],
+  // 3-cell corner pieces (all 4 rotations)
+  [[1,0],[1,1]],  // top-left corner
+  [[0,1],[1,1]],  // top-right corner
+  [[1,1],[1,0]],  // bottom-left corner
+  [[1,1],[0,1]],  // bottom-right corner
 ];
 // TIER 2: unlocks after 10 lines cleared (medium pieces)
 const PIECES_T2=[
@@ -3673,9 +3701,11 @@ function placePiece(piece,startRow,startCol) {
     showToast('✨ GLORY BLOCK! ✨');
     setTimeout(()=>showToast('🏆 LEGENDARY!'), 700);
   }
+  let cellCount = 0;
   piece.shape.forEach((row,r)=>row.forEach((val,c)=>{
-    if(val) board[startRow+r][startCol+c]=piece.color;
+    if(val) { board[startRow+r][startCol+c]=piece.color; cellCount++; }
   }));
+  if(cellCount > 0) addScore(cellCount * 5, 0, 0);
   renderBoard();
   clearLines();
 }
@@ -3863,7 +3893,7 @@ function checkGameOver() {
   checkTurboUnlock();
   checkMusicUnlocks();
   recordGameStats(score, sessionLinesCleared, sessionPiecesPlaced);
-  deathFlood(() => isDaily ? finishDaily() : finishClassic());
+  deathFlood(() => isDaily ? finishDaily() : showWatchAdOverlay(finishClassic));
 }
 
 function deathFlood(callback) {
@@ -5837,6 +5867,47 @@ function grantAdRetry() {
 window.onAdRewarded = function(type) {
   if(type === 'retry') grantAdRetry();
 };
+
+
+function showWatchAdOverlay(callback) {
+  if(isDaily) { callback(); return; } // skip for daily
+  const overlay = $id('watch-ad-overlay');
+  if(!overlay) { callback(); return; }
+  overlay.style.display = 'flex';
+  let count = 5;
+  const timerEl = $id('watch-ad-timer');
+
+  // Try to show an interstitial ad behind the overlay
+  try {
+    const isAndroidApp = /; wv\)/.test(navigator.userAgent) || typeof window.Android !== 'undefined';
+    if(!isAndroidApp) (adsbygoogle = window.adsbygoogle || []).push({});
+  } catch(e) {}
+
+  const interval = setInterval(() => {
+    count--;
+    if(timerEl) timerEl.textContent = count;
+    if(count <= 0) {
+      clearInterval(interval);
+      closeWatchAdOverlay(callback);
+    }
+  }, 1000);
+
+  overlay._interval = interval;
+  overlay._callback = callback;
+}
+
+function skipWatchAd() {
+  const overlay = $id('watch-ad-overlay');
+  if(!overlay) return;
+  if(overlay._interval) clearInterval(overlay._interval);
+  closeWatchAdOverlay(overlay._callback);
+}
+
+function closeWatchAdOverlay(callback) {
+  const overlay = $id('watch-ad-overlay');
+  if(overlay) overlay.style.display = 'none';
+  if(callback) callback();
+}
 
 function showGloryPopup() {
   const popup = document.createElement('div');
