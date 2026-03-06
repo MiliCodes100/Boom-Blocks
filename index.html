@@ -770,10 +770,9 @@ header {
   background:rgba(8,8,16,0.95);
   backdrop-filter:blur(10px);
   z-index:800;
-  flex-direction:column; align-items:center; justify-content:flex-start;
+  flex-direction:column; align-items:center; justify-content:center;
   gap:16px; padding:30px 30px 40px;
   overflow-y:auto;
-  padding-top:max(40px, 10vh);
 }
 #daily-complete.show { display:flex; }
 
@@ -2440,11 +2439,37 @@ body.theme-pastel .btn, body.theme-pastel .menu-btn {
     <div class="dc-streak-label">CURRENT STREAK</div>
     <div class="dc-streak-val">🔥 <span id="dc-streak">0</span> DAYS</div>
   </div>
-  <div class="go-btns" style="max-width:280px;width:100%">
-    <button class="btn primary" onclick="goMenu()" style="min-width:200px;padding:14px">◀ BACK TO MENU</button>
+  <div style="max-width:280px;width:100%;margin-top:8px">
+    <button class="btn primary" onclick="goMenu()" style="min-width:220px;padding:16px;font-size:0.6rem">◀ MENU</button>
   </div>
 </div>
 
+
+
+<div id="power-reminder" style="
+  position:fixed;
+  bottom:90px;
+  left:50%;
+  transform:translateX(-50%) translateY(20px);
+  background:rgba(255,159,10,0.15);
+  border:1px solid rgba(255,159,10,0.5);
+  border-radius:8px;
+  padding:8px 14px;
+  font-family:'Press Start 2P',monospace;
+  font-size:0.32rem;
+  color:#ff9f0a;
+  text-align:center;
+  letter-spacing:1px;
+  line-height:1.8;
+  pointer-events:none;
+  z-index:200;
+  opacity:0;
+  transition:opacity 0.3s, transform 0.3s;
+  white-space:nowrap;
+">⚡ YOU HAVE POWER-UPS!<br>TRY USING THEM</div>
+<style>
+#power-reminder.show { opacity:1; transform:translateX(-50%) translateY(0); }
+</style>
 
 <div id="watch-ad-overlay" style="
   display:none;
@@ -3260,7 +3285,6 @@ function startDaily() {
     return;
   }
   isDaily=true;
-  rng=seededRng(todaySeed());
   $id('mode-label').textContent='★ DAILY';
   $id('mode-label').className='mode-label daily-mode';
   const dbw2=$id('daily-bar-wrap'); if(dbw2) dbw2.style.display='';
@@ -3288,13 +3312,16 @@ function restartGame() {
 
 function initGame() {
   adRetryUsed = 0;
-  // Init banner ad
-  try {
-    const isAndroidApp = /; wv\)/.test(navigator.userAgent) || typeof window.Android !== 'undefined';
-    if(!isAndroidApp) {
-      (adsbygoogle = window.adsbygoogle || []).push({});
-    }
-  } catch(e) {}
+  // Init banner ad (only once)
+  if(!window._bannerAdInited) {
+    try {
+      const isAndroidApp = /; wv\)/.test(navigator.userAgent) || typeof window.Android !== 'undefined';
+      if(!isAndroidApp) {
+        (adsbygoogle = window.adsbygoogle || []).push({});
+        window._bannerAdInited = true;
+      }
+    } catch(e) {}
+  }
   score=0; consecutiveClearCount=0;
   resetPowers();
   clearPowerHintTimer();
@@ -3310,13 +3337,26 @@ function initGame() {
   // Skip obstacles if glory or insane piece will spawn
   if(!isDaily && gamesPlayed>=5 && !_gloryRoll && !_insaneRoll) addStartingObstacles();
   renderBoard();
+  // Reset seeded rng right before pieces are generated (ensures consistent daily)
+  if (isDaily) rng = seededRng(todaySeed());
+
   if (isDaily) {
-    const insanePieces = [CURSED_PIECE, CIRCLE_PIECE, LIGHTNING_PIECE, DONUT_PIECE, PLUSPLUS_PIECE, SNAKE_PIECE, PYRAMID_PIECE, COMB_PIECE, CROSS_PIECE, STAIRS_PIECE, PITCHFORK_PIECE, HASHTAG_PIECE, BOWTIE_PIECE, ANCHOR_PIECE, TEETH_PIECE, ZSTACK_PIECE, BLOB_PIECE];
+    const insanePieces = [CURSED_PIECE, CIRCLE_PIECE, LIGHTNING_PIECE, DONUT_PIECE, PLUSPLUS_PIECE, SNAKE_PIECE, PYRAMID_PIECE, COMB_PIECE, CROSS_PIECE, PITCHFORK_PIECE, HASHTAG_PIECE, BOWTIE_PIECE, ANCHOR_PIECE, TEETH_PIECE, ZSTACK_PIECE, BLOB_PIECE];
+    // STAIRS: level 20+ only, 10% chance it replaces the normal pick
+    if(getLevel() >= 20 && Math.random() < 0.10) insanePieces.splice(0, insanePieces.length, STAIRS_PIECE);
+    // Use fixed arcade palette for daily so seed is theme-independent
+    const _dailyPalette = THEMES[0].colors;
     const pick = insanePieces[Math.floor(rng() * insanePieces.length)];
-    const colors = getActivePieces().map(s => COLORS[Math.floor(rng()*COLORS.length)]);
-    const insane = { shape: pick, color: colors[0], hex: colors[0] };
     const slot = Math.floor(rng() * 3);
-    pieces = [rngPieceEasy(), rngPieceEasy(), rngPieceEasy()];
+    const insaneColor = _dailyPalette[Math.floor(rng() * _dailyPalette.length)];
+    const insane = { shape: pick, color: insaneColor, hex: insaneColor };
+    // Generate other pieces using fixed palette for consistent seeding
+    const _makeDaily = () => {
+      const shape = EASY_PIECES[Math.floor(rng() * EASY_PIECES.length)];
+      const color = _dailyPalette[Math.floor(rng() * _dailyPalette.length)];
+      return { shape, color, hex: color };
+    };
+    pieces = [_makeDaily(), _makeDaily(), _makeDaily()];
     pieces[slot] = insane;
   } else {
     const traySize = getTraySize();
@@ -3330,7 +3370,9 @@ function initGame() {
       setTimeout(() => { showGloryPopup(); sfxGloryBlock(); }, 300);
     } else {
       if (_insaneRoll) {
-        const insanePieces = [CURSED_PIECE, CIRCLE_PIECE, LIGHTNING_PIECE, DONUT_PIECE, PLUSPLUS_PIECE, SNAKE_PIECE, PYRAMID_PIECE, COMB_PIECE, CROSS_PIECE, STAIRS_PIECE, PITCHFORK_PIECE, HASHTAG_PIECE, BOWTIE_PIECE, ANCHOR_PIECE, TEETH_PIECE, ZSTACK_PIECE, BLOB_PIECE];
+        const insanePieces = [CURSED_PIECE, CIRCLE_PIECE, LIGHTNING_PIECE, DONUT_PIECE, PLUSPLUS_PIECE, SNAKE_PIECE, PYRAMID_PIECE, COMB_PIECE, CROSS_PIECE, PITCHFORK_PIECE, HASHTAG_PIECE, BOWTIE_PIECE, ANCHOR_PIECE, TEETH_PIECE, ZSTACK_PIECE, BLOB_PIECE];
+    // STAIRS: level 20+ only, 10% chance it replaces the normal pick
+    if(getLevel() >= 20 && Math.random() < 0.10) insanePieces.splice(0, insanePieces.length, STAIRS_PIECE);
         const pick = insanePieces[Math.floor(Math.random() * insanePieces.length)];
         const _theme = THEMES.find(t=>t.id===activeTheme)||THEMES[0];
         const color = _theme.colors[Math.floor(Math.random() * _theme.colors.length)];
@@ -3691,6 +3733,17 @@ function placePiece(piece,startRow,startCol) {
   if(slots[dragSlot]) slots[dragSlot].classList.remove('dragging-source');
   sessionPiecesPlaced++;
   if(dragPiece) markPieceSeen(dragPiece.shape);
+  // Powerup reminder check
+  const _hasPower = Object.values(powerInventory).some(v => v > 0);
+  if(_hasPower && !_powerRemindShown) {
+    _movesSincePowerup++;
+    if(_movesSincePowerup >= 10) {
+      _powerRemindShown = true;
+      showPowerReminder();
+    }
+  } else if(!_hasPower) {
+    _movesSincePowerup = 0; // reset if they use a powerup
+  }
   resetPowerHintTimer();
   if(piece.isBomb) {
     placeBombPiece(piece, startRow, startCol);
@@ -4781,6 +4834,8 @@ const POWERS = {
 };
 
 let powerInventory = { laser:0, shatter:0, wildfire:0, bomb:0 };
+let _movesSincePowerup = 0;   // moves placed since player first got a powerup
+let _powerRemindShown = false; // only show once per game
 let activePower = null; // currently selected power waiting for board tap
 
 function awardPower(lines, combo) {
@@ -5066,6 +5121,8 @@ function usePower(type) {
   powerInventory[type] = Math.max(0, powerInventory[type] - 1);
   cancelPower();
   clearPowerHintTimer();
+  _movesSincePowerup = 0; // reset counter when they actually use one
+  _powerRemindShown = false; // allow reminder again after use
 }
 
 function flashPower(color) {
@@ -5079,6 +5136,8 @@ function flashPower(color) {
 function resetPowers() {
   powerInventory = { laser:0, shatter:0, wildfire:0, bomb:0 };
   activePower = null;
+  _movesSincePowerup = 0;
+  _powerRemindShown = false;
   updatePowerUI();
   clearBoardSelectMode();
 }
@@ -5228,7 +5287,7 @@ const THEMES = [
 
 // XP / Level system
 // Level thresholds based on cumulative total score
-const XP_THRESHOLDS = [0,10000,30000,60000,100000,180000,300000,500000,750000,1000000,1500000,2000000,3000000,5000000];
+const XP_THRESHOLDS = [0,13000,38000,75000,125000,180000,300000,500000,750000,1000000,1500000,2000000,3000000,5000000];
 
 let activeTheme   = localStorage.getItem('bb_theme')   || 'arcade';
 let seenUnlocks   = JSON.parse(localStorage.getItem('bb_seen_unlocks') || '[]');
@@ -5907,6 +5966,15 @@ function closeWatchAdOverlay(callback) {
   const overlay = $id('watch-ad-overlay');
   if(overlay) overlay.style.display = 'none';
   if(callback) callback();
+}
+
+
+function showPowerReminder() {
+  const popup = document.getElementById('power-reminder');
+  if(!popup) return;
+  popup.classList.add('show');
+  clearTimeout(popup._timer);
+  popup._timer = setTimeout(() => popup.classList.remove('show'), 3000);
 }
 
 function showGloryPopup() {
