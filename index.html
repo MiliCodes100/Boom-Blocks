@@ -3221,9 +3221,13 @@ function todayKey() {
 }
 
 function todaySeed() {
-  const k=todayKey(); let h=5381;
-  for(let i=0;i<k.length;i++) h=(h*33^k.charCodeAt(i))&0x7fffffff;
-  return h;
+  const k=todayKey();
+  let h=0x811c9dc5;
+  for(let i=0;i<k.length;i++){
+    h^=k.charCodeAt(i);
+    h=(h*0x01000193)&0xffffffff;
+  }
+  return h>>>0;
 }
 
 // ════════════════════════════════════
@@ -3343,7 +3347,7 @@ function initGame() {
   if (isDaily) {
     const insanePieces = [CURSED_PIECE, CIRCLE_PIECE, LIGHTNING_PIECE, DONUT_PIECE, PLUSPLUS_PIECE, SNAKE_PIECE, PYRAMID_PIECE, COMB_PIECE, CROSS_PIECE, PITCHFORK_PIECE, HASHTAG_PIECE, BOWTIE_PIECE, ANCHOR_PIECE, TEETH_PIECE, ZSTACK_PIECE, BLOB_PIECE];
     // STAIRS: level 20+ only, 10% chance it replaces the normal pick
-    if(getLevel() >= 20 && Math.random() < 0.10) insanePieces.splice(0, insanePieces.length, STAIRS_PIECE);
+    if(getLevel() >= 20 && rng() < 0.10) insanePieces.splice(0, insanePieces.length, STAIRS_PIECE);
     // Use fixed arcade palette for daily so seed is theme-independent
     const _dailyPalette = THEMES[0].colors;
     const pick = insanePieces[Math.floor(rng() * insanePieces.length)];
@@ -3372,7 +3376,7 @@ function initGame() {
       if (_insaneRoll) {
         const insanePieces = [CURSED_PIECE, CIRCLE_PIECE, LIGHTNING_PIECE, DONUT_PIECE, PLUSPLUS_PIECE, SNAKE_PIECE, PYRAMID_PIECE, COMB_PIECE, CROSS_PIECE, PITCHFORK_PIECE, HASHTAG_PIECE, BOWTIE_PIECE, ANCHOR_PIECE, TEETH_PIECE, ZSTACK_PIECE, BLOB_PIECE];
     // STAIRS: level 20+ only, 10% chance it replaces the normal pick
-    if(getLevel() >= 20 && Math.random() < 0.10) insanePieces.splice(0, insanePieces.length, STAIRS_PIECE);
+    if(getLevel() >= 20 && rng() < 0.10) insanePieces.splice(0, insanePieces.length, STAIRS_PIECE);
         const pick = insanePieces[Math.floor(Math.random() * insanePieces.length)];
         const _theme = THEMES.find(t=>t.id===activeTheme)||THEMES[0];
         const color = _theme.colors[Math.floor(Math.random() * _theme.colors.length)];
@@ -4160,6 +4164,11 @@ function finishDaily() {
   lastPlayedDay=dk;
   localStorage.setItem('bb_streak',streak);
   localStorage.setItem('bb_last_day',dk);
+  // LOVER unlock trigger (14 day streak)
+  if(streak >= 14 && !localStorage.getItem('bb_music_lover')) {
+    localStorage.setItem('bb_music_lover', '1');
+    setTimeout(() => showToast('💜 LOVER UNLOCKED!'), 2000);
+  }
   if(score>dailyBest){ dailyBest=score; localStorage.setItem('bb_daily_best',dailyBest); }
   if(score>best){ best=score; localStorage.setItem('bb_best',best); }
   showAdInterstitial(() => {
@@ -5346,6 +5355,11 @@ function checkNewUnlocks() {
   if(newOnes.length) {
     localStorage.setItem('bb_seen_unlocks', JSON.stringify(seenUnlocks));
     setTimeout(() => { showToast('🔓 UNLOCKED: ' + newOnes[0]); sfxUnlock(); }, 600);
+  }
+  // DISTANT STAR unlock trigger (level 15)
+  if(getLevel() >= 15 && !localStorage.getItem('bb_music_distant')) {
+    localStorage.setItem('bb_music_distant', '1');
+    setTimeout(() => showToast('⭐ DISTANT STAR UNLOCKED!'), 2400);
   }
 }
 
