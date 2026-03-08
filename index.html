@@ -5,7 +5,7 @@
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>BOOM BOOM BLOCKS</title>
-<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Orbitron:wght@400;700;900&family=Courgette&family=Audiowide&family=Almendra:wght@700&family=UnifrakturMaguntia&display=swap" rel="stylesheet">
 <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -1610,6 +1610,48 @@ header {
 
 /* ══ WILD THEMES ══ */
 
+/* CRT — phosphor green/amber scanlines */
+body.theme-crt {
+  --bg: #0a0a00;
+  --surface: #111100;
+  --surface2: #1a1a00;
+}
+body.theme-crt #app {
+  background: #0a0a00 !important;
+}
+body.theme-crt #board {
+  box-shadow: 0 0 20px rgba(51,255,0,0.3), 0 0 60px rgba(51,255,0,0.1) !important;
+  image-rendering: pixelated;
+}
+body.theme-crt #game-area::after {
+  content: '';
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0,0,0,0.18) 2px,
+    rgba(0,0,0,0.18) 4px
+  );
+  pointer-events: none;
+  z-index: 9999;
+}
+body.theme-crt .cell.filled {
+  box-shadow: 0 0 6px currentColor, 0 0 2px currentColor !important;
+  border-radius: 1px !important;
+}
+body.theme-crt * {
+  font-family: 'Courier New', monospace !important;
+  letter-spacing: 0.05em;
+  text-shadow: 0 0 8px currentColor;
+}
+body.theme-crt .menu-btn, body.theme-crt button {
+  text-shadow: 0 0 10px currentColor !important;
+  border-color: #33ff00 !important;
+  color: #33ff00 !important;
+}
+
 /* NEON CITY — hot pink/electric blue city grid */
 body.theme-neon-city {
   --bg: #0a0014;
@@ -1913,6 +1955,51 @@ body.theme-bloodmoon {
   --text: #ffcccc;
   --muted: #993333;
 }
+body.theme-bloodmoon * {
+  font-family: 'Almendra', serif !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.05em;
+}
+body.theme-bloodmoon .logo-boom,
+body.theme-bloodmoon .logo-blocks {
+  color: #cc0000 !important;
+  text-shadow: 0 0 20px rgba(200,0,0,0.7), 0 0 40px rgba(150,0,0,0.4) !important;
+}
+body.theme-bloodmoon .menu-btn.primary {
+  background: #cc0000 !important;
+  border-color: #cc0000 !important;
+  color: #000 !important;
+  box-shadow: 0 0 20px rgba(204,0,0,0.5) !important;
+}
+body.theme-bloodmoon .menu-btn.daily {
+  background: #990000 !important;
+  border-color: #990000 !important;
+  color: #000 !important;
+  box-shadow: 0 0 20px rgba(153,0,0,0.4) !important;
+}
+body.theme-bloodmoon .menu-btn.ghost {
+  background: transparent !important;
+}
+body.theme-bloodmoon .menu-btn.ghost:nth-of-type(3) {
+  background: #ff1a1a !important; border-color: #ff1a1a !important; color: #000 !important;
+  box-shadow: 0 0 15px rgba(255,26,26,0.3) !important;
+}
+body.theme-bloodmoon .menu-btn.ghost:nth-of-type(4) {
+  background: #e60000 !important; border-color: #e60000 !important; color: #000 !important;
+  box-shadow: 0 0 15px rgba(230,0,0,0.3) !important;
+}
+body.theme-bloodmoon .menu-btn.ghost:nth-of-type(5) {
+  background: #b30000 !important; border-color: #b30000 !important; color: #000 !important;
+  box-shadow: 0 0 15px rgba(179,0,0,0.3) !important;
+}
+body.theme-bloodmoon .menu-btn.ghost:nth-of-type(6) {
+  background: #ff4d4d !important; border-color: #ff4d4d !important; color: #000 !important;
+  box-shadow: 0 0 15px rgba(255,77,77,0.3) !important;
+}
+body.theme-bloodmoon .menu-btn.ghost:nth-of-type(7) {
+  background: #800000 !important; border-color: #800000 !important; color: #000 !important;
+  box-shadow: 0 0 15px rgba(128,0,0,0.3) !important;
+}
 body.theme-bloodmoon #board {
   box-shadow: 0 0 40px rgba(200,0,0,0.2), inset 0 0 30px rgba(100,0,0,0.4) !important;
   border-color: rgba(200,0,0,0.3) !important;
@@ -1958,6 +2045,70 @@ body.theme-blossom {
   --text: #ffe0ee;
   --muted: #cc6699;
 }
+body.theme-blossom * {
+  font-family: 'Courgette', cursive !important;
+  letter-spacing: 0.02em;
+}
+/* Main menu buttons — each a different shade of pink */
+body.theme-blossom .logo-boom {
+  color: #ff4d94 !important;
+  text-shadow: 0 0 20px rgba(255,77,148,0.6), 0 0 40px rgba(255,77,148,0.3) !important;
+}
+body.theme-blossom .logo-blocks {
+  color: #ffb3d1 !important;
+  text-shadow: 0 0 20px rgba(255,179,209,0.6), 0 0 40px rgba(255,100,180,0.3) !important;
+}
+body.theme-blossom .menu-btn.primary {
+  background: #ff4d94 !important;
+  border-color: #ff4d94 !important;
+  color: #fff !important;
+  box-shadow: 0 0 20px rgba(255,77,148,0.5) !important;
+}
+body.theme-blossom .menu-btn.daily {
+  background: #ff80b3 !important;
+  border-color: #ff80b3 !important;
+  color: #fff !important;
+  box-shadow: 0 0 20px rgba(255,128,179,0.4) !important;
+}
+body.theme-blossom .menu-btn.ghost {
+  background: transparent !important;
+}
+body.theme-blossom .menu-btn.ghost:nth-of-type(3) {
+  border-color: #e91e8c !important; color: #e91e8c !important;
+  box-shadow: 0 0 15px rgba(233,30,140,0.2) !important;
+}
+body.theme-blossom .menu-btn.ghost:nth-of-type(4) {
+  border-color: #ff66aa !important; color: #ff66aa !important;
+  box-shadow: 0 0 15px rgba(255,102,170,0.2) !important;
+}
+body.theme-blossom .menu-btn.ghost:nth-of-type(5) {
+  border-color: #ffb3d1 !important; color: #ffb3d1 !important;
+  box-shadow: 0 0 15px rgba(255,179,209,0.2) !important;
+}
+body.theme-blossom .menu-btn.ghost:nth-of-type(6) {
+  border-color: #cc3377 !important; color: #cc3377 !important;
+  box-shadow: 0 0 15px rgba(204,51,119,0.2) !important;
+}
+body.theme-blossom .menu-btn.ghost:nth-of-type(7) {
+  border-color: #ff99cc !important; color: #ff99cc !important;
+  box-shadow: 0 0 15px rgba(255,153,204,0.2) !important;
+}
+/* Numbers — all pinks */
+body.theme-blossom .stat-val,
+body.theme-blossom .score-val,
+body.theme-blossom .go-stat-val,
+body.theme-blossom .dc-streak-val,
+body.theme-blossom #xp-level,
+body.theme-blossom #xp-label,
+body.theme-blossom #score,
+body.theme-blossom #lines-display {
+  color: #ff4d94 !important;
+  text-shadow: 0 0 10px rgba(255,77,148,0.4) !important;
+}
+body.theme-blossom .go-stat-val.highlight {
+  color: #ff80b3 !important;
+  text-shadow: 0 0 12px rgba(255,128,179,0.5) !important;
+}
 body.theme-blossom #board {
   box-shadow: 0 0 30px rgba(255,100,180,0.2), inset 0 0 20px rgba(150,0,80,0.3) !important;
   border-color: rgba(255,100,180,0.3) !important;
@@ -1967,8 +2118,41 @@ body.theme-blossom .cell.filled {
   border-radius: 3px;
 }
 
+/* LIQUID GLASS — frosted iOS-style */
+body.theme-liquidglass {
+  --text: #2a3a5a;
+  --muted: #6a7a9a;
+}
+body.theme-liquidglass #board {
+  background: rgba(220,240,255,0.35) !important;
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+  border: 1px solid rgba(255,255,255,0.7) !important;
+  box-shadow: 0 8px 32px rgba(100,160,255,0.2), inset 0 1px 0 rgba(255,255,255,0.8) !important;
+}
+body.theme-liquidglass #game-area,
+body.theme-liquidglass .panel,
+body.theme-liquidglass .piece-slot {
+  background: rgba(255,255,255,0.35) !important;
+  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
+  border: 1px solid rgba(255,255,255,0.6) !important;
+  box-shadow: 0 4px 16px rgba(100,160,255,0.15), inset 0 1px 0 rgba(255,255,255,0.7) !important;
+}
+body.theme-liquidglass .cell.filled {
+  border: 1px solid rgba(255,255,255,0.8) !important;
+  border-radius: 6px !important;
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+}
+
 
 /* VOID — deep purple glow */
+body.theme-void * {
+  font-family: 'Audiowide', sans-serif !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.08em;
+}
 body.theme-void #board {
   box-shadow: 0 0 40px rgba(191,90,242,0.2), inset 0 0 30px rgba(100,0,150,0.3) !important;
   border-color: rgba(191,90,242,0.3) !important;
@@ -2109,7 +2293,6 @@ body.theme-pastel .btn, body.theme-pastel .menu-btn {
 
   <div class="xp-bar-wrap"><div class="xp-bar-label"><span>LEVEL <span id="xp-level">1</span></span><span id="xp-label">0 / 500 XP</span></div><div class="xp-bar-bg"><div class="xp-bar-fill" id="xp-bar" style="width:0%"></div></div></div>
   <button class="menu-btn primary" onclick="startClassic()">▶ PLAY</button>
-  <button class="menu-btn ghost" id="turbo-toggle-btn" onclick="toggleTurboTray()" style="display:none;border-color:#ffd60a;color:#ffd60a;box-shadow:0 0 15px rgba(255,214,10,0.15)">⚡ TURBO TRAY: OFF</button>
   <button class="menu-btn daily" onclick="startDaily()">
     ★ DAILY CHALLENGE
     <span class="daily-done-tag" id="daily-badge">TODAY</span>
@@ -3524,8 +3707,17 @@ function renderBoard() {
     const cell=document.createElement('div');
     cell.className='cell'+(board[r][c]?' filled':'');
     if(board[r][c]){
+      const isGlass = (THEMES.find(t=>t.id===activeTheme)||{}).glassStyle;
       cell.style.background=board[r][c];
-      cell.style.boxShadow=`0 0 6px ${board[r][c]}, inset 0 0 3px rgba(255,255,255,0.1)`;
+      if(isGlass){
+        cell.style.backdropFilter='blur(12px)';
+        cell.style.webkitBackdropFilter='blur(12px)';
+        cell.style.border='1px solid rgba(255,255,255,0.7)';
+        cell.style.boxShadow=`0 4px 16px ${board[r][c]}, inset 0 1px 0 rgba(255,255,255,0.8), inset 0 -1px 0 rgba(0,0,0,0.05)`;
+        cell.style.borderRadius='6px';
+      } else {
+        cell.style.boxShadow=`0 0 6px ${board[r][c]}, inset 0 0 3px rgba(255,255,255,0.1)`;
+      }
       const em = getEmojiForColor(board[r][c]);
       if (em) {
         cell.style.display = 'flex';
@@ -5158,6 +5350,7 @@ function resetPowers() {
 // ════════════════════════════════════
 
 const THEMES = [
+  // ── DEFAULT ──
   {
     id:'arcade', name:'ARCADE', req:0, reqLabel:'DEFAULT',
     bg:'#080810', surface:'#0e0e1e', surface2:'#141428',
@@ -5166,8 +5359,9 @@ const THEMES = [
     preview:['#ff2d55','#ffd60a','#30d158','#0af5ff','#bf5af2'],
     emoji:'🎮'
   },
+  // ── LEVEL UNLOCKS ──
   {
-    id:'neon-city', name:'NEON CITY', req:2, reqLabel:'LEVEL 2',
+    id:'neon-city', name:'NEON CITY', req:3, reqLabel:'LEVEL 3',
     bg:'#0a0014', surface:'#12001f', surface2:'#1a0030',
     colors:['#ff00c8','#00eeff','#ff0090','#00ffcc','#cc00ff','#ff4dff','#00ccff'],
     boardBg:'#12001f', boardBorder:'rgba(255,0,200,0.3)',
@@ -5175,7 +5369,7 @@ const THEMES = [
     emoji:'🌃'
   },
   {
-    id:'toxic', name:'TOXIC', req:3, reqLabel:'LEVEL 3',
+    id:'toxic', name:'TOXIC', req:4, reqLabel:'LEVEL 4',
     bg:'#010d01', surface:'#041504', surface2:'#082008',
     colors:['#00ff41','#39ff14','#7fff00','#adff2f','#00e600','#33ff33','#b3ff00'],
     boardBg:'#041504', boardBorder:'rgba(0,255,65,0.3)',
@@ -5183,7 +5377,7 @@ const THEMES = [
     emoji:'☢️'
   },
   {
-    id:'candy', name:'CANDY', req:4, reqLabel:'LEVEL 4',
+    id:'candy', name:'CANDY', req:5, reqLabel:'LEVEL 5',
     bg:'#1a0520', surface:'#220a2a', surface2:'#2e1038',
     colors:['#ff99cc','#ffaaff','#aaffee','#ffffaa','#ffccaa','#ccaaff','#aaffcc'],
     boardBg:'#220a2a', boardBorder:'rgba(255,153,204,0.3)',
@@ -5191,7 +5385,7 @@ const THEMES = [
     emoji:'🍬'
   },
   {
-    id:'lava', name:'LAVA', req:5, reqLabel:'LEVEL 5',
+    id:'lava', name:'LAVA', req:6, reqLabel:'LEVEL 6',
     bg:'#0f0000', surface:'#1a0300', surface2:'#250500',
     colors:['#ff3c00','#ff6a00','#ff9500','#ffb700','#ff4500','#e63900','#ff2200'],
     boardBg:'#1a0300', boardBorder:'rgba(255,60,0,0.35)',
@@ -5220,24 +5414,26 @@ const THEMES = [
     colors:['#ffffff','#cc00ff','#ff00ff','#aa00ff','#ee00ee','#ff44ff','#dd00dd'],
     boardBg:'#050005', boardBorder:'rgba(200,0,255,0.4)',
     preview:['#ffffff','#cc00ff','#ff00ff','#aa00ff','#ee00ee'],
-    emoji:'🌌'
-  },
-
-  {
-    id:'ice', name:'ICE', req:10, reqLabel:'LEVEL 10',
-    bg:'#000d1f', surface:'#001428', surface2:'#001e38',
-    colors:['#96deff','#b8ecff','#70c8ff','#d4f4ff','#50b0ff','#aae0ff','#c8f0ff'],
-    boardBg:'#001428', boardBorder:'rgba(150,220,255,0.25)',
-    preview:['#96deff','#b8ecff','#70c8ff','#d4f4ff','#50b0ff'],
-    emoji:'❄️'
+    emoji:'🌌',
+    font: "'Audiowide', sans-serif"
   },
   {
-    id:'bloodmoon', name:'BLOOD MOON', req:15, reqLabel:'LEVEL 15',
+    id:'crt', name:'CRT', req:10, reqLabel:'LEVEL 10',
+    bg:'#0a0a00', surface:'#111100', surface2:'#1a1a00',
+    colors:['#33ff00','#ffb000','#ff6600','#00ffcc','#ccff00','#ff9900','#aaff33'],
+    boardBg:'#0d0d00', boardBorder:'rgba(51,255,0,0.25)',
+    preview:['#33ff00','#ffb000','#ff6600','#00ffcc','#ccff00'],
+    emoji:'📺',
+    crtStyle: true
+  },
+  {
+    id:'bloodmoon', name:'BLOOD MOON', req:1, reqLabel:'LEVEL 1',
     bg:'#0d0000', surface:'#1a0000', surface2:'#240000',
     colors:['#cc0000','#990000','#ff1a1a','#800000','#e60000','#b30000','#ff3333'],
     boardBg:'#110000', boardBorder:'rgba(200,0,0,0.4)',
     preview:['#cc0000','#990000','#ff1a1a','#800000','#e60000'],
-    emoji:'🩸'
+    emoji:'🩸',
+    font: "'Almendra', serif"
   },
   {
     id:'wood', name:'WOOD', req:20, reqLabel:'LEVEL 20',
@@ -5248,6 +5444,32 @@ const THEMES = [
     emoji:'🌳'
   },
   {
+    id:'liquidglass', name:'LIQUID GLASS', req:25, reqLabel:'LEVEL 25',
+    bg:'#e8f4ff', surface:'rgba(255,255,255,0.45)', surface2:'rgba(255,255,255,0.3)',
+    colors:['rgba(120,200,255,0.85)','rgba(180,140,255,0.85)','rgba(120,240,200,0.85)','rgba(255,160,200,0.85)','rgba(255,220,120,0.85)','rgba(140,220,255,0.85)','rgba(200,160,255,0.85)'],
+    boardBg:'rgba(220,240,255,0.4)', boardBorder:'rgba(180,220,255,0.6)',
+    preview:['rgba(120,200,255,0.85)','rgba(180,140,255,0.85)','rgba(120,240,200,0.85)','rgba(255,160,200,0.85)','rgba(255,220,120,0.85)'],
+    emoji:'🫧',
+    glassStyle: true
+  },
+  // ── STREAK UNLOCKS ──
+  {
+    id:'pastel', name:'CHILL', req:'streak7', reqLabel:'7 DAY STREAK',
+    bg:'#e2eaff', surface:'#d4dcff', surface2:'#c8d0f8',
+    emoji:'☁️',
+    colors:['#b5d5f5','#f5b5d5','#b5f5d5','#f5e6b5','#d5b5f5','#b5f0e6','#f5c8b5'],
+    boardBg:'#c8ccd8', boardBorder:'rgba(160,170,200,0.5)',
+    preview:['#b5d5f5','#f5b5d5','#b5f5d5','#f5e6b5'],
+  },
+  {
+    id:'ice', name:'ICE', req:'streak10', reqLabel:'10 DAY STREAK',
+    bg:'#000d1f', surface:'#001428', surface2:'#001e38',
+    colors:['#96deff','#b8ecff','#70c8ff','#d4f4ff','#50b0ff','#aae0ff','#c8f0ff'],
+    boardBg:'#001428', boardBorder:'rgba(150,220,255,0.25)',
+    preview:['#96deff','#b8ecff','#70c8ff','#d4f4ff','#50b0ff'],
+    emoji:'❄️'
+  },
+  {
     id:'emoji', name:'EMOJI', req:'streak30', reqLabel:'30 DAY STREAK',
     bg:'#0d0d1a', surface:'#13132a', surface2:'#1a1a38',
     colors:['#ff6b6b','#ffd93d','#6bcb77','#4d96ff','#ff6bff','#ffb347','#b8f0ff'],
@@ -5255,6 +5477,7 @@ const THEMES = [
     preview:['#ff6b6b','#ffd93d','#6bcb77','#4d96ff','#ff6bff'],
     emoji:'😀'
   },
+  // ── OTHER UNLOCKS ──
   {
     id:'onyx', name:'ONYX', req:'lines100', reqLabel:'CLEAR 100 LINES IN 1 GAME',
     bg:'#000000', surface:'#0a0a0a', surface2:'#111111',
@@ -5269,19 +5492,8 @@ const THEMES = [
     colors:['#ff99bb','#ff66aa','#ffb3cc','#ff4d94','#ffd6e8','#cc3377','#ffcce0'],
     boardBg:'#200015', boardBorder:'rgba(255,100,180,0.35)',
     preview:['#ff99bb','#ff66aa','#ffb3cc','#ff4d94','#ffd6e8'],
-    emoji:'🌸'
-  },
-  {
-    id:'pastel', name:'CHILL', req:'streak7', reqLabel:'7 DAY STREAK',
-    bg:'#d0d4de', surface:'#bec3cf', surface2:'#acb1be',
-    emoji:'☁️',
-    colors:['#b5d5f5','#f5b5d5','#b5f5d5','#f5e6b5','#d5b5f5','#b5f0e6','#f5c8b5'],
-    boardBg:'#c8ccd8', boardBorder:'rgba(160,170,200,0.5)',
-    preview:['#b5d5f5','#f5b5d5','#b5f5d5','#f5e6b5'],
-    c1:'#b5d5f5', c2:'#f5b5d5', c3:'#b5f5d5', c4:'#f5e6b5', c5:'#d5b5f5', c6:'#b5f0e6', c7:'#f5c8b5',
-    surface:'#e2eaff', surface2:'#d4dcff',
-    glow1:'rgba(181,213,245,0.4)', glow2:'rgba(245,181,213,0.4)', glow3:'rgba(181,245,213,0.4)',
-    glow4:'rgba(245,230,181,0.4)', glow5:'rgba(213,181,245,0.4)',
+    emoji:'🌸',
+    font: "'Courgette', cursive"
   },
   {
     id:'rainbow', name:'RAINBOW', req:'score500k', reqLabel:'GET 500,000 SCORE',
@@ -5422,9 +5634,9 @@ function applyTheme(id) {
   root.style.setProperty('--surface', t.surface);
   root.style.setProperty('--surface2', t.surface2);
   // Reset text/muted colors for light themes
-  if(id === 'hologram' || id === 'pastel') {
-    root.style.setProperty('--text', '#4a4a6a');
-    root.style.setProperty('--muted', '#8a8aaa');
+  if(id === 'hologram' || id === 'pastel' || id === 'liquidglass') {
+    root.style.setProperty('--text', '#2a3a5a');
+    root.style.setProperty('--muted', '#6a7a9a');
   } else {
     root.style.setProperty('--text', '#f0f0ff');
     root.style.setProperty('--muted', '#606080');
@@ -6060,7 +6272,7 @@ function renderThemeGrid() {
           }
         </div>
       </div>
-      <div class="unlock-name">${theme.name}</div>
+      <div class="unlock-name" style="${theme.font ? `font-family:${theme.font}` : ''}">${theme.name}</div>
       <div class="unlock-req">${unlocked ? (isActive ? '✓ ACTIVE' : 'TAP TO USE') : '🔒 ' + theme.reqLabel}</div>
     `;
     if(unlocked) card.onclick = () => { applyTheme(theme.id); sfxMenu(); renderThemeGrid(); };
