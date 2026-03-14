@@ -2879,6 +2879,186 @@ body.theme-pastel #app   { animation: pastelBg 5s ease-in-out infinite; }
 }
 body.theme-onyx #board { animation: onyxPulse 5s ease-in-out infinite; }
 
+/* ══════════════════════════════════════
+   INTERACTIVE TUTORIAL OVERLAY
+══════════════════════════════════════ */
+#play-tutorial-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+  pointer-events: none;
+}
+
+/* Spotlight — darkens everything except the target */
+#tut-spotlight {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.72);
+  transition: clip-path 0.4s ease;
+  pointer-events: none;
+  z-index: 1101;
+}
+
+/* Coach mark bubble */
+#tut-coach {
+  position: fixed;
+  z-index: 1102;
+  background: rgba(10,10,24,0.97);
+  border: 2px solid var(--c2);
+  border-radius: 14px;
+  padding: 14px 18px;
+  max-width: 260px;
+  box-shadow: 0 0 30px var(--glow2), 0 8px 32px rgba(0,0,0,0.6);
+  pointer-events: all;
+  transition: top 0.35s ease, left 0.35s ease, opacity 0.25s;
+}
+#tut-coach-title {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 0.55rem;
+  color: var(--c2);
+  letter-spacing: 2px;
+  margin-bottom: 8px;
+  text-shadow: 0 0 10px var(--glow2);
+}
+#tut-coach-body {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 0.38rem;
+  color: #ccd;
+  line-height: 1.9;
+  letter-spacing: 0.5px;
+}
+#tut-coach-body b { color: var(--c1); font-weight: normal; }
+#tut-coach-body em { color: var(--c4); font-style: normal; }
+
+/* Power-up mini demos inside coach */
+.tut-pu-demos {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 6px;
+}
+.tut-pu-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.tut-pu-icon {
+  font-size: 1.1rem;
+  width: 22px;
+  text-align: center;
+  flex-shrink: 0;
+}
+.tut-pu-label {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 0.3rem;
+  color: var(--c2);
+  letter-spacing: 1px;
+  width: 52px;
+  flex-shrink: 0;
+}
+.tut-pu-grid {
+  display: grid;
+  gap: 2px;
+  flex-shrink: 0;
+}
+.tut-pu-cell {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  background: rgba(255,255,255,0.08);
+}
+.tut-pu-cell.on  { background: var(--c1); box-shadow: 0 0 4px var(--c1); }
+.tut-pu-cell.hit { background: rgba(255,255,255,0.9); box-shadow: 0 0 6px #fff; }
+.tut-pu-cell.gone{ background: transparent; border: 1px dashed rgba(255,255,255,0.15); }
+.tut-pu-arrow {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 0.5rem;
+  color: rgba(255,255,255,0.4);
+  margin: 0 2px;
+}
+#tut-coach-arrow {
+  position: absolute;
+  width: 12px; height: 12px;
+  background: var(--c2);
+  clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
+}
+#tut-coach-btn {
+  margin-top: 12px;
+  width: 100%;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 0.38rem;
+  letter-spacing: 1px;
+  padding: 8px;
+  background: var(--c2);
+  color: #000;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  pointer-events: all;
+}
+#tut-coach-btn:active { transform: scale(0.97); }
+
+/* Pulsing highlight ring around a target element */
+#tut-ring {
+  position: fixed;
+  border: 3px solid var(--c2);
+  border-radius: 10px;
+  box-shadow: 0 0 20px var(--glow2), inset 0 0 10px var(--glow2);
+  pointer-events: none;
+  z-index: 1103;
+  animation: tutRingPulse 1.2s ease-in-out infinite;
+  transition: all 0.35s ease;
+}
+@keyframes tutRingPulse {
+  0%,100% { box-shadow: 0 0 12px var(--glow2), inset 0 0 6px var(--glow2); }
+  50%      { box-shadow: 0 0 28px var(--glow2), inset 0 0 14px var(--glow2); }
+}
+
+/* Hand pointer hint */
+#tut-hand {
+  position: fixed;
+  font-size: 2rem;
+  z-index: 1104;
+  pointer-events: none;
+  animation: tutHandBounce 0.9s ease-in-out infinite;
+  transition: top 0.35s ease, left 0.35s ease;
+  text-shadow: 0 2px 8px rgba(0,0,0,0.8);
+}
+@keyframes tutHandBounce {
+  0%,100% { transform: translateY(0) rotate(-20deg); }
+  50%      { transform: translateY(-8px) rotate(-10deg); }
+}
+
+/* Skip button */
+#tut-skip-btn {
+  position: fixed;
+  bottom: 20px;
+  right: 16px;
+  z-index: 1110;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 0.32rem;
+  color: #606080;
+  background: transparent;
+  border: 1px solid #404060;
+  border-radius: 6px;
+  padding: 6px 10px;
+  cursor: pointer;
+  pointer-events: all;
+  letter-spacing: 1px;
+}
+#tut-skip-btn:hover { color: #9090b0; border-color: #606080; }
+
+/* Progress bar */
+#tut-progress {
+  position: fixed;
+  top: 0; left: 0;
+  height: 3px;
+  background: var(--c2);
+  z-index: 1110;
+  transition: width 0.4s ease;
+  box-shadow: 0 0 8px var(--glow2);
+}
+
 </style>
 <!-- AdMob -->
 <meta name="google-adsense-account" content="ca-pub-9829984726595934">
@@ -2928,7 +3108,8 @@ body.theme-onyx #board { animation: onyxPulse 5s ease-in-out infinite; }
     ★ DAILY CHALLENGE
     <span class="daily-done-tag" id="daily-badge">TODAY</span>
   </button>
-  <button class="menu-btn ghost" onclick="showTutorial()" style="border-color:var(--c5);color:var(--c5);box-shadow:0 0 15px rgba(191,90,242,0.15)">? HOW TO PLAY</button>
+  <button class="menu-btn ghost" onclick="startPlayTutorial()" style="border-color:var(--c5);color:var(--c5);box-shadow:0 0 15px rgba(191,90,242,0.15)">🎮 PLAY TUTORIAL</button>
+  <button class="menu-btn ghost" onclick="showTutorial()" style="border-color:var(--c5);color:var(--c5);box-shadow:0 0 15px rgba(191,90,242,0.15);font-size:0.38rem">? HOW TO PLAY</button>
   <button class="menu-btn ghost" onclick="showLeaderboard()" style="position:relative">🏆 LEADERBOARD<span style="position:absolute;top:-8px;right:-4px;font-family:'Press Start 2P',monospace;font-size:0.28rem;background:#ff9f0a;color:#000;border-radius:4px;padding:2px 5px;letter-spacing:0.5px">GLOBAL SOON</span></button>
   <button class="menu-btn ghost" onclick="showStats()" style="border-color:var(--c4);color:var(--c4);box-shadow:0 0 15px rgba(10,245,255,0.15)">📊 STATS</button>
   <button class="menu-btn ghost" onclick="showUnlocks()" style="border-color:var(--c3);color:var(--c3);box-shadow:0 0 15px rgba(48,209,88,0.15)">🔓 UNLOCKS</button>
@@ -4902,6 +5083,9 @@ function placePiece(piece,startRow,startCol) {
     haptic([30, 20, 50, 20, 80]);
     checkNewUnlocks();
   }
+
+  // Tutorial hook
+  if(typeof _ptOnPlace === 'function') _ptOnPlace();
 }
 
 function refillPieces() {
@@ -4978,6 +5162,8 @@ function clearLines() {
   if(lines>=2||consecutiveClearCount>=2){ hapticCombo(); sfxCombo(consecutiveClearCount); }
   else hapticClear();
   awardPower(lines, consecutiveClearCount);
+  // Tutorial hook
+  if(typeof _ptOnClear === 'function') _ptOnClear();
 
   if(isDaily){
     const pct=Math.min(100,((score)/50000)*100);
@@ -7547,5 +7733,351 @@ if('serviceWorker' in navigator) {
   });
 }
 </script>
+<!-- ══ INTERACTIVE TUTORIAL OVERLAY ══ -->
+<div id="play-tutorial-overlay" style="display:none">
+  <div id="tut-spotlight"></div>
+  <div id="tut-ring" style="display:none"></div>
+  <div id="tut-hand" style="display:none">👆</div>
+  <div id="tut-coach" style="display:none">
+    <div id="tut-coach-title"></div>
+    <div id="tut-coach-body"></div>
+    <button id="tut-coach-btn" onclick="playTutNext()">GOT IT ▶</button>
+  </div>
+  <div id="tut-progress" style="width:0%"></div>
+  <button id="tut-skip-btn" onclick="playTutSkip()">SKIP TUTORIAL</button>
+</div>
+
+<script>
+// ════════════════════════════════════
+//  INTERACTIVE PLAYABLE TUTORIAL
+// ════════════════════════════════════
+let _ptActive = false;
+let _ptStep = 0;
+let _ptWaitingForPlace = false;
+let _ptWaitingForClear = false;
+let _ptPlaceCount = 0;
+let _ptClearDone = false;
+let _ptFallbackTimer = null;
+let _ptOrigPlacePiece = null;
+let _ptOrigClearLines = null;
+
+const PT_STEPS = [
+  {
+    title: 'WELCOME!',
+    body: 'Let\'s learn to play\n<b>BOOM BOOM BLOCKS</b>\nin 60 seconds!\n\nThis is your <em>game board.</em>\nPieces go here.',
+    target: 'board',
+    hand: false,
+    btn: 'LET\'S GO ▶',
+  },
+  {
+    title: 'YOUR PIECES',
+    body: 'These are your <b>3 pieces.</b>\n\nHold and <em>drag</em> a piece\nonto the board\nto place it.',
+    target: 'tray',
+    hand: true,
+    btn: null, // wait for a placement
+    waitPlace: 1,
+  },
+  {
+    title: 'NICE WORK!',
+    body: 'You placed a piece!\n\nTry placing the\n<em>other 2 pieces</em>\nto refill your tray.',
+    target: 'tray',
+    hand: true,
+    btn: null,
+    waitPlace: 2,
+  },
+  {
+    title: 'CLEARING LINES',
+    body: 'Fill a <b>complete row</b>\nor <b>column</b> and\nit clears for points!\n\nTry to clear one now.\n<em>(or tap skip below)</em>',
+    target: 'board',
+    hand: false,
+    btn: null,
+    waitClear: true,
+  },
+  {
+    title: 'COMBOS!',
+    body: 'Clear multiple lines\nat once for a\n<em>COMBO BONUS!</em>\n\nThe bigger the combo,\nthe more points you earn.',
+    target: 'score',
+    hand: false,
+    btn: 'COOL! ▶',
+  },
+  {
+    title: 'POWER-UPS',
+    body: 'Clear lines to earn\n<b>power-ups!</b>\nTap one, then\ntap the board!',
+    puDemo: true,
+    target: 'powerup-bar',
+    hand: false,
+    btn: 'GOT IT ▶',
+  },
+  {
+    title: 'GAME OVER',
+    body: 'The game ends when\n<b>none of your pieces</b>\ncan fit on the board.\n\nPlan ahead and\n<em>keep it clean!</em>',
+    target: 'board',
+    hand: false,
+    btn: 'UNDERSTOOD ▶',
+  },
+  {
+    title: 'YOU\'RE READY!',
+    body: 'That\'s everything!\n\n<b>★</b> Fill rows & columns\n<b>★</b> Chain combos\n<b>★</b> Use power-ups\n<b>★</b> Beat your best!\n\n<em>Good luck!</em>',
+    target: null,
+    hand: false,
+    btn: '▶ PLAY NOW!',
+    finish: true,
+  },
+];
+
+function startPlayTutorial() {
+  sfxMenu();
+  // Start a fresh classic game silently
+  isDaily = false;
+  $id('mode-label').textContent = 'TUTORIAL';
+  $id('mode-label').className = 'mode-label';
+  const dbw = $id('daily-bar-wrap'); if(dbw) dbw.style.display = 'none';
+  rng = Math.random;
+  initGame();
+  showScreen('game-screen');
+
+  // Small delay to let board render
+  setTimeout(() => {
+    _ptActive = true;
+    _ptStep = 0;
+    _ptWaitingForPlace = false;
+    _ptWaitingForClear = false;
+    _ptPlaceCount = 0;
+    _ptClearDone = false;
+
+    const overlay = $id('play-tutorial-overlay');
+    overlay.style.display = 'block';
+
+    // Hook into placePiece and clearLines
+    _ptHookGame();
+
+    _ptShowStep(0);
+  }, 300);
+}
+
+function _ptGrid(cols, rows, hitMap, id) {
+  const colors = ['#ff2d55','#ffd60a','#30d158','#0af5ff','#bf5af2'];
+  let before = `<div class="tut-pu-grid" id="tpt-before-${id}" style="grid-template-columns:repeat(${cols},10px)">`;
+  let after  = `<div class="tut-pu-grid" id="tpt-after-${id}"  style="grid-template-columns:repeat(${cols},10px)">`;
+  for(let r = 0; r < rows; r++) {
+    for(let c = 0; c < cols; c++) {
+      const filled = hitMap[r] && hitMap[r][c];
+      const col = colors[(r * cols + c) % colors.length];
+      before += `<div class="tut-pu-cell${filled?' on':''}" style="${filled?`background:${col};box-shadow:0 0 4px ${col}`:''}"></div>`;
+      after  += `<div class="tut-pu-cell" id="tpt-ac-${id}-${r}-${c}"></div>`;
+    }
+  }
+  return `${before}</div><span class="tut-pu-arrow">▶</span>${after}</div>`;
+}
+
+function _ptPuRow(icon, label, gridHTML) {
+  return `<div class="tut-pu-row">
+    <span class="tut-pu-icon">${icon}</span>
+    <span class="tut-pu-label">${label}</span>
+    ${gridHTML}
+  </div>`;
+}
+
+let _ptDemoTimer = null;
+function _ptAnimateDemos() {
+  const configs = [
+    { id:1, hitMap:[[0,0,1,0,0],[1,1,1,1,1],[0,1,0,1,0]], cols:5, rows:3 },
+    { id:2, hitMap:[[1,0,1,0],[0,1,0,1],[1,0,1,0]],         cols:4, rows:3 },
+    { id:3, hitMap:[[0,1,1,1,0],[1,1,1,1,1],[1,1,1,1,1],[1,1,1,1,1],[0,1,1,1,0]], cols:5, rows:5 },
+    { id:4, hitMap:[[0,0,1,0,0],[0,0,1,0,0],[1,1,1,1,1],[0,0,1,0,0],[0,0,1,0,0]], cols:5, rows:5 },
+  ];
+  const colors = ['#ff2d55','#ffd60a','#30d158','#0af5ff','#bf5af2'];
+  let ci = 0;
+  function runNext() {
+    if(!document.getElementById('tpt-before-1')) return;
+    const cfg = configs[ci % configs.length];
+    ci++;
+    // Flash hit cells white
+    for(let r = 0; r < cfg.rows; r++) for(let c = 0; c < cfg.cols; c++) {
+      if(cfg.hitMap[r]?.[c]) {
+        const g = document.getElementById('tpt-before-'+cfg.id);
+        if(g) { const el = g.children[r*cfg.cols+c]; if(el){ el.style.background='#fff'; el.style.boxShadow='0 0 8px #fff'; } }
+      }
+    }
+    // Show cleared after
+    setTimeout(() => {
+      if(!document.getElementById('tpt-before-1')) return;
+      for(let r = 0; r < cfg.rows; r++) for(let c = 0; c < cfg.cols; c++) {
+        if(cfg.hitMap[r]?.[c]) {
+          const el = document.getElementById(`tpt-ac-${cfg.id}-${r}-${c}`);
+          if(el){ el.style.background='transparent'; el.style.border='1px dashed rgba(255,255,255,0.2)'; }
+        }
+      }
+      // Reset
+      setTimeout(() => {
+        if(!document.getElementById('tpt-before-1')) return;
+        for(let r = 0; r < cfg.rows; r++) for(let c = 0; c < cfg.cols; c++) {
+          if(cfg.hitMap[r]?.[c]) {
+            const g = document.getElementById('tpt-before-'+cfg.id);
+            if(g){ const el = g.children[r*cfg.cols+c]; const col = colors[(r*cfg.cols+c)%colors.length]; if(el){ el.style.background=col; el.style.boxShadow=`0 0 4px ${col}`; } }
+            const el = document.getElementById(`tpt-ac-${cfg.id}-${r}-${c}`);
+            if(el){ el.style.background=''; el.style.border=''; }
+          }
+        }
+        _ptDemoTimer = setTimeout(runNext, 500);
+      }, 700);
+    }, 400);
+  }
+  clearTimeout(_ptDemoTimer);
+  _ptDemoTimer = setTimeout(runNext, 600);
+}
+
+function _ptHookGame() {
+  // We'll check placement and clears via event flags set in the step logic
+}
+
+function _ptShowStep(idx) {
+  if(idx >= PT_STEPS.length) { playTutSkip(); return; }
+  _ptStep = idx;
+  const step = PT_STEPS[idx];
+  const total = PT_STEPS.length;
+
+  // Progress bar
+  $id('tut-progress').style.width = ((idx / (total - 1)) * 100) + '%';
+
+  // Coach bubble
+  const coach = $id('tut-coach');
+  const titleEl = $id('tut-coach-title');
+  const bodyEl = $id('tut-coach-body');
+  const btn = $id('tut-coach-btn');
+
+  titleEl.textContent = step.title;
+  bodyEl.innerHTML = step.body.replace(/\n/g, '<br>');
+
+  // Power-up demo grids
+  if(step.puDemo) {
+    const demos = document.createElement('div');
+    demos.className = 'tut-pu-demos';
+    demos.innerHTML = `
+      ${_ptPuRow('⚡','LASER',   _ptGrid(5,3,[[0,0,1,0,0],[1,1,1,1,1],[0,1,0,1,0]], 1))}
+      ${_ptPuRow('🔥','WILDFIRE',_ptGrid(4,3,[[1,0,1,0],[0,1,0,1],[1,0,1,0]], 2))}
+      ${_ptPuRow('💣','BOMB',    _ptGrid(5,5,[[0,1,1,1,0],[1,1,1,1,1],[1,1,1,1,1],[1,1,1,1,1],[0,1,1,1,0]], 3))}
+      ${_ptPuRow('🔨','SHATTER', _ptGrid(5,5,[[0,0,1,0,0],[0,0,1,0,0],[1,1,1,1,1],[0,0,1,0,0],[0,0,1,0,0]], 4))}
+    `;
+    bodyEl.appendChild(demos);
+    _ptAnimateDemos();
+  }
+
+  if(step.btn) {
+    btn.style.display = 'block';
+    btn.textContent = step.btn;
+  } else {
+    btn.style.display = 'none';
+  }
+
+  // Position coach near target
+  const targetEl = step.target ? $id(step.target) || document.querySelector('.' + step.target) : null;
+  coach.style.display = 'block';
+
+  if(targetEl) {
+    const rect = targetEl.getBoundingClientRect();
+    const vw = window.innerWidth, vh = window.innerHeight;
+    // Place coach above or below the target
+    const coachH = 180;
+    const spaceBelow = vh - rect.bottom;
+    const spaceAbove = rect.top;
+    let coachTop, coachLeft;
+
+    if(spaceBelow > coachH + 20) {
+      coachTop = rect.bottom + 16;
+    } else {
+      coachTop = Math.max(10, rect.top - coachH - 16);
+    }
+    coachLeft = Math.max(8, Math.min(vw - 276, rect.left + rect.width / 2 - 130));
+    coach.style.top = coachTop + 'px';
+    coach.style.left = coachLeft + 'px';
+    coach.style.transform = '';
+
+    // Ring highlight
+    const ring = $id('tut-ring');
+    ring.style.display = 'block';
+    ring.style.top    = (rect.top - 6) + 'px';
+    ring.style.left   = (rect.left - 6) + 'px';
+    ring.style.width  = (rect.width + 12) + 'px';
+    ring.style.height = (rect.height + 12) + 'px';
+
+    // Hand pointer
+    const hand = $id('tut-hand');
+    if(step.hand) {
+      hand.style.display = 'block';
+      hand.style.top  = (rect.top + rect.height * 0.3) + 'px';
+      hand.style.left = (rect.left + rect.width * 0.4) + 'px';
+    } else {
+      hand.style.display = 'none';
+    }
+  } else {
+    // No target — center everything
+    coach.style.top  = '50%';
+    coach.style.left = '50%';
+    coach.style.transform = 'translate(-50%, -50%)';
+    $id('tut-ring').style.display = 'none';
+    $id('tut-hand').style.display = 'none';
+  }
+
+  // Set up waiting flags
+  _ptWaitingForPlace = !!(step.waitPlace);
+  _ptWaitingForClear = !!(step.waitClear);
+  if(step.waitPlace) _ptPlaceCount = 0;
+
+  // Fallback — show a SKIP STEP button after 15s on wait steps
+  if(!step.btn && (step.waitPlace || step.waitClear)) {
+    clearTimeout(_ptFallbackTimer);
+    _ptFallbackTimer = setTimeout(() => {
+      if(_ptActive && (_ptWaitingForPlace || _ptWaitingForClear)) {
+        const btn = $id('tut-coach-btn');
+        if(btn) { btn.style.display = 'block'; btn.textContent = 'SKIP STEP ▶'; }
+      }
+    }, 15000);
+  }
+}
+
+// Called by the game when a piece is placed (hooked in placePiece)
+function _ptOnPlace() {
+  if(!_ptActive || !_ptWaitingForPlace) return;
+  const step = PT_STEPS[_ptStep];
+  _ptPlaceCount++;
+  if(_ptPlaceCount >= (step.waitPlace || 1)) {
+    _ptWaitingForPlace = false;
+    setTimeout(() => playTutNext(), 500);
+  }
+}
+
+// Called by the game when lines clear
+function _ptOnClear() {
+  if(!_ptActive || !_ptWaitingForClear) return;
+  _ptWaitingForClear = false;
+  setTimeout(() => playTutNext(), 700);
+}
+
+function playTutNext() {
+  clearTimeout(_ptFallbackTimer);
+  clearTimeout(_ptDemoTimer);
+  const step = PT_STEPS[_ptStep];
+  if(step && step.finish) { playTutSkip(); return; }
+  _ptShowStep(_ptStep + 1);
+}
+
+function playTutSkip() {
+  clearTimeout(_ptFallbackTimer);
+  clearTimeout(_ptDemoTimer);
+  _ptActive = false;
+  _ptWaitingForPlace = false;
+  _ptWaitingForClear = false;
+  const overlay = $id('play-tutorial-overlay');
+  overlay.style.display = 'none';
+  $id('tut-ring').style.display = 'none';
+  $id('tut-hand').style.display = 'none';
+  $id('tut-coach').style.display = 'none';
+  localStorage.setItem('bb_tut_done', '1');
+  sfxMenu();
+  // Game keeps running — player is now in a real game
+}
+</script>
+
 </body>
 </html>
