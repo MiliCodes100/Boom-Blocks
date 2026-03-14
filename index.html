@@ -2027,7 +2027,8 @@ body.theme-onyx header {
   gap:6px;
   z-index:999;
   pointer-events:none;
-  animation:levelStampIn 0.4s cubic-bezier(0.175,0.885,0.32,1.275) forwards;
+  animation:levelStampIn 0.5s cubic-bezier(0.175,0.885,0.32,1.275) forwards;
+  box-shadow: 0 0 40px var(--glow2), 0 0 80px var(--glow2), inset 0 0 20px rgba(255,255,255,0.05);
 }
 
 .levelup-stamp.out {
@@ -2040,16 +2041,18 @@ body.theme-onyx header {
   color:var(--c2);
   letter-spacing:3px;
   text-shadow:0 0 12px var(--glow2);
+  animation: levelTitlePulse 0.6s ease-in-out infinite alternate;
 }
 
 .levelup-number {
   font-family:'Press Start 2P',monospace;
-  font-size:clamp(1.2rem,7vw,2rem);
+  font-size:clamp(1.2rem,7vw,2.4rem);
   color:#fff;
   letter-spacing:2px;
-  text-shadow:0 0 20px var(--glow2);
+  text-shadow:0 0 20px var(--glow2), 0 0 40px var(--glow2);
   text-align:center;
   width:100%;
+  animation: levelNumPop 0.5s cubic-bezier(0.175,0.885,0.32,1.275) 0.15s both;
 }
 
 .levelup-sub {
@@ -2061,9 +2064,79 @@ body.theme-onyx header {
   text-shadow:0 0 8px rgba(48,209,88,0.6);
 }
 
+/* Screen flash on level up */
+.levelup-flash {
+  position:fixed; inset:0;
+  background: var(--c2);
+  opacity:0;
+  pointer-events:none;
+  z-index:998;
+  animation: levelFlash 0.5s ease-out forwards;
+}
+
+/* Rays behind stamp */
+.levelup-rays {
+  position:fixed;
+  top:50%; left:50%;
+  transform:translate(-50%,-50%);
+  width:600px; height:600px;
+  pointer-events:none;
+  z-index:997;
+  animation: levelRaysSpin 3s linear infinite, levelRaysFade 2.5s ease-out forwards;
+}
+.levelup-rays::before {
+  content:'';
+  position:absolute; inset:0;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg, rgba(255,255,255,0.06) 10deg,
+    transparent 20deg, rgba(255,255,255,0.06) 30deg,
+    transparent 40deg, rgba(255,255,255,0.06) 50deg,
+    transparent 60deg, rgba(255,255,255,0.06) 70deg,
+    transparent 80deg, rgba(255,255,255,0.06) 90deg,
+    transparent 100deg, rgba(255,255,255,0.06) 110deg,
+    transparent 120deg, rgba(255,255,255,0.06) 130deg,
+    transparent 140deg, rgba(255,255,255,0.06) 150deg,
+    transparent 160deg, rgba(255,255,255,0.06) 170deg,
+    transparent 180deg, rgba(255,255,255,0.06) 190deg,
+    transparent 200deg, rgba(255,255,255,0.06) 210deg,
+    transparent 220deg, rgba(255,255,255,0.06) 230deg,
+    transparent 240deg, rgba(255,255,255,0.06) 250deg,
+    transparent 260deg, rgba(255,255,255,0.06) 270deg,
+    transparent 280deg, rgba(255,255,255,0.06) 290deg,
+    transparent 300deg, rgba(255,255,255,0.06) 310deg,
+    transparent 320deg, rgba(255,255,255,0.06) 330deg,
+    transparent 340deg, rgba(255,255,255,0.06) 350deg,
+    transparent 360deg
+  );
+  border-radius:50%;
+}
+
+@keyframes levelFlash {
+  0%   { opacity: 0.35; }
+  100% { opacity: 0; }
+}
+@keyframes levelRaysSpin {
+  from { transform: translate(-50%,-50%) rotate(0deg); }
+  to   { transform: translate(-50%,-50%) rotate(360deg); }
+}
+@keyframes levelRaysFade {
+  0%   { opacity:1; }
+  60%  { opacity:0.8; }
+  100% { opacity:0; }
+}
+@keyframes levelTitlePulse {
+  from { text-shadow: 0 0 8px var(--glow2); }
+  to   { text-shadow: 0 0 20px var(--glow2), 0 0 40px var(--glow2); }
+}
+@keyframes levelNumPop {
+  0%   { transform: scale(0.5); opacity:0; }
+  70%  { transform: scale(1.15); opacity:1; }
+  100% { transform: scale(1); opacity:1; }
+}
 @keyframes levelStampIn {
-  0%   { opacity:0; transform:translate(-50%,-50%) scale(0.4) rotate(-8deg); }
-  60%  { opacity:1; transform:translate(-50%,-50%) scale(1.08) rotate(2deg); }
+  0%   { opacity:0; transform:translate(-50%,-50%) scale(0.3) rotate(-12deg); }
+  60%  { opacity:1; transform:translate(-50%,-50%) scale(1.1) rotate(2deg); }
   100% { opacity:1; transform:translate(-50%,-50%) scale(1) rotate(0deg); }
 }
 @keyframes levelStampOut {
@@ -4734,13 +4807,20 @@ function getBoardPos(pos) {
   };
 }
 
+let _lastHighlightRow = -1, _lastHighlightCol = -1;
+
 function highlightBoard(startRow,startCol) {
+  // Rainbow — only update color when moving to a different cell
+  if(activeTheme === 'rainbow' && startRow === _lastHighlightRow && startCol === _lastHighlightCol) return;
+  _lastHighlightRow = startRow;
+  _lastHighlightCol = startCol;
+
   clearHighlights();
   if(!dragPiece) return;
   if(!canPlace(dragPiece.shape,startRow,startCol)) return;
   const cells=document.querySelectorAll('#board .cell');
 
-  // Rainbow theme — pick a new random color and inject via dynamic style tag
+  // Rainbow theme — pick a new random color each time we land on a new cell
   if(activeTheme === 'rainbow') {
     const _rainbowPalette = ['255,0,0','255,119,0','255,220,0','0,204,0','0,153,255','119,0,255','255,0,200'];
     const _rc = _rainbowPalette[Math.floor(Math.random() * _rainbowPalette.length)];
@@ -4762,6 +4842,8 @@ function highlightBoard(startRow,startCol) {
 }
 
 function clearHighlights() {
+  _lastHighlightRow = -1;
+  _lastHighlightCol = -1;
   document.querySelectorAll('#board .cell').forEach(c => c.classList.remove('highlight'));
 }
 
@@ -4782,6 +4864,7 @@ function placePiece(piece,startRow,startCol) {
   if(slots[dragSlot]) slots[dragSlot].classList.remove('dragging-source');
   sessionPiecesPlaced++;
   if(dragPiece) markPieceSeen(dragPiece.shape);
+  const _levelBefore = getLevel(); // capture before any scoring
   // Powerup reminder check
   const _hasPower = Object.values(powerInventory).some(v => v > 0);
   if(_hasPower && !_powerRemindShown) {
@@ -4811,6 +4894,14 @@ function placePiece(piece,startRow,startCol) {
   if(cellCount > 0) addScore(cellCount * 5, 0, 0, piece.color);
   renderBoard();
   clearLines();
+
+  // Check level up once after all scoring — only show highest level reached
+  const _levelAfter = getLevel();
+  if(_levelAfter > _levelBefore) {
+    queueStamp(() => { showLevelUpStamp(_levelAfter); sfxLevelUp(); });
+    haptic([30, 20, 50, 20, 80]);
+    checkNewUnlocks();
+  }
 }
 
 function refillPieces() {
@@ -4909,7 +5000,6 @@ function clearLines() {
 }
 
 function addScore(pts,lines,combo,blockColor) {
-  const oldLevel = getLevel();
   score+=pts;
   $id('score').textContent=score.toLocaleString();
   if(!isDaily&&score>best){
@@ -4958,14 +5048,8 @@ function addScore(pts,lines,combo,blockColor) {
     setTimeout(()=>banner.remove(),950);
   }
 
-  // Check for level up in real time
-  const newLevel = getLevel();
-  if(newLevel > oldLevel) {
-    queueStamp(() => { showLevelUpStamp(newLevel); sfxLevelUp(); });
-    haptic([30, 20, 50, 20, 80]); // level up rumble
-    updateXPBar();
-    checkNewUnlocks();
-  }
+  // XP bar always updates
+  updateXPBar();
 }
 
 // ════════════════════════════════════
@@ -6921,6 +7005,29 @@ function showLevelUpStamp(level) {
   };
   const sub = newBlockLevels[level] || '';
 
+  // Screen flash
+  const flash = document.createElement('div');
+  flash.className = 'levelup-flash';
+  document.body.appendChild(flash);
+  setTimeout(() => flash.remove(), 500);
+
+  // Spinning rays
+  const rays = document.createElement('div');
+  rays.className = 'levelup-rays';
+  document.body.appendChild(rays);
+  setTimeout(() => rays.remove(), 2500);
+
+  // Particle burst from center
+  const cx = window.innerWidth / 2;
+  const cy = window.innerHeight / 2;
+  const theme = THEMES.find(t => t.id === activeTheme) || THEMES[0];
+  for(let i = 0; i < 5; i++) {
+    setTimeout(() => {
+      theme.colors.forEach(col => spawnParticles(cx, cy, col, 4));
+    }, i * 120);
+  }
+
+  // Stamp
   const stamp = document.createElement('div');
   stamp.className = 'levelup-stamp';
   stamp.innerHTML = `
