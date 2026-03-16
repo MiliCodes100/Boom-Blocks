@@ -1383,226 +1383,6 @@ header {
 }
 
 
-/* ══ TUTORIAL ══ */
-#tutorial-screen {
-  padding:0;
-  justify-content:flex-start;
-  overflow:hidden;
-  position:relative;
-}
-
-.tut-slide {
-  display:none;
-  flex-direction:column;
-  align-items:center;
-  justify-content:center;
-  width:100%;
-  height:100%;
-  min-height:100vh;
-  padding:28px 24px 24px;
-  gap:0;
-  position:absolute;
-  inset:0;
-  opacity:0;
-  transition:opacity 0.3s ease;
-}
-
-.tut-slide.active {
-  display:flex;
-  opacity:1;
-}
-
-.tut-slide.exit-left  { animation:slideOutLeft 0.3s ease forwards; }
-.tut-slide.enter-right { animation:slideInRight 0.3s ease forwards; }
-.tut-slide.exit-right  { animation:slideOutRight 0.3s ease forwards; }
-.tut-slide.enter-left  { animation:slideInLeft 0.3s ease forwards; }
-
-@keyframes slideOutLeft  { to { transform:translateX(-60px); opacity:0; } }
-@keyframes slideInRight  { from { transform:translateX(60px); opacity:0; } to { transform:translateX(0); opacity:1; } }
-@keyframes slideOutRight { to { transform:translateX(60px); opacity:0; } }
-@keyframes slideInLeft   { from { transform:translateX(-60px); opacity:0; } to { transform:translateX(0); opacity:1; } }
-
-.tut-step {
-  font-family:'Press Start 2P', monospace;
-  font-size:0.48rem;
-  color:var(--c2);
-  letter-spacing:2px;
-  margin-bottom:14px;
-}
-
-.tut-title {
-  font-family:'Press Start 2P', monospace;
-  font-size:clamp(0.85rem,4vw,1.2rem);
-  color:var(--text);
-  text-align:center;
-  letter-spacing:2px;
-  margin-bottom:10px;
-  line-height:1.6;
-}
-
-.tut-title span { color:var(--c4); }
-
-.tut-body {
-  font-family:'Press Start 2P', monospace;
-  font-size:0.52rem;
-  color:var(--muted);
-  text-align:center;
-  line-height:2.2;
-  letter-spacing:0.5px;
-  max-width:320px;
-  margin-bottom:20px;
-}
-
-.tut-body b { color:var(--c2); font-weight:normal; }
-.tut-body em { color:var(--c4); font-style:normal; }
-
-/* Demo board */
-.tut-demo {
-  display:grid;
-  gap:3px;
-  background:var(--surface);
-  border:1px solid rgba(10,245,255,0.15);
-  border-radius:6px;
-  padding:8px;
-  margin-bottom:20px;
-  box-shadow:0 0 20px rgba(10,245,255,0.08);
-}
-
-.tut-cell {
-  width:22px; height:22px;
-  border-radius:3px;
-  background:var(--surface2);
-  transition:background 0.2s, box-shadow 0.2s;
-}
-
-.tut-cell.on {
-  box-shadow:0 0 6px currentColor;
-}
-
-.tut-cell.flash {
-  animation:cellFlash 0.4s ease forwards;
-}
-
-@keyframes cellFlash {
-  0%   { filter:brightness(1); transform:scale(1); }
-  40%  { filter:brightness(3); transform:scale(1.15); }
-  100% { filter:brightness(0); transform:scale(0); opacity:0; }
-}
-
-/* Power-up preview pills */
-.tut-powers {
-  display:flex;
-  gap:8px;
-  margin-bottom:20px;
-  flex-wrap:wrap;
-  justify-content:center;
-}
-
-.tut-power-pill {
-  display:flex;
-  align-items:center;
-  gap:6px;
-  background:var(--surface);
-  border-radius:6px;
-  padding:8px 12px;
-  border:1px solid rgba(255,255,255,0.08);
-}
-
-.tut-power-pill .pip-icon { font-size:1rem; }
-.tut-power-pill .pip-text {
-  font-family:'Press Start 2P', monospace;
-  font-size:0.3rem;
-  color:var(--muted);
-  line-height:1.8;
-}
-.tut-power-pill .pip-name { color:var(--text); display:block; }
-
-/* Nav dots */
-.tut-dots {
-  display:flex;
-  gap:8px;
-  margin-bottom:16px;
-}
-
-.tut-dot {
-  width:8px; height:8px;
-  border-radius:50%;
-  background:var(--surface2);
-  transition:background 0.2s, transform 0.2s;
-}
-
-.tut-dot.active {
-  background:var(--c4);
-  transform:scale(1.3);
-  box-shadow:0 0 6px var(--glow4);
-}
-
-/* Nav buttons */
-.tut-nav {
-  display:flex;
-  gap:10px;
-  width:100%;
-  max-width:300px;
-}
-
-.tut-btn {
-  flex:1;
-  padding:12px;
-  border:none;
-  border-radius:4px;
-  font-family:'Press Start 2P', monospace;
-  font-size:0.45rem;
-  letter-spacing:1px;
-  cursor:pointer;
-  transition:all 0.12s;
-}
-
-.tut-btn:active { transform:scale(0.96); }
-
-.tut-btn.prev {
-  background:var(--surface);
-  color:var(--muted);
-  border:1px solid rgba(255,255,255,0.08);
-  flex:0.6;
-}
-
-.tut-btn.next {
-  background:var(--c4);
-  color:#000;
-  box-shadow:0 0 12px var(--glow4);
-}
-
-.tut-btn.finish {
-  background:var(--c1);
-  color:#fff;
-  box-shadow:0 0 14px var(--glow1);
-  flex:1;
-}
-
-/* Piece preview in tut */
-.tut-piece-row {
-  display:flex;
-  gap:14px;
-  justify-content:center;
-  margin-bottom:18px;
-  flex-wrap:wrap;
-}
-
-.tut-piece {
-  display:grid;
-  gap:3px;
-  padding:6px;
-  background:var(--surface);
-  border-radius:4px;
-  border:1px solid rgba(255,255,255,0.06);
-}
-
-.tut-pc {
-  width:16px; height:16px;
-  border-radius:2px;
-}
-
-.tut-pc.off { background:transparent; }
 
 
 .powerup-btn.hint-pulse {
@@ -2885,7 +2665,7 @@ body.theme-onyx #board { animation: onyxPulse 5s ease-in-out infinite; }
 #play-tutorial-overlay {
   position: fixed;
   inset: 0;
-  z-index: 1100;
+  z-index: 10000;
   pointer-events: none;
 }
 
@@ -2896,18 +2676,18 @@ body.theme-onyx #board { animation: onyxPulse 5s ease-in-out infinite; }
   background: rgba(0,0,0,0.72);
   transition: clip-path 0.4s ease;
   pointer-events: none;
-  z-index: 1101;
+  z-index: 10001;
 }
 
 /* Coach mark bubble */
 #tut-coach {
   position: fixed;
-  z-index: 1102;
+  z-index: 10010;
   background: rgba(10,10,24,0.97);
   border: 2px solid var(--c2);
   border-radius: 14px;
   padding: 14px 18px;
-  max-width: 260px;
+  width: 260px;
   box-shadow: 0 0 30px var(--glow2), 0 8px 32px rgba(0,0,0,0.6);
   pointer-events: all;
   transition: top 0.35s ease, left 0.35s ease, opacity 0.25s;
@@ -2931,51 +2711,6 @@ body.theme-onyx #board { animation: onyxPulse 5s ease-in-out infinite; }
 #tut-coach-body em { color: var(--c4); font-style: normal; }
 
 /* Power-up mini demos inside coach */
-.tut-pu-demos {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-top: 6px;
-}
-.tut-pu-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.tut-pu-icon {
-  font-size: 1.1rem;
-  width: 22px;
-  text-align: center;
-  flex-shrink: 0;
-}
-.tut-pu-label {
-  font-family: 'Press Start 2P', monospace;
-  font-size: 0.3rem;
-  color: var(--c2);
-  letter-spacing: 1px;
-  width: 52px;
-  flex-shrink: 0;
-}
-.tut-pu-grid {
-  display: grid;
-  gap: 2px;
-  flex-shrink: 0;
-}
-.tut-pu-cell {
-  width: 10px;
-  height: 10px;
-  border-radius: 2px;
-  background: rgba(255,255,255,0.08);
-}
-.tut-pu-cell.on  { background: var(--c1); box-shadow: 0 0 4px var(--c1); }
-.tut-pu-cell.hit { background: rgba(255,255,255,0.9); box-shadow: 0 0 6px #fff; }
-.tut-pu-cell.gone{ background: transparent; border: 1px dashed rgba(255,255,255,0.15); }
-.tut-pu-arrow {
-  font-family: 'Press Start 2P', monospace;
-  font-size: 0.5rem;
-  color: rgba(255,255,255,0.4);
-  margin: 0 2px;
-}
 #tut-coach-arrow {
   position: absolute;
   width: 12px; height: 12px;
@@ -3005,7 +2740,7 @@ body.theme-onyx #board { animation: onyxPulse 5s ease-in-out infinite; }
   border-radius: 10px;
   box-shadow: 0 0 20px var(--glow2), inset 0 0 10px var(--glow2);
   pointer-events: none;
-  z-index: 1103;
+  z-index: 10004;
   animation: tutRingPulse 1.2s ease-in-out infinite;
   transition: all 0.35s ease;
 }
@@ -3018,7 +2753,7 @@ body.theme-onyx #board { animation: onyxPulse 5s ease-in-out infinite; }
 #tut-hand {
   position: fixed;
   font-size: 2rem;
-  z-index: 1104;
+  z-index: 10005;
   pointer-events: none;
   animation: tutHandBounce 0.9s ease-in-out infinite;
   transition: top 0.35s ease, left 0.35s ease;
@@ -3034,7 +2769,7 @@ body.theme-onyx #board { animation: onyxPulse 5s ease-in-out infinite; }
   position: fixed;
   bottom: 20px;
   right: 16px;
-  z-index: 1110;
+  z-index: 10006;
   font-family: 'Press Start 2P', monospace;
   font-size: 0.32rem;
   color: #606080;
@@ -3054,7 +2789,7 @@ body.theme-onyx #board { animation: onyxPulse 5s ease-in-out infinite; }
   top: 0; left: 0;
   height: 3px;
   background: var(--c2);
-  z-index: 1110;
+  z-index: 10006;
   transition: width 0.4s ease;
   box-shadow: 0 0 8px var(--glow2);
 }
@@ -3109,168 +2844,10 @@ body.theme-onyx #board { animation: onyxPulse 5s ease-in-out infinite; }
     <span class="daily-done-tag" id="daily-badge">TODAY</span>
   </button>
   <button class="menu-btn ghost" onclick="startPlayTutorial()" style="border-color:var(--c5);color:var(--c5);box-shadow:0 0 15px rgba(191,90,242,0.15)">🎮 PLAY TUTORIAL</button>
-  <button class="menu-btn ghost" onclick="showTutorial()" style="border-color:var(--c5);color:var(--c5);box-shadow:0 0 15px rgba(191,90,242,0.15);font-size:0.38rem">? HOW TO PLAY</button>
   <button class="menu-btn ghost" onclick="showLeaderboard()" style="position:relative">🏆 LEADERBOARD<span style="position:absolute;top:-8px;right:-4px;font-family:'Press Start 2P',monospace;font-size:0.28rem;background:#ff9f0a;color:#000;border-radius:4px;padding:2px 5px;letter-spacing:0.5px">GLOBAL SOON</span></button>
   <button class="menu-btn ghost" onclick="showStats()" style="border-color:var(--c4);color:var(--c4);box-shadow:0 0 15px rgba(10,245,255,0.15)">📊 STATS</button>
   <button class="menu-btn ghost" onclick="showUnlocks()" style="border-color:var(--c3);color:var(--c3);box-shadow:0 0 15px rgba(48,209,88,0.15)">🔓 UNLOCKS</button>
   <button class="menu-btn ghost" onclick="showBlockDex()" style="border-color:var(--c4);color:var(--c4);box-shadow:0 0 15px rgba(10,245,255,0.15)">🧩 BLOCK DEX</button>
-
-</div>
-
-<div id="tutorial-screen" class="screen">
-
-  <!-- Slide 1: The Goal -->
-  <div class="tut-slide active" id="tut-slide-0">
-    <div class="tut-step">1 / 7</div>
-    <div class="tut-title">THE <span>GOAL</span></div>
-    <div class="tut-body">
-      Fill <b>complete rows</b> or<br>
-      <b>complete columns</b> to<br>
-      clear them and score points.<br><br>
-      The more you clear at once,<br>
-      the bigger the <em>combo!</em>
-    </div>
-    <div class="tut-demo" id="tut-demo-0" style="grid-template-columns:repeat(6,1fr)"></div>
-    <div class="tut-dots" id="tut-dots"></div>
-    <div class="tut-nav">
-      <button class="tut-btn prev" onclick="tutNav(-1)" style="visibility:hidden">◀</button>
-      <button class="tut-btn next" onclick="tutNav(1)">NEXT ▶</button>
-    </div>
-  </div>
-
-  <!-- Slide 2: Placing Pieces -->
-  <div class="tut-slide" id="tut-slide-1">
-    <div class="tut-step">2 / 7</div>
-    <div class="tut-title">PLACING <span>PIECES</span></div>
-    <div class="tut-body">
-      You have <b>3 pieces</b> in your tray.<br><br>
-      <b>Hold + drag</b> a piece onto<br>
-      the board to place it.<br><br>
-      A new set appears when all<br>
-      <em>3 are placed.</em>
-    </div>
-    <div class="tut-piece-row" id="tut-pieces"></div>
-    <div class="tut-dots" id="tut-dots-1"></div>
-    <div class="tut-nav">
-      <button class="tut-btn prev" onclick="tutNav(-1)">◀</button>
-      <button class="tut-btn next" onclick="tutNav(1)">NEXT ▶</button>
-    </div>
-  </div>
-
-  <!-- Slide 3: Game Over -->
-  <div class="tut-slide" id="tut-slide-2">
-    <div class="tut-step">3 / 7</div>
-    <div class="tut-title">GAME <span>OVER</span></div>
-    <div class="tut-body">
-      The game ends when <b>none</b><br>
-      of your 3 pieces can fit<br>
-      anywhere on the board.<br><br>
-      Plan ahead — don't let the<br>
-      board get <em>too full!</em>
-    </div>
-    <div class="tut-demo" id="tut-demo-2" style="grid-template-columns:repeat(5,1fr)"></div>
-    <div class="tut-dots" id="tut-dots-2"></div>
-    <div class="tut-nav">
-      <button class="tut-btn prev" onclick="tutNav(-1)">◀</button>
-      <button class="tut-btn next" onclick="tutNav(1)">NEXT ▶</button>
-    </div>
-  </div>
-
-  <!-- Slide 4: Power-Ups -->
-  <div class="tut-slide" id="tut-slide-3">
-    <div class="tut-step">4 / 7</div>
-    <div class="tut-title">POWER<span>-UPS</span></div>
-    <div class="tut-body">
-      Clear lines to earn powers.<br>
-      Tap one to activate it,<br>
-      then tap the board!
-    </div>
-    <div class="tut-powers">
-      <div class="tut-power-pill">
-        <div class="pip-icon">⚡</div>
-        <div class="pip-text"><span class="pip-name">LASER</span>Nukes a full row</div>
-      </div>
-      <div class="tut-power-pill">
-        <div class="pip-icon">🔨</div>
-        <div class="pip-text"><span class="pip-name">SHATTER</span>Smashes a + cross</div>
-      </div>
-      <div class="tut-power-pill">
-        <div class="pip-icon">🔥</div>
-        <div class="pip-text"><span class="pip-name">WILDFIRE</span>Burns one color</div>
-      </div>
-      <div class="tut-power-pill">
-        <div class="pip-icon">💣</div>
-        <div class="pip-text"><span class="pip-name">BOMB</span>3x3 explosion</div>
-      </div>
-    </div>
-    <div class="tut-dots" id="tut-dots-3"></div>
-    <div class="tut-nav">
-      <button class="tut-btn prev" onclick="tutNav(-1)">◀</button>
-      <button class="tut-btn next" onclick="tutNav(1)">NEXT ▶</button>
-    </div>
-  </div>
-
-  <!-- Slide 5: Blocks & Tiers -->
-  <div class="tut-slide" id="tut-slide-4">
-    <div class="tut-step">5 / 7</div>
-    <div class="tut-title">BLOCK <span>TIERS</span></div>
-    <div class="tut-body">
-      As you level up, <b>rarer blocks</b><br>
-      appear in your tray!<br><br>
-      <em>COMMON</em> → easy to place<br>
-      <em>UNCOMMON</em> → slightly tricky<br>
-      <em>RARE</em> → getting harder<br>
-      <em>EPIC</em> → big & challenging<br>
-      <em>NIGHTMARE</em> → massive pieces<br>
-      <em>LEGENDARY</em> → the Glory Block!
-    </div>
-    <div class="tut-dots" id="tut-dots-4"></div>
-    <div class="tut-nav">
-      <button class="tut-btn prev" onclick="tutNav(-1)">◀</button>
-      <button class="tut-btn next" onclick="tutNav(1)">NEXT ▶</button>
-    </div>
-  </div>
-
-  <!-- Slide 6: Special Blocks -->
-  <div class="tut-slide" id="tut-slide-5">
-    <div class="tut-step">6 / 7</div>
-    <div class="tut-title">SPECIAL <span>BLOCKS</span></div>
-    <div class="tut-body">
-      <b>🌟 DAILY CHALLENGE</b><br>
-      A unique daily challenge<br>
-      the same for everyone<br>
-      worldwide!<br><br>
-      <b>🧩 BLOCK DEX</b><br>
-      Discover & collect every<br>
-      piece in the game!
-    </div>
-    <div class="tut-dots" id="tut-dots-5"></div>
-    <div class="tut-nav">
-      <button class="tut-btn prev" onclick="tutNav(-1)">◀</button>
-      <button class="tut-btn next" onclick="tutNav(1)">NEXT ▶</button>
-    </div>
-  </div>
-
-  <!-- Slide 7: Tips -->
-  <div class="tut-slide" id="tut-slide-6">
-    <div class="tut-step">7 / 7</div>
-    <div class="tut-title">PRO <span>TIPS</span></div>
-    <div class="tut-body">
-      <b>★</b> Clear multiple lines at<br>
-      once for a <em>combo bonus</em><br><br>
-      <b>★</b> Daily challenge builds<br>
-      your <em>streak</em> — don't break it!<br><br>
-      <b>★</b> Level up to unlock<br>
-      <em>themes</em> &amp; rarer blocks<br><br>
-      <b>★</b> Hit 500k score to unlock<br>
-      the <em>Rainbow theme!</em>
-    </div>
-    <div class="tut-dots" id="tut-dots-6"></div>
-    <div class="tut-nav">
-      <button class="tut-btn prev" onclick="tutNav(-1)">◀</button>
-      <button class="tut-btn finish" onclick="finishTutorial()">▶ PLAY!</button>
-    </div>
-  </div>
 
 </div>
 
@@ -5659,237 +5236,6 @@ function dismissAdInterstitial() {
 // ════════════════════════════════════
 //  TUTORIAL
 // ════════════════════════════════════
-let tutCurrent = 0;
-const TUT_TOTAL = 7;
-
-function showTutorial() {
-  sfxMenu();
-  tutCurrent = 0;
-
-  // Fully reset all slides — clear every class and state
-  for(let i = 0; i < TUT_TOTAL; i++) {
-    const slide = document.getElementById('tut-slide-' + i);
-    if(slide) {
-      slide.className = 'tut-slide';
-      slide.style.opacity = '';
-    }
-  }
-  // Stop any running demo animations
-  if(_demo0Interval) { clearInterval(_demo0Interval); clearTimeout(_demo0Interval); _demo0Interval = null; }
-
-  buildTutDemos();
-  buildTutDots();
-  showScreen('tutorial-screen');
-
-  // Activate slide 0 cleanly with no animation
-  const first = document.getElementById('tut-slide-0');
-  if(first) { first.className = 'tut-slide active'; first.style.opacity = '1'; }
-
-  // Update dots to show slide 0 active
-  for(let i = 0; i < TUT_TOTAL; i++) {
-    const dotEl = document.getElementById(i === 0 ? 'tut-dots' : 'tut-dots-' + i);
-    if(dotEl) dotEl.querySelectorAll('.tut-dot').forEach((d, di) => d.classList.toggle('active', di === 0));
-  }
-
-  animateTutClear();
-}
-
-function finishTutorial() {
-  sfxMenu();
-  localStorage.setItem('bb_tut_done', '1');
-  showScreen('menu-screen');
-}
-
-function tutNav(dir) {
-  const next = tutCurrent + dir;
-  if(next < 0 || next >= TUT_TOTAL) return;
-  sfxMenu();
-  showTutSlide(next, dir);
-}
-
-function showTutSlide(idx, dir) {
-  const old = document.getElementById('tut-slide-' + tutCurrent);
-  const nxt = document.getElementById('tut-slide-' + idx);
-  if(!nxt) return;
-
-  if(old && old !== nxt) {
-    old.classList.add(dir > 0 ? 'exit-left' : 'exit-right');
-    setTimeout(() => {
-      old.classList.remove('active', 'exit-left', 'exit-right');
-    }, 300);
-  }
-
-  tutCurrent = idx;
-  nxt.classList.add('active');
-  nxt.style.opacity = '0';
-  nxt.classList.add(dir > 0 ? 'enter-right' : 'enter-left');
-  requestAnimationFrame(() => {
-    nxt.style.opacity = '';
-    setTimeout(() => nxt.classList.remove('enter-right', 'enter-left'), 350);
-  });
-
-  // Update all dot sets
-  for(let i = 0; i < TUT_TOTAL; i++) {
-    const dotSet = document.getElementById('tut-dots-' + i);
-    if(dotSet) {
-      dotSet.querySelectorAll('.tut-dot').forEach((d, di) => {
-        d.classList.toggle('active', di === idx);
-      });
-    }
-  }
-
-  // Trigger demo animations
-  if(idx === 0) animateTutClear();
-  if(idx === 2) animateTutFull();
-}
-
-function buildTutDots() {
-  for(let s = 0; s < TUT_TOTAL; s++) {
-    const container = document.getElementById('tut-dots-' + (s === 0 ? '' : s));
-    const el = document.getElementById(s === 0 ? 'tut-dots' : 'tut-dots-' + s);
-    if(!el) continue;
-    el.innerHTML = '';
-    for(let i = 0; i < TUT_TOTAL; i++) {
-      const d = document.createElement('div');
-      d.className = 'tut-dot' + (i === 0 ? ' active' : '');
-      el.appendChild(d);
-    }
-  }
-}
-
-// ── Demo 0: Row clearing animation ──
-const DEMO0_COLS = 6;
-const DEMO0_ROWS = 4;
-let demo0Timer = null;
-
-function buildTutDemos() {
-  // Demo 0 — clearing board
-  const d0 = document.getElementById('tut-demo-0');
-  if(d0) {
-    d0.innerHTML = '';
-    d0.style.gridTemplateColumns = 'repeat(' + DEMO0_COLS + ', 1fr)';
-    const colors = ['#ff2d55','#ffd60a','#30d158','#0af5ff','#bf5af2','#ff6b35'];
-    for(let r = 0; r < DEMO0_ROWS; r++) {
-      for(let c = 0; c < DEMO0_COLS; c++) {
-        const cell = document.createElement('div');
-        cell.className = 'tut-cell';
-        cell.id = 'td0-' + r + '-' + c;
-        // Bottom two rows filled, top two sparse
-        if(r >= 2) {
-          const col = colors[(r * DEMO0_COLS + c) % colors.length];
-          cell.style.background = col;
-          cell.style.color = col;
-          cell.classList.add('on');
-        }
-        d0.appendChild(cell);
-      }
-    }
-  }
-
-  // Demo 2 — full board (game over state)
-  const d2 = document.getElementById('tut-demo-2');
-  if(d2) {
-    d2.innerHTML = '';
-    d2.style.gridTemplateColumns = 'repeat(5, 1fr)';
-    const colors2 = ['#ff2d55','#ffd60a','#30d158','#0af5ff','#bf5af2'];
-    for(let r = 0; r < 4; r++) {
-      for(let c = 0; c < 5; c++) {
-        const cell = document.createElement('div');
-        cell.className = 'tut-cell';
-        const filled = !(r === 0 && c >= 3); // Leave small gap top right
-        if(filled) {
-          const col = colors2[(r + c) % colors2.length];
-          cell.style.background = col;
-          cell.style.color = col;
-          cell.classList.add('on');
-        }
-        d2.appendChild(cell);
-      }
-    }
-  }
-
-  // Piece previews on slide 2
-  buildTutPieces();
-}
-
-function buildTutPieces() {
-  const container = document.getElementById('tut-pieces');
-  if(!container) return;
-  container.innerHTML = '';
-  const examples = [
-    { shape:[[1,1,1]], color:'#0af5ff' },
-    { shape:[[1,0],[1,1],[0,1]], color:'#ff2d55' },
-    { shape:[[1,1],[1,1]], color:'#ffd60a' },
-    { shape:[[1],[1],[1],[1]], color:'#30d158' },
-    { shape:[[1,1,1],[0,1,0]], color:'#bf5af2' },
-  ];
-  examples.forEach(p => {
-    const cols = p.shape[0].length;
-    const wrap = document.createElement('div');
-    wrap.className = 'tut-piece';
-    wrap.style.gridTemplateColumns = 'repeat(' + cols + ', 1fr)';
-    p.shape.forEach(row => row.forEach(val => {
-      const c = document.createElement('div');
-      c.className = 'tut-pc' + (val ? '' : ' off');
-      if(val) { c.style.background = p.color; c.style.boxShadow = '0 0 4px ' + p.color; }
-      wrap.appendChild(c);
-    }));
-    container.appendChild(wrap);
-  });
-}
-
-let _demo0Interval = null;
-function animateTutClear() {
-  if(_demo0Interval) clearInterval(_demo0Interval);
-  // Reset
-  buildTutDemos();
-  // After 800ms, flash the full bottom rows and remove them
-  _demo0Interval = setTimeout(() => {
-    const colors = ['#ff2d55','#ffd60a','#30d158','#0af5ff','#bf5af2','#ff6b35'];
-    // Fill the second-to-last row completely
-    for(let c = 0; c < DEMO0_COLS; c++) {
-      const cell = document.getElementById('td0-2-' + c);
-      if(cell && !cell.classList.contains('on')) {
-        const col = colors[c % colors.length];
-        cell.style.background = col;
-        cell.style.color = col;
-        cell.classList.add('on');
-      }
-    }
-    // Small delay then flash + clear that row
-    setTimeout(() => {
-      for(let c = 0; c < DEMO0_COLS; c++) {
-        const cell = document.getElementById('td0-2-' + c);
-        if(cell) cell.classList.add('flash');
-      }
-      setTimeout(() => {
-        for(let c = 0; c < DEMO0_COLS; c++) {
-          const cell = document.getElementById('td0-2-' + c);
-          if(cell) { cell.classList.remove('on','flash'); cell.style.background=''; cell.style.color=''; }
-        }
-        // Loop
-        setTimeout(() => animateTutClear(), 1200);
-      }, 500);
-    }, 500);
-  }, 900);
-}
-
-function animateTutFull() {
-  // Pulse the nearly-full board cells to emphasize danger
-  const d2 = document.getElementById('tut-demo-2');
-  if(!d2) return;
-  let bright = false;
-  if(_demo0Interval) clearInterval(_demo0Interval);
-  _demo0Interval = setInterval(() => {
-    bright = !bright;
-    d2.querySelectorAll('.tut-cell.on').forEach(c => {
-      c.style.filter = bright ? 'brightness(1.4)' : 'brightness(0.8)';
-    });
-  }, 600);
-}
-
-
-// ════════════════════════════════════
 //  STATS TRACKING
 // ════════════════════════════════════
 function getStat(k, def=0) { return parseInt(localStorage.getItem('bb_stat_'+k)||def); }
@@ -7802,8 +7148,7 @@ const PT_STEPS = [
   },
   {
     title: 'POWER-UPS',
-    body: 'Clear lines to earn\n<b>power-ups!</b>\nTap one, then\ntap the board!',
-    puDemo: true,
+    body: 'Clear lines to earn\n<b>power-ups!</b>\n\n⚡ <b>LASER</b> — wipes an\nentire row clean\n\n🔥 <b>WILDFIRE</b> — burns\nevery block of one color\n\n💣 <b>BOMB</b> — explodes a\n3×3 area of blocks\n\n🔨 <b>SHATTER</b> — smashes\na + cross of blocks',
     target: 'powerup-bar',
     hand: false,
     btn: 'GOT IT ▶',
@@ -7855,78 +7200,6 @@ function startPlayTutorial() {
   }, 300);
 }
 
-function _ptGrid(cols, rows, hitMap, id) {
-  const colors = ['#ff2d55','#ffd60a','#30d158','#0af5ff','#bf5af2'];
-  let before = `<div class="tut-pu-grid" id="tpt-before-${id}" style="grid-template-columns:repeat(${cols},10px)">`;
-  let after  = `<div class="tut-pu-grid" id="tpt-after-${id}"  style="grid-template-columns:repeat(${cols},10px)">`;
-  for(let r = 0; r < rows; r++) {
-    for(let c = 0; c < cols; c++) {
-      const filled = hitMap[r] && hitMap[r][c];
-      const col = colors[(r * cols + c) % colors.length];
-      before += `<div class="tut-pu-cell${filled?' on':''}" style="${filled?`background:${col};box-shadow:0 0 4px ${col}`:''}"></div>`;
-      after  += `<div class="tut-pu-cell" id="tpt-ac-${id}-${r}-${c}"></div>`;
-    }
-  }
-  return `${before}</div><span class="tut-pu-arrow">▶</span>${after}</div>`;
-}
-
-function _ptPuRow(icon, label, gridHTML) {
-  return `<div class="tut-pu-row">
-    <span class="tut-pu-icon">${icon}</span>
-    <span class="tut-pu-label">${label}</span>
-    ${gridHTML}
-  </div>`;
-}
-
-let _ptDemoTimer = null;
-function _ptAnimateDemos() {
-  const configs = [
-    { id:1, hitMap:[[0,0,1,0,0],[1,1,1,1,1],[0,1,0,1,0]], cols:5, rows:3 },
-    { id:2, hitMap:[[1,0,1,0],[0,1,0,1],[1,0,1,0]],         cols:4, rows:3 },
-    { id:3, hitMap:[[0,1,1,1,0],[1,1,1,1,1],[1,1,1,1,1],[1,1,1,1,1],[0,1,1,1,0]], cols:5, rows:5 },
-    { id:4, hitMap:[[0,0,1,0,0],[0,0,1,0,0],[1,1,1,1,1],[0,0,1,0,0],[0,0,1,0,0]], cols:5, rows:5 },
-  ];
-  const colors = ['#ff2d55','#ffd60a','#30d158','#0af5ff','#bf5af2'];
-  let ci = 0;
-  function runNext() {
-    if(!document.getElementById('tpt-before-1')) return;
-    const cfg = configs[ci % configs.length];
-    ci++;
-    // Flash hit cells white
-    for(let r = 0; r < cfg.rows; r++) for(let c = 0; c < cfg.cols; c++) {
-      if(cfg.hitMap[r]?.[c]) {
-        const g = document.getElementById('tpt-before-'+cfg.id);
-        if(g) { const el = g.children[r*cfg.cols+c]; if(el){ el.style.background='#fff'; el.style.boxShadow='0 0 8px #fff'; } }
-      }
-    }
-    // Show cleared after
-    setTimeout(() => {
-      if(!document.getElementById('tpt-before-1')) return;
-      for(let r = 0; r < cfg.rows; r++) for(let c = 0; c < cfg.cols; c++) {
-        if(cfg.hitMap[r]?.[c]) {
-          const el = document.getElementById(`tpt-ac-${cfg.id}-${r}-${c}`);
-          if(el){ el.style.background='transparent'; el.style.border='1px dashed rgba(255,255,255,0.2)'; }
-        }
-      }
-      // Reset
-      setTimeout(() => {
-        if(!document.getElementById('tpt-before-1')) return;
-        for(let r = 0; r < cfg.rows; r++) for(let c = 0; c < cfg.cols; c++) {
-          if(cfg.hitMap[r]?.[c]) {
-            const g = document.getElementById('tpt-before-'+cfg.id);
-            if(g){ const el = g.children[r*cfg.cols+c]; const col = colors[(r*cfg.cols+c)%colors.length]; if(el){ el.style.background=col; el.style.boxShadow=`0 0 4px ${col}`; } }
-            const el = document.getElementById(`tpt-ac-${cfg.id}-${r}-${c}`);
-            if(el){ el.style.background=''; el.style.border=''; }
-          }
-        }
-        _ptDemoTimer = setTimeout(runNext, 500);
-      }, 700);
-    }, 400);
-  }
-  clearTimeout(_ptDemoTimer);
-  _ptDemoTimer = setTimeout(runNext, 600);
-}
-
 function _ptHookGame() {
   // We'll check placement and clears via event flags set in the step logic
 }
@@ -7949,20 +7222,6 @@ function _ptShowStep(idx) {
   titleEl.textContent = step.title;
   bodyEl.innerHTML = step.body.replace(/\n/g, '<br>');
 
-  // Power-up demo grids
-  if(step.puDemo) {
-    const demos = document.createElement('div');
-    demos.className = 'tut-pu-demos';
-    demos.innerHTML = `
-      ${_ptPuRow('⚡','LASER',   _ptGrid(5,3,[[0,0,1,0,0],[1,1,1,1,1],[0,1,0,1,0]], 1))}
-      ${_ptPuRow('🔥','WILDFIRE',_ptGrid(4,3,[[1,0,1,0],[0,1,0,1],[1,0,1,0]], 2))}
-      ${_ptPuRow('💣','BOMB',    _ptGrid(5,5,[[0,1,1,1,0],[1,1,1,1,1],[1,1,1,1,1],[1,1,1,1,1],[0,1,1,1,0]], 3))}
-      ${_ptPuRow('🔨','SHATTER', _ptGrid(5,5,[[0,0,1,0,0],[0,0,1,0,0],[1,1,1,1,1],[0,0,1,0,0],[0,0,1,0,0]], 4))}
-    `;
-    bodyEl.appendChild(demos);
-    _ptAnimateDemos();
-  }
-
   if(step.btn) {
     btn.style.display = 'block';
     btn.textContent = step.btn;
@@ -7977,18 +7236,50 @@ function _ptShowStep(idx) {
   if(targetEl) {
     const rect = targetEl.getBoundingClientRect();
     const vw = window.innerWidth, vh = window.innerHeight;
-    // Place coach above or below the target
-    const coachH = 180;
+    const coachW = 260, coachH = step.puDemo ? 300 : 210;
     const spaceBelow = vh - rect.bottom;
     const spaceAbove = rect.top;
+    const spaceRight = vw - rect.right;
+    const spaceLeft  = rect.left;
     let coachTop, coachLeft;
 
-    if(spaceBelow > coachH + 20) {
-      coachTop = rect.bottom + 16;
+    // Tray and powerup-bar: always prefer above to avoid blocking interactive elements
+    if(step.target === 'tray' || step.target === 'powerup-bar') {
+      if(spaceAbove > coachH + 16) {
+        coachTop  = rect.top - coachH - 16;
+        coachLeft = Math.max(8, Math.min(vw - coachW - 8, rect.left + rect.width / 2 - coachW / 2));
+      } else if(spaceRight > coachW + 16) {
+        coachTop  = Math.max(8, rect.top + rect.height / 2 - coachH / 2);
+        coachLeft = rect.right + 12;
+      } else if(spaceLeft > coachW + 16) {
+        coachTop  = Math.max(8, rect.top + rect.height / 2 - coachH / 2);
+        coachLeft = rect.left - coachW - 12;
+      } else {
+        // Last resort: push it as high as possible
+        coachTop  = Math.max(8, rect.top - coachH - 16);
+        coachLeft = Math.max(8, Math.min(vw - coachW - 8, rect.left + rect.width / 2 - coachW / 2));
+      }
     } else {
-      coachTop = Math.max(10, rect.top - coachH - 16);
+      // Board and others: prefer above, then below, then sides
+      if(spaceAbove > coachH + 16) {
+        coachTop  = rect.top - coachH - 16;
+        coachLeft = Math.max(8, Math.min(vw - coachW - 8, rect.left + rect.width / 2 - coachW / 2));
+      } else if(spaceBelow > coachH + 16) {
+        coachTop  = rect.bottom + 16;
+        coachLeft = Math.max(8, Math.min(vw - coachW - 8, rect.left + rect.width / 2 - coachW / 2));
+      } else if(spaceRight > coachW + 16) {
+        coachTop  = Math.max(8, rect.top + rect.height / 2 - coachH / 2);
+        coachLeft = rect.right + 12;
+      } else {
+        coachTop  = Math.max(8, rect.top + rect.height / 2 - coachH / 2);
+        coachLeft = Math.max(8, rect.left - coachW - 12);
+      }
     }
-    coachLeft = Math.max(8, Math.min(vw - 276, rect.left + rect.width / 2 - 130));
+
+    // Final clamp to keep fully on screen
+    coachTop  = Math.max(8, Math.min(vh - coachH - 8, coachTop));
+    coachLeft = Math.max(8, Math.min(vw - coachW - 8, coachLeft));
+
     coach.style.top = coachTop + 'px';
     coach.style.left = coachLeft + 'px';
     coach.style.transform = '';
@@ -8056,7 +7347,6 @@ function _ptOnClear() {
 
 function playTutNext() {
   clearTimeout(_ptFallbackTimer);
-  clearTimeout(_ptDemoTimer);
   const step = PT_STEPS[_ptStep];
   if(step && step.finish) { playTutSkip(); return; }
   _ptShowStep(_ptStep + 1);
@@ -8064,7 +7354,6 @@ function playTutNext() {
 
 function playTutSkip() {
   clearTimeout(_ptFallbackTimer);
-  clearTimeout(_ptDemoTimer);
   _ptActive = false;
   _ptWaitingForPlace = false;
   _ptWaitingForClear = false;
