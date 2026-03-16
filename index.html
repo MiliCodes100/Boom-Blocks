@@ -88,6 +88,7 @@ body::after {
   scroll-behavior:smooth;
   -webkit-overflow-scrolling:touch;
   touch-action:pan-y;
+  will-change: background;
 }
 
 .screen { display:none; width:100%; max-width:440px; flex-direction:column; align-items:center; min-height:100vh; }
@@ -334,6 +335,8 @@ header {
     inset 0 0 40px rgba(0,0,0,0.6);
   position:relative;
   transition: transform 0.05s;
+  will-change: box-shadow, transform;
+  contain: layout style;
 }
 
 #board.shake {
@@ -2794,6 +2797,95 @@ body.theme-onyx #board { animation: onyxPulse 5s ease-in-out infinite; }
   box-shadow: 0 0 8px var(--glow2);
 }
 
+/* ══ REVIEW PROMPT ══ */
+#review-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.75);
+  z-index: 11000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  animation: reviewFadeIn 0.3s ease;
+}
+@keyframes reviewFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+#review-card {
+  background: var(--surface);
+  border: 2px solid var(--c2);
+  border-radius: 16px;
+  padding: 24px 20px 20px;
+  max-width: 320px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  box-shadow: 0 0 40px var(--glow2), 0 16px 48px rgba(0,0,0,0.6);
+  animation: reviewCardIn 0.35s cubic-bezier(0.175,0.885,0.32,1.275);
+}
+@keyframes reviewCardIn {
+  from { transform: scale(0.85) translateY(20px); opacity: 0; }
+  to   { transform: scale(1) translateY(0); opacity: 1; }
+}
+#review-emoji {
+  font-size: 2.8rem;
+  line-height: 1;
+}
+#review-title {
+  font-family: 'Press Start 2P', monospace;
+  font-size: clamp(0.55rem, 3vw, 0.75rem);
+  color: var(--c2);
+  text-align: center;
+  letter-spacing: 2px;
+  text-shadow: 0 0 12px var(--glow2);
+}
+#review-body {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 0.38rem;
+  color: #aab;
+  text-align: center;
+  line-height: 2;
+  letter-spacing: 0.5px;
+}
+.review-stars {
+  display: flex;
+  gap: 6px;
+  font-size: 1.6rem;
+  margin: 4px 0;
+}
+#review-btn-yes {
+  width: 100%;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 0.45rem;
+  letter-spacing: 1px;
+  padding: 12px;
+  background: var(--c2);
+  color: #000;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  box-shadow: 0 0 16px var(--glow2);
+  margin-top: 4px;
+}
+#review-btn-yes:active { transform: scale(0.97); }
+.review-btn-later {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 0.32rem;
+  color: #606080;
+  background: transparent;
+  border: 1px solid #404060;
+  border-radius: 6px;
+  padding: 7px 14px;
+  cursor: pointer;
+  letter-spacing: 1px;
+  width: 100%;
+}
+.review-btn-later:active { transform: scale(0.97); }
+
 </style>
 <!-- AdMob -->
 <meta name="google-adsense-account" content="ca-pub-9829984726595934">
@@ -4178,6 +4270,7 @@ function initGame() {
   $id('score').textContent='0';
   const ld=$id('lines-display'); if(ld) ld.textContent='0';
   board=Array.from({length:ROWS},()=>Array(COLS).fill(null));
+  _boardInitialized = false; // force full cell rebuild on next renderBoard
   // Check for glory block BEFORE obstacles are added
   const _gloryRoll = !isDaily && Math.random() < 0.01;
   // Pre-roll insane piece so we know if board needs to be clear
@@ -4363,45 +4456,104 @@ function rngPiece() {
 //  BOARD RENDER
 // ════════════════════════════════════
 let cellSize=0;
+let _boardInitialized = false;
+let _prevBoard = null; // tracks last rendered state for diffing
+
+function _initBoardCells() {
+  const el = $id('board');
+  el.innerHTML = '';
+  // Build scanline overlay once
+  const overlay = document.createElement('div');
+  overlay.id = 'board-scanline';
+  overlay.style.cssText = 'position:absolute;inset:0;pointer-events:none;z-index:10;border-radius:6px;background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,0.04) 3px,rgba(0,0,0,0.04) 4px)';
+  el.appendChild(overlay);
+  // Build all cells once
+  for(let r = 0; r < ROWS; r++) for(let c = 0; c < COLS; c++) {
+    const cell = document.createElement('div');
+    cell.className = 'cell';
+    cell.dataset.r = r;
+    cell.dataset.c = c;
+    el.appendChild(cell);
+  }
+  _boardInitialized = true;
+  _prevBoard = Array.from({length: ROWS}, () => Array(COLS).fill(null));
+  const first = el.querySelector('.cell');
+  if(first) cellSize = first.getBoundingClientRect().width;
+}
 
 function renderBoard() {
-  const el=$id('board');
-  el.innerHTML='';
-  // rebuild scanline overlay
-  const overlay=document.createElement('div');
-  overlay.style.cssText='position:absolute;inset:0;pointer-events:none;z-index:10;border-radius:6px;background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,0.04) 3px,rgba(0,0,0,0.04) 4px)';
-  el.appendChild(overlay);
+  const el = $id('board');
+  // First time or after a full reset — build cell DOM
+  if(!_boardInitialized || el.querySelectorAll('.cell').length !== ROWS * COLS) {
+    _initBoardCells();
+  }
 
-  for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++){
-    const cell=document.createElement('div');
-    cell.className='cell'+(board[r][c]?' filled':'');
-    if(board[r][c]){
-      const isGlass = (THEMES.find(t=>t.id===activeTheme)||{}).glassStyle;
-      cell.style.background=board[r][c];
-      if(isGlass){
-        cell.style.backdropFilter='blur(12px)';
-        cell.style.webkitBackdropFilter='blur(12px)';
-        cell.style.border='1px solid rgba(255,255,255,0.7)';
-        cell.style.boxShadow=`0 4px 16px ${board[r][c]}, inset 0 1px 0 rgba(255,255,255,0.8), inset 0 -1px 0 rgba(0,0,0,0.05)`;
-        cell.style.borderRadius='6px';
+  const isGlass = (THEMES.find(t => t.id === activeTheme) || {}).glassStyle;
+  const cells = el.querySelectorAll('.cell');
+
+  for(let r = 0; r < ROWS; r++) for(let c = 0; c < COLS; c++) {
+    const color = board[r][c];
+    const prev  = _prevBoard[r][c];
+    if(color === prev) continue; // nothing changed — skip entirely
+
+    const cell = cells[r * COLS + c];
+    if(!cell) continue;
+
+    if(color) {
+      cell.className = 'cell filled';
+      cell.style.background = color;
+      if(isGlass) {
+        cell.style.backdropFilter = 'blur(12px)';
+        cell.style.webkitBackdropFilter = 'blur(12px)';
+        cell.style.border = '1px solid rgba(255,255,255,0.7)';
+        cell.style.boxShadow = `0 4px 16px ${color}, inset 0 1px 0 rgba(255,255,255,0.8), inset 0 -1px 0 rgba(0,0,0,0.05)`;
+        cell.style.borderRadius = '6px';
       } else {
-        cell.style.boxShadow=`0 0 6px ${board[r][c]}, inset 0 0 3px rgba(255,255,255,0.1)`;
+        cell.style.backdropFilter = '';
+        cell.style.webkitBackdropFilter = '';
+        cell.style.border = '';
+        cell.style.boxShadow = `0 0 6px ${color}, inset 0 0 3px rgba(255,255,255,0.1)`;
+        cell.style.borderRadius = '';
       }
-      const em = getEmojiForColor(board[r][c]);
-      if (em) {
+      const em = getEmojiForColor(color);
+      if(em) {
         cell.style.display = 'flex';
         cell.style.alignItems = 'center';
         cell.style.justifyContent = 'center';
         cell.style.fontSize = '0.75em';
         cell.style.lineHeight = '1';
         cell.textContent = em;
+      } else {
+        cell.style.display = '';
+        cell.style.alignItems = '';
+        cell.style.justifyContent = '';
+        cell.style.fontSize = '';
+        cell.style.lineHeight = '';
+        cell.textContent = '';
       }
+    } else {
+      // Cell was cleared
+      cell.className = 'cell';
+      cell.style.background = '';
+      cell.style.boxShadow = '';
+      cell.style.border = '';
+      cell.style.backdropFilter = '';
+      cell.style.webkitBackdropFilter = '';
+      cell.style.borderRadius = '';
+      cell.style.display = '';
+      cell.style.alignItems = '';
+      cell.style.justifyContent = '';
+      cell.style.fontSize = '';
+      cell.style.lineHeight = '';
+      cell.textContent = '';
     }
-    cell.dataset.r=r; cell.dataset.c=c;
-    el.appendChild(cell);
+    _prevBoard[r][c] = color;
   }
-  const first=el.querySelector('.cell');
-  if(first) cellSize=first.getBoundingClientRect().width;
+
+  if(!cellSize) {
+    const first = el.querySelector('.cell');
+    if(first) cellSize = first.getBoundingClientRect().width;
+  }
   // Render bomb icons on existing bomb cells
   renderBombOnBoard();
 }
@@ -4850,6 +5002,7 @@ function checkGameOver() {
   checkTurboUnlock();
   checkMusicUnlocks();
   recordGameStats(score, sessionLinesCleared, sessionPiecesPlaced);
+  checkReviewPrompt();
   deathFlood(() => isDaily ? finishDaily() : showWatchAdOverlay(finishClassic));
 }
 
@@ -6141,8 +6294,11 @@ function startSnow() {
 
   function snowLoop() {
     if(activeTheme !== 'ice') { stopSnow(); return; }
-    _snowCanvas.width  = window.innerWidth;
-    _snowCanvas.height = window.innerHeight;
+    // Only resize when dimensions actually change — avoids clearing canvas every frame
+    if(_snowCanvas.width !== window.innerWidth || _snowCanvas.height !== window.innerHeight) {
+      _snowCanvas.width  = window.innerWidth;
+      _snowCanvas.height = window.innerHeight;
+    }
     _snowCtx.clearRect(0, 0, _snowCanvas.width, _snowCanvas.height);
 
     _snowFlakes.forEach(f => {
@@ -6235,8 +6391,11 @@ function startPetals() {
 
   function petalLoop() {
     if(activeTheme !== 'blossom') { stopPetals(); return; }
-    _petalCanvas.width  = window.innerWidth;
-    _petalCanvas.height = window.innerHeight;
+    // Only resize when dimensions actually change
+    if(_petalCanvas.width !== window.innerWidth || _petalCanvas.height !== window.innerHeight) {
+      _petalCanvas.width  = window.innerWidth;
+      _petalCanvas.height = window.innerHeight;
+    }
     _petalCtx.clearRect(0, 0, _petalCanvas.width, _petalCanvas.height);
 
     _petals.forEach(p => {
@@ -6307,6 +6466,8 @@ function applyTheme(id) {
   activeTheme = id;
   localStorage.setItem('bb_theme', id);
   haptic(20); // theme selected tap
+  // Force board re-render so theme-specific styles (glass, etc.) update
+  _boardInitialized = false;
 
   // Ice theme — start/stop snowflakes
   if(id === 'ice') startSnow(); else stopSnow();
@@ -7365,6 +7526,84 @@ function playTutSkip() {
   localStorage.setItem('bb_tut_done', '1');
   sfxMenu();
   // Game keeps running — player is now in a real game
+}
+</script>
+
+<!-- ══ REVIEW PROMPT ══ -->
+<script>
+// ════════════════════════════════════
+//  REVIEW PROMPT
+// ════════════════════════════════════
+const REVIEW_TRIGGERS  = [10, 30, 75]; // show at these game counts
+const REVIEW_SNOOZE_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+const PLAY_STORE_URL   = 'https://play.google.com/store/apps/details?id=com.boomboomblocks.app';
+
+function checkReviewPrompt() {
+  // Don't show if permanently dismissed
+  if(localStorage.getItem('bb_review_done')) return;
+  // Don't show if snoozed
+  const snoozed = parseInt(localStorage.getItem('bb_review_snooze') || '0');
+  if(snoozed && Date.now() < snoozed) return;
+  // Only show at trigger game counts
+  if(!REVIEW_TRIGGERS.includes(gamesPlayed)) return;
+  // Don't show same trigger twice
+  const seen = JSON.parse(localStorage.getItem('bb_review_seen') || '[]');
+  if(seen.includes(gamesPlayed)) return;
+
+  // Mark this trigger as seen
+  seen.push(gamesPlayed);
+  localStorage.setItem('bb_review_seen', JSON.stringify(seen));
+
+  // Small delay so it doesn't pop up right at game over
+  setTimeout(showReviewPrompt, 1800);
+}
+
+function showReviewPrompt() {
+  if(document.getElementById('review-overlay')) return;
+
+  const overlay = document.createElement('div');
+  overlay.id = 'review-overlay';
+  overlay.innerHTML = `
+    <div id="review-card">
+      <div id="review-emoji">🎮</div>
+      <div id="review-title">ENJOYING THE GAME?</div>
+      <div class="review-stars">⭐⭐⭐⭐⭐</div>
+      <div id="review-body">You've played ${gamesPlayed} games!<br>A quick review helps us<br>grow the game 🚀</div>
+      <button id="review-btn-yes" onclick="reviewGoRate()">⭐ RATE ON PLAY STORE</button>
+      <button class="review-btn-later" onclick="reviewSnooze()">MAYBE LATER</button>
+      <button class="review-btn-later" style="border:none;color:#404060" onclick="reviewDismiss()">NO THANKS</button>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  haptic([20, 10, 20]);
+
+  // Close on backdrop tap
+  overlay.addEventListener('click', e => { if(e.target === overlay) reviewSnooze(); });
+}
+
+function reviewGoRate() {
+  localStorage.setItem('bb_review_done', '1');
+  _closeReview();
+  // Try native app store link first, fall back to web
+  window.open(PLAY_STORE_URL, '_blank');
+}
+
+function reviewSnooze() {
+  localStorage.setItem('bb_review_snooze', Date.now() + REVIEW_SNOOZE_MS);
+  _closeReview();
+}
+
+function reviewDismiss() {
+  localStorage.setItem('bb_review_done', '1');
+  _closeReview();
+}
+
+function _closeReview() {
+  const overlay = document.getElementById('review-overlay');
+  if(overlay) {
+    overlay.style.animation = 'reviewFadeIn 0.2s ease reverse forwards';
+    setTimeout(() => overlay.remove(), 200);
+  }
 }
 </script>
 
