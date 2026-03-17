@@ -2886,6 +2886,288 @@ body.theme-onyx #board { animation: onyxPulse 5s ease-in-out infinite; }
 }
 .review-btn-later:active { transform: scale(0.97); }
 
+/* ══ UNLOCK CELEBRATION POPUP ══ */
+#unlock-celebrate-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.8);
+  z-index: 12000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  animation: unlockOverlayIn 0.3s ease;
+}
+@keyframes unlockOverlayIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+#unlock-celebrate-card {
+  background: var(--surface);
+  border: 3px solid var(--c2);
+  border-radius: 20px;
+  padding: 28px 24px 22px;
+  max-width: 300px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  box-shadow: 0 0 60px var(--glow2), 0 0 120px var(--glow1), 0 20px 60px rgba(0,0,0,0.7);
+  animation: unlockCardIn 0.45s cubic-bezier(0.175,0.885,0.32,1.275);
+  position: relative;
+  overflow: hidden;
+}
+@keyframes unlockCardIn {
+  from { transform: scale(0.6) translateY(40px) rotate(-4deg); opacity: 0; }
+  to   { transform: scale(1) translateY(0) rotate(0deg); opacity: 1; }
+}
+/* Shimmer sweep across card */
+#unlock-celebrate-card::before {
+  content: '';
+  position: absolute;
+  top: -50%; left: -60%;
+  width: 40%; height: 200%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.12), transparent);
+  transform: skewX(-15deg);
+  animation: unlockShimmer 2s ease 0.5s infinite;
+}
+@keyframes unlockShimmer {
+  0%   { left: -60%; }
+  100% { left: 140%; }
+}
+#unlock-celebrate-label {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 0.42rem;
+  color: var(--c4);
+  letter-spacing: 3px;
+  text-shadow: 0 0 10px var(--glow4);
+}
+#unlock-celebrate-emoji {
+  font-size: 3.5rem;
+  line-height: 1;
+  animation: unlockEmojiPop 0.5s cubic-bezier(0.175,0.885,0.32,1.275) 0.2s both;
+  filter: drop-shadow(0 0 20px var(--glow2));
+}
+@keyframes unlockEmojiPop {
+  from { transform: scale(0) rotate(-20deg); }
+  to   { transform: scale(1) rotate(0deg); }
+}
+#unlock-celebrate-name {
+  font-family: 'Press Start 2P', monospace;
+  font-size: clamp(0.7rem, 4vw, 1rem);
+  color: #fff;
+  letter-spacing: 2px;
+  text-shadow: 0 0 20px var(--glow2);
+  text-align: center;
+  animation: unlockNameIn 0.4s ease 0.3s both;
+}
+@keyframes unlockNameIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+#unlock-celebrate-sub {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 0.35rem;
+  color: var(--c3);
+  letter-spacing: 1px;
+  text-align: center;
+  animation: unlockNameIn 0.4s ease 0.4s both;
+}
+.unlock-celebrate-preview {
+  display: flex;
+  gap: 6px;
+  margin: 4px 0;
+  animation: unlockNameIn 0.4s ease 0.5s both;
+}
+.unlock-celebrate-swatch {
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+}
+#unlock-celebrate-btn {
+  width: 100%;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 0.45rem;
+  letter-spacing: 1px;
+  padding: 13px;
+  background: var(--c2);
+  color: #000;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  box-shadow: 0 0 20px var(--glow2);
+  margin-top: 6px;
+  animation: unlockNameIn 0.4s ease 0.6s both;
+}
+#unlock-celebrate-btn:active { transform: scale(0.97); }
+
+/* ══ DAILY MISSIONS ══ */
+#missions-screen {
+  padding: 16px 16px 40px;
+  gap: 12px;
+}
+.missions-header {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 4px 0 8px;
+}
+.missions-title {
+  font-family: 'Press Start 2P', monospace;
+  font-size: clamp(0.6rem, 3vw, 0.85rem);
+  color: var(--c1);
+  letter-spacing: 2px;
+  text-shadow: 0 0 12px var(--glow1);
+  flex: 1;
+}
+.missions-date {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 0.3rem;
+  color: var(--muted);
+  letter-spacing: 1px;
+}
+.missions-xp-bar-wrap {
+  width: 100%;
+  background: var(--surface2);
+  border-radius: 6px;
+  height: 8px;
+  overflow: hidden;
+  margin-bottom: 4px;
+}
+.missions-xp-bar {
+  height: 100%;
+  background: linear-gradient(90deg, var(--c1), var(--c2));
+  border-radius: 6px;
+  transition: width 0.5s ease;
+  box-shadow: 0 0 8px var(--glow1);
+}
+.missions-xp-label {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 0.3rem;
+  color: var(--muted);
+  text-align: right;
+  width: 100%;
+  margin-bottom: 8px;
+}
+.mission-card {
+  width: 100%;
+  background: var(--surface);
+  border: 2px solid rgba(255,255,255,0.08);
+  border-radius: 12px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: border-color 0.3s;
+}
+.mission-card.complete {
+  border-color: var(--c3);
+  background: rgba(48,209,88,0.06);
+}
+.mission-card.complete .mission-name {
+  color: var(--c3);
+}
+.mission-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.mission-icon {
+  font-size: 1.4rem;
+  width: 28px;
+  text-align: center;
+  flex-shrink: 0;
+}
+.mission-info {
+  flex: 1;
+}
+.mission-name {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 0.45rem;
+  color: var(--text);
+  letter-spacing: 1px;
+  margin-bottom: 4px;
+}
+.mission-desc {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 0.32rem;
+  color: var(--muted);
+  letter-spacing: 0.5px;
+  line-height: 1.8;
+}
+.mission-xp {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 0.35rem;
+  color: var(--c2);
+  text-shadow: 0 0 8px var(--glow2);
+  white-space: nowrap;
+}
+.mission-progress-wrap {
+  width: 100%;
+  background: var(--surface2);
+  border-radius: 4px;
+  height: 6px;
+  overflow: hidden;
+}
+.mission-progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, var(--c1), var(--c2));
+  border-radius: 4px;
+  transition: width 0.4s ease;
+  box-shadow: 0 0 6px var(--glow1);
+  max-width: 100%;
+}
+.mission-progress-label {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 0.28rem;
+  color: var(--muted);
+  text-align: right;
+}
+.mission-complete-badge {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 0.35rem;
+  color: var(--c3);
+  text-shadow: 0 0 8px rgba(48,209,88,0.6);
+  text-align: center;
+  letter-spacing: 2px;
+}
+.missions-all-done {
+  width: 100%;
+  background: linear-gradient(135deg, rgba(48,209,88,0.1), rgba(10,245,255,0.1));
+  border: 2px solid var(--c3);
+  border-radius: 12px;
+  padding: 20px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+.missions-all-done-emoji { font-size: 2.5rem; }
+.missions-all-done-text {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 0.5rem;
+  color: var(--c3);
+  letter-spacing: 2px;
+  text-shadow: 0 0 12px rgba(48,209,88,0.6);
+}
+.missions-all-done-sub {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 0.32rem;
+  color: var(--muted);
+  letter-spacing: 1px;
+}
+.missions-refresh-note {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 0.3rem;
+  color: var(--muted);
+  text-align: center;
+  letter-spacing: 1px;
+  padding: 8px 0 0;
+}
+
 </style>
 <!-- AdMob -->
 <meta name="google-adsense-account" content="ca-pub-9829984726595934">
@@ -2936,6 +3218,7 @@ body.theme-onyx #board { animation: onyxPulse 5s ease-in-out infinite; }
     <span class="daily-done-tag" id="daily-badge">TODAY</span>
   </button>
   <button class="menu-btn ghost" onclick="startPlayTutorial()" style="border-color:var(--c5);color:var(--c5);box-shadow:0 0 15px rgba(191,90,242,0.15)">🎮 PLAY TUTORIAL</button>
+  <button class="menu-btn ghost" onclick="showMissions()" style="border-color:var(--c1);color:var(--c1);box-shadow:0 0 15px rgba(255,45,85,0.15)" id="missions-menu-btn">📋 DAILY MISSIONS</button>
   <button class="menu-btn ghost" onclick="showLeaderboard()" style="position:relative">🏆 LEADERBOARD<span style="position:absolute;top:-8px;right:-4px;font-family:'Press Start 2P',monospace;font-size:0.28rem;background:#ff9f0a;color:#000;border-radius:4px;padding:2px 5px;letter-spacing:0.5px">GLOBAL SOON</span></button>
   <button class="menu-btn ghost" onclick="showStats()" style="border-color:var(--c4);color:var(--c4);box-shadow:0 0 15px rgba(10,245,255,0.15)">📊 STATS</button>
   <button class="menu-btn ghost" onclick="showUnlocks()" style="border-color:var(--c3);color:var(--c3);box-shadow:0 0 15px rgba(48,209,88,0.15)">🔓 UNLOCKS</button>
@@ -3056,6 +3339,20 @@ body.theme-onyx #board { animation: onyxPulse 5s ease-in-out infinite; }
   <div style="width:100%;height:1px;background:rgba(255,255,255,0.08);margin-bottom:4px"></div>
   <div id="gameplay-unlock-section" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;width:100%"></div>
 
+</div>
+
+<div id="missions-screen" class="screen missions-screen">
+  <div class="missions-header">
+    <button class="back-btn" onclick="showScreen('menu-screen')">◀ BACK</button>
+    <div class="missions-title">📋 DAILY MISSIONS</div>
+  </div>
+  <div class="missions-date" id="missions-date"></div>
+  <div class="missions-xp-bar-wrap">
+    <div class="missions-xp-bar" id="missions-xp-bar" style="width:0%"></div>
+  </div>
+  <div class="missions-xp-label" id="missions-xp-label">0 / 3 COMPLETE</div>
+  <div id="missions-list"></div>
+  <div class="missions-refresh-note">🔄 NEW MISSIONS EVERY DAY AT MIDNIGHT</div>
 </div>
 
 <div id="blockdex-screen" class="screen">
@@ -4047,6 +4344,7 @@ function showScreen(id) {
 function goMenu() {
   closeOverlays();
   updateMenuStats();
+  updateMissionsBadge();
   showScreen('menu-screen');
 }
 
@@ -4252,6 +4550,7 @@ function restartGame() {
 }
 
 function initGame() {
+  _missionOnGameStart();
   adRetryUsed = 0;
   // Init banner ad (only once)
   if(!window._bannerAdInited) {
@@ -4815,6 +5114,8 @@ function placePiece(piece,startRow,startCol) {
 
   // Tutorial hook
   if(typeof _ptOnPlace === 'function') _ptOnPlace();
+  // Mission hook
+  _missionOnPlace(piece);
 }
 
 function refillPieces() {
@@ -4893,6 +5194,8 @@ function clearLines() {
   awardPower(lines, consecutiveClearCount);
   // Tutorial hook
   if(typeof _ptOnClear === 'function') _ptOnClear();
+  // Mission hook
+  _missionOnClear(lines);
 
   if(isDaily){
     const pct=Math.min(100,((score)/50000)*100);
@@ -4910,6 +5213,7 @@ function clearLines() {
       const bonus = 1000;
       addScore(bonus, 0, 0);
       showClearBonus();
+      _missionOnBoardClear();
     }
   },400);
 }
@@ -4917,17 +5221,19 @@ function clearLines() {
 function addScore(pts,lines,combo,blockColor) {
   score+=pts;
   $id('score').textContent=score.toLocaleString();
+  // Mission hook
+  _missionOnScore(pts);
   if(!isDaily&&score>best){
     best=score;
     localStorage.setItem('bb_best',best);
   }
   if(score>=250000 && !localStorage.getItem('bb_music_vibe')) {
     localStorage.setItem('bb_music_vibe','1');
-    setTimeout(()=>showToast('🔥 VIBE UNLOCKED!'), 600);
+    setTimeout(()=>showUnlockCelebration({name:'VIBE', emoji:'🔥', colors:['#ff6b35','#ff2d55','#ffd60a','#bf5af2','#0af5ff']}, 'MUSIC TRACK'), 600);
   }
   if(score>=500000 && !localStorage.getItem('bb_score500k')) {
     localStorage.setItem('bb_score500k','1');
-    setTimeout(()=>showToast('🌈 RAINBOW UNLOCKED!'), 1200);
+    setTimeout(()=>showUnlockCelebration({name:'RAINBOW', emoji:'🌈', colors:['#ff0000','#ff7700','#ffee00','#00cc00','#0099ff']}, 'THEME'), 1200);
   }
   incStat('total_score', pts);
 
@@ -4996,12 +5302,13 @@ function checkGameOver() {
   localStorage.setItem('bb_games', gamesPlayed);
   if(gamesPlayed === 25 && !localStorage.getItem('bb_music_chill')) {
     localStorage.setItem('bb_music_chill','1');
-    setTimeout(()=>showToast('☁️ CHILL UNLOCKED!'), 2000);
+    setTimeout(()=>showUnlockCelebration({name:'CHILL', emoji:'☁️', colors:['#b5d5f5','#f5b5d5','#b5f5d5','#f5e6b5','#d5b5f5']}, 'MUSIC TRACK'), 2000);
   }
-  if(gamesPlayed === 100) setTimeout(()=>showToast('🌸 BLOSSOM UNLOCKED!'), 2000);
+  if(gamesPlayed === 100) setTimeout(()=>showUnlockCelebration({name:'BLOSSOM', emoji:'🌸', colors:['#ff99bb','#ff66aa','#ffb3cc','#ff4d94','#ffd6e8']}, 'THEME'), 2000);
   checkTurboUnlock();
   checkMusicUnlocks();
   recordGameStats(score, sessionLinesCleared, sessionPiecesPlaced);
+  _missionOnGameEnd();
   checkReviewPrompt();
   deathFlood(() => isDaily ? finishDaily() : showWatchAdOverlay(finishClassic));
 }
@@ -5206,6 +5513,7 @@ function xpEarned(s) {
 function finishDaily() {
   const xpEarned = Math.floor(score / 80) + 100; // daily bonus XP
   if(xpEarned > 0) addXP(xpEarned);
+  _missionOnDailyComplete();
   const dk=todayKey();
   localStorage.setItem('bb_daily_done',dk);
   localStorage.setItem('bb_daily_score',score);
@@ -5220,7 +5528,7 @@ function finishDaily() {
   // LOVER unlock trigger (14 day streak)
   if(streak >= 14 && !localStorage.getItem('bb_music_lover')) {
     localStorage.setItem('bb_music_lover', '1');
-    setTimeout(() => showToast('💜 LOVER UNLOCKED!'), 2000);
+    setTimeout(() => showUnlockCelebration({name:'LOVER', emoji:'💜', colors:['#bf5af2','#ff2d55','#ffd60a','#0af5ff','#30d158']}, 'MUSIC TRACK'), 2000);
   }
   if(score>dailyBest){ dailyBest=score; localStorage.setItem('bb_daily_best',dailyBest); }
   if(score>best){ best=score; localStorage.setItem('bb_best',best); }
@@ -5407,6 +5715,290 @@ function recordGameStats(pts, linesCleared, piecesPlaced) {
   if(sessionBestCombo > bc) setStat('best_combo', sessionBestCombo);
   const bl = getStat('best_lines');
   if(sessionBestLines > bl) setStat('best_lines', sessionBestLines);
+}
+
+// ════════════════════════════════════
+//  DAILY MISSIONS
+// ════════════════════════════════════
+
+const ALL_MISSIONS = [
+  { id:'place10',   icon:'🧩', name:'BLOCK LAYER',     desc:'Place 10 pieces in one game',         type:'session', stat:'pieces',  target:10  },
+  { id:'place25',   icon:'🏗️', name:'BUILDER',         desc:'Place 25 pieces in one game',         type:'session', stat:'pieces',  target:25  },
+  { id:'place50',   icon:'🏛️', name:'ARCHITECT',       desc:'Place 50 pieces in one game',         type:'session', stat:'pieces',  target:50  },
+  { id:'lines5',    icon:'⚡', name:'LINE CLEANER',    desc:'Clear 5 lines in one game',           type:'session', stat:'lines',   target:5   },
+  { id:'lines15',   icon:'💥', name:'DEMOLISHER',      desc:'Clear 15 lines in one game',          type:'session', stat:'lines',   target:15  },
+  { id:'lines30',   icon:'🌊', name:'WIPEOUT',         desc:'Clear 30 lines in one game',          type:'session', stat:'lines',   target:30  },
+  { id:'combo3',    icon:'🔥', name:'ON FIRE',         desc:'Get a 3x combo',                      type:'session', stat:'combo',   target:3   },
+  { id:'combo5',    icon:'🌪️', name:'UNSTOPPABLE',     desc:'Get a 5x combo',                      type:'session', stat:'combo',   target:5   },
+  { id:'score5k',   icon:'🎯', name:'SCORER',          desc:'Score 5,000 points in one game',      type:'session', stat:'score',   target:5000  },
+  { id:'score25k',  icon:'💰', name:'HIGH ROLLER',     desc:'Score 25,000 points in one game',     type:'session', stat:'score',   target:25000 },
+  { id:'score50k',  icon:'💎', name:'BIG BALLER',      desc:'Score 50,000 points in one game',     type:'session', stat:'score',   target:50000 },
+  { id:'power1',    icon:'⚡', name:'POWERED UP',      desc:'Use a power-up',                      type:'session', stat:'powers',  target:1   },
+  { id:'power3',    icon:'💣', name:'POWER SURGE',     desc:'Use 3 power-ups in one game',         type:'session', stat:'powers',  target:3   },
+  { id:'play2',     icon:'🎮', name:'KEEP GOING',      desc:'Play 2 games today',                  type:'daily',   stat:'games',   target:2   },
+  { id:'play3',     icon:'🕹️', name:'DEDICATED',       desc:'Play 3 games today',                  type:'daily',   stat:'games',   target:3   },
+  { id:'daily1',    icon:'📅', name:'DAILY DEVOTEE',   desc:'Complete the daily challenge',        type:'special', stat:'daily',   target:1   },
+  { id:'multiline', icon:'✨', name:'MULTI-CLEAR',     desc:'Clear 2+ lines in one move',          type:'session', stat:'multi',   target:1   },
+  { id:'nopow',     icon:'🧠', name:'PURIST',          desc:'Score 10,000 without power-ups',      type:'session', stat:'nopow',   target:10000 },
+  { id:'t4piece',   icon:'👾', name:'EPIC TAMER',      desc:'Place an epic piece',                 type:'session', stat:'epic',    target:1   },
+  { id:'boardclear',icon:'🌟', name:'CLEAN SWEEP',     desc:'Clear the entire board',              type:'session', stat:'sweep',   target:1   },
+];
+
+// Daily mission state
+let _missionProgress = {};   // stat key → current value (session)
+let _missionDailyGames = 0;  // games played today
+let _missionDailyDone = false;
+let _missionPowersUsed = 0;
+let _missionEpicPlaced = false;
+let _missionBoardCleared = false;
+let _missionMultiDone = false;
+let _missionNoPowScore = 0;
+let _missionNoPowBroken = false;
+
+// Get today's 3 missions using daily seed
+function getTodayMissions() {
+  const seed = todaySeed();
+  const pool = [...ALL_MISSIONS];
+  const picked = [];
+  let s = seed;
+  // Simple seeded shuffle pick 3
+  for(let i = 0; i < 3; i++) {
+    s = (s * 1664525 + 1013904223) & 0xffffffff;
+    const idx = Math.abs(s) % pool.length;
+    picked.push(pool.splice(idx, 1)[0]);
+  }
+  return picked;
+}
+
+function getMissionSaveKey() {
+  return 'bb_missions_' + todayKey();
+}
+
+function loadMissionProgress() {
+  const saved = JSON.parse(localStorage.getItem(getMissionSaveKey()) || '{}');
+  return saved; // { missionId: currentProgress }
+}
+
+function saveMissionProgress(id, val) {
+  const saved = loadMissionProgress();
+  saved[id] = val;
+  localStorage.setItem(getMissionSaveKey(), JSON.stringify(saved));
+}
+
+function getMissionValue(mission, saved) {
+  const v = saved[mission.id] || 0;
+  return Math.min(v, mission.target);
+}
+
+function isMissionComplete(mission, saved) {
+  return (saved[mission.id] || 0) >= mission.target;
+}
+
+// Called after each game / event to update mission progress
+function updateMissionProgress(stat, value) {
+  const missions = getTodayMissions();
+  const saved = loadMissionProgress();
+  let anyNewComplete = false;
+
+  missions.forEach(m => {
+    if(isMissionComplete(m, saved)) return; // already done
+    if(m.stat !== stat) return;
+
+    let newVal;
+    if(m.type === 'session') {
+      // session stats: take the max seen this session
+      newVal = Math.max(saved[m.id] || 0, value);
+    } else {
+      // daily/special stats: accumulate
+      newVal = (saved[m.id] || 0) + value;
+    }
+
+    saveMissionProgress(m.id, newVal);
+
+    if(newVal >= m.target && !isMissionComplete(m, { [m.id]: (saved[m.id] || 0) })) {
+      anyNewComplete = true;
+      setTimeout(() => showMissionComplete(m), 600);
+    }
+  });
+
+  // Update menu button badge
+  updateMissionsBadge();
+  return anyNewComplete;
+}
+
+function showMissionComplete(mission) {
+  haptic([20, 10, 40, 10, 60]);
+  sfxUnlock();
+
+  const toast = document.createElement('div');
+  toast.style.cssText = `
+    position:fixed; bottom:90px; left:50%; transform:translateX(-50%);
+    background:rgba(10,10,24,0.97); border:2px solid var(--c3);
+    border-radius:12px; padding:12px 18px; z-index:9500;
+    font-family:'Press Start 2P',monospace; text-align:center;
+    box-shadow:0 0 24px rgba(48,209,88,0.5); pointer-events:none;
+    animation:toastIn 0.3s ease;
+  `;
+  toast.innerHTML = `
+    <div style="font-size:0.3rem;color:var(--c3);letter-spacing:2px;margin-bottom:4px">✅ MISSION COMPLETE</div>
+    <div style="font-size:1.2rem;margin-bottom:4px">${mission.icon}</div>
+    <div style="font-size:0.42rem;color:#fff;letter-spacing:1px">${mission.name}</div>
+  `;
+  document.body.appendChild(toast);
+  spawnParticles(window.innerWidth/2, window.innerHeight*0.85, '#30d158', 10);
+  setTimeout(() => toast.remove(), 3000);
+}
+
+function updateMissionsBadge() {
+  const missions = getTodayMissions();
+  const saved = loadMissionProgress();
+  const done = missions.filter(m => isMissionComplete(m, saved)).length;
+  const btn = document.getElementById('missions-menu-btn');
+  if(!btn) return;
+  // Remove old badge
+  const old = btn.querySelector('.mission-badge');
+  if(old) old.remove();
+  if(done < 3) {
+    const badge = document.createElement('span');
+    badge.className = 'mission-badge';
+    badge.style.cssText = `position:absolute;top:-8px;right:-4px;font-family:'Press Start 2P',monospace;font-size:0.28rem;background:var(--c1);color:#fff;border-radius:4px;padding:2px 5px;letter-spacing:0.5px`;
+    badge.textContent = `${done}/3`;
+    btn.style.position = 'relative';
+    btn.appendChild(badge);
+  } else {
+    // All done — green glow
+    btn.style.borderColor = 'var(--c3)';
+    btn.style.color = 'var(--c3)';
+    btn.style.boxShadow = '0 0 15px rgba(48,209,88,0.3)';
+  }
+}
+
+function showMissions() {
+  sfxMenu();
+  showScreen('missions-screen');
+
+  const missions = getTodayMissions();
+  const saved = loadMissionProgress();
+  const done = missions.filter(m => isMissionComplete(m, saved)).length;
+
+  // Date label
+  const d = new Date();
+  const months = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+  const dateEl = document.getElementById('missions-date');
+  if(dateEl) dateEl.textContent = `${months[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
+
+  // XP bar
+  const barEl = document.getElementById('missions-xp-bar');
+  const labelEl = document.getElementById('missions-xp-label');
+  if(barEl) barEl.style.width = ((done / 3) * 100) + '%';
+  if(labelEl) labelEl.textContent = `${done} / 3 COMPLETE`;
+
+  // Render mission cards
+  const list = document.getElementById('missions-list');
+  if(!list) return;
+  list.innerHTML = '';
+
+  missions.forEach(m => {
+    const complete = isMissionComplete(m, saved);
+    const progress = getMissionValue(m, saved);
+    const pct = Math.min(100, (progress / m.target) * 100);
+
+    const card = document.createElement('div');
+    card.className = 'mission-card' + (complete ? ' complete' : '');
+    card.innerHTML = `
+      <div class="mission-top">
+        <div class="mission-icon">${complete ? '✅' : m.icon}</div>
+        <div class="mission-info">
+          <div class="mission-name">${m.name}</div>
+          <div class="mission-desc">${m.desc}</div>
+        </div>
+        <div class="mission-xp">+XP</div>
+      </div>
+      ${complete
+        ? `<div class="mission-complete-badge">✓ COMPLETE</div>`
+        : `<div class="mission-progress-wrap">
+            <div class="mission-progress-bar" style="width:${pct}%"></div>
+           </div>
+           <div class="mission-progress-label">${progress} / ${m.target.toLocaleString()}</div>`
+      }
+    `;
+    list.appendChild(card);
+  });
+
+  // All done banner
+  if(done === 3) {
+    const banner = document.createElement('div');
+    banner.className = 'missions-all-done';
+    banner.innerHTML = `
+      <div class="missions-all-done-emoji">🏆</div>
+      <div class="missions-all-done-text">ALL DONE!</div>
+      <div class="missions-all-done-sub">Come back tomorrow<br>for new missions</div>
+    `;
+    list.appendChild(banner);
+  }
+}
+
+// ── Hooks into game events ──
+function _missionOnGameStart() {
+  // Reset session trackers each new game
+  _missionPowersUsed = 0;
+  _missionEpicPlaced = false;
+  _missionBoardCleared = false;
+  _missionMultiDone = false;
+  _missionNoPowScore = 0;
+  _missionNoPowBroken = false;
+}
+
+function _missionOnPlace(piece) {
+  updateMissionProgress('pieces', sessionPiecesPlaced);
+  // Epic piece check
+  if(!_missionEpicPlaced && piece && PIECES_T4 && PIECES_T4.includes(piece.shape)) {
+    _missionEpicPlaced = true;
+    updateMissionProgress('epic', 1);
+  }
+}
+
+function _missionOnClear(lines) {
+  updateMissionProgress('lines', sessionLinesCleared);
+  updateMissionProgress('combo', sessionBestCombo);
+  if(lines >= 2 && !_missionMultiDone) {
+    _missionMultiDone = true;
+    updateMissionProgress('multi', 1);
+  }
+}
+
+function _missionOnScore(pts) {
+  updateMissionProgress('score', score);
+  // No power-up score tracking
+  if(!_missionNoPowBroken) {
+    _missionNoPowScore += pts;
+    updateMissionProgress('nopow', _missionNoPowScore);
+  }
+}
+
+function _missionOnPower() {
+  _missionPowersUsed++;
+  _missionNoPowBroken = true; // used a power, breaks purist
+  updateMissionProgress('powers', _missionPowersUsed);
+}
+
+function _missionOnBoardClear() {
+  if(!_missionBoardCleared) {
+    _missionBoardCleared = true;
+    updateMissionProgress('sweep', 1);
+  }
+}
+
+function _missionOnGameEnd() {
+  // Daily games counter
+  const key = 'bb_mission_games_' + todayKey();
+  const today = parseInt(localStorage.getItem(key) || '0') + 1;
+  localStorage.setItem(key, today);
+  updateMissionProgress('games', today);
+}
+
+function _missionOnDailyComplete() {
+  updateMissionProgress('daily', 1);
 }
 
 function showStats() {
@@ -5953,8 +6545,9 @@ function usePower(type) {
   powerInventory[type] = Math.max(0, powerInventory[type] - 1);
   cancelPower();
   clearPowerHintTimer();
-  _movesSincePowerup = 0; // reset counter when they actually use one
-  _powerRemindShown = false; // allow reminder again after use
+  _movesSincePowerup = 0;
+  _powerRemindShown = false;
+  _missionOnPower();
 }
 
 function flashPower(color) {
@@ -6190,21 +6783,67 @@ function updateXPBar() {
 function checkNewUnlocks() {
   const newOnes = [];
   THEMES.forEach(t => {
-    const tUnlocked = t.req === 0 ? true : t.req === 'lines100' ? !!localStorage.getItem('bb_cleared_100') : getLevel() >= t.req;
+    const tUnlocked = t.req === 0 ? true : t.req === 'lines100' ? !!localStorage.getItem('bb_cleared_100') : t.req === 'streak7' ? (streak >= 7 || !!localStorage.getItem('bb_streak7')) : t.req === 'streak10' ? (streak >= 10 || !!localStorage.getItem('bb_streak10')) : t.req === 'streak30' ? (streak >= 30 || !!localStorage.getItem('bb_streak30')) : t.req === 'games100' ? (gamesPlayed >= 100 || !!localStorage.getItem('bb_games100')) : t.req === 'score500k' ? !!localStorage.getItem('bb_score500k') : getLevel() >= t.req;
     if(t.req !== 0 && tUnlocked && !seenUnlocks.includes('theme_'+t.id)) {
-      newOnes.push(t.name + ' THEME');
+      newOnes.push(t);
       seenUnlocks.push('theme_'+t.id);
     }
   });
   if(newOnes.length) {
     localStorage.setItem('bb_seen_unlocks', JSON.stringify(seenUnlocks));
-    setTimeout(() => { showToast('🔓 UNLOCKED: ' + newOnes[0]); sfxUnlock(); }, 600);
+    setTimeout(() => { showUnlockCelebration(newOnes[0], 'THEME'); sfxUnlock(); }, 800);
   }
   // DISTANT STAR unlock trigger (level 15)
   if(getLevel() >= 15 && !localStorage.getItem('bb_music_distant')) {
     localStorage.setItem('bb_music_distant', '1');
-    setTimeout(() => showToast('⭐ DISTANT STAR UNLOCKED!'), 2400);
+    setTimeout(() => showUnlockCelebration({ name:'DISTANT STAR', emoji:'⭐', colors:['#0af5ff','#bf5af2','#ffd60a','#30d158','#ff2d55'] }, 'MUSIC TRACK'), 2400);
   }
+}
+
+function showUnlockCelebration(item, type) {
+  // Remove any existing popup
+  const old = document.getElementById('unlock-celebrate-overlay');
+  if(old) old.remove();
+
+  const overlay = document.createElement('div');
+  overlay.id = 'unlock-celebrate-overlay';
+
+  const colors = item.colors || item.preview || ['#ff2d55','#ffd60a','#30d158','#0af5ff','#bf5af2'];
+  const swatches = colors.slice(0, 5).map(c =>
+    `<div class="unlock-celebrate-swatch" style="background:${c};box-shadow:0 0 8px ${c}"></div>`
+  ).join('');
+
+  overlay.innerHTML = `
+    <div id="unlock-celebrate-card">
+      <div id="unlock-celebrate-label">★ ${type} UNLOCKED ★</div>
+      <div id="unlock-celebrate-emoji">${item.emoji || '🔓'}</div>
+      <div id="unlock-celebrate-name">${item.name}</div>
+      <div class="unlock-celebrate-preview">${swatches}</div>
+      <div id="unlock-celebrate-sub">Head to THEMES to try it!</div>
+      <button id="unlock-celebrate-btn" onclick="closeUnlockCelebration()">AWESOME! ▶</button>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  // Particle burst
+  const cx = window.innerWidth / 2;
+  const cy = window.innerHeight / 2;
+  colors.forEach(col => spawnParticles(cx, cy, col, 6));
+  setTimeout(() => colors.forEach(col => spawnParticles(cx, cy, col, 4)), 300);
+
+  // Close on backdrop tap
+  overlay.addEventListener('click', e => { if(e.target === overlay) closeUnlockCelebration(); });
+
+  // Auto-close after 8 seconds
+  overlay._autoClose = setTimeout(closeUnlockCelebration, 4000);
+}
+
+function closeUnlockCelebration() {
+  const overlay = document.getElementById('unlock-celebrate-overlay');
+  if(!overlay) return;
+  clearTimeout(overlay._autoClose);
+  overlay.style.animation = 'unlockOverlayIn 0.2s ease reverse forwards';
+  setTimeout(() => overlay.remove(), 200);
 }
 
 
@@ -6224,7 +6863,7 @@ function checkTierStamp() {
       queueStamp(() => showTierStamp(TIER_STAMPS[t]));
       if (t === 100 && !localStorage.getItem('bb_cleared_100')) {
         localStorage.setItem('bb_cleared_100', '1');
-        setTimeout(() => showToast('🌌 THE VOID UNLOCKED!'), 2600);
+        setTimeout(() => showUnlockCelebration({name:'THE VOID', emoji:'🌌', colors:['#ffffff','#cc00ff','#ff00ff','#aa00ff','#ee00ee']}, 'THEME'), 2600);
       }
       break;
     }
@@ -6858,7 +7497,7 @@ function checkMusicUnlocks() {
     if(!track.unlockKey) return;
     if(isTrackUnlocked(track) && !localStorage.getItem(track.unlockKey)) {
       localStorage.setItem(track.unlockKey, '1');
-      setTimeout(() => showToast(track.emoji + ' ' + track.name + ' UNLOCKED!'), 2200);
+      setTimeout(() => showUnlockCelebration({name: track.name, emoji: track.emoji, colors:['#0af5ff','#bf5af2','#ffd60a','#30d158','#ff2d55']}, 'MUSIC TRACK'), 2200);
     }
   });
 }
@@ -6907,7 +7546,7 @@ function checkTurboUnlock() {
   if(!turboTrayUnlocked && gamesPlayed >= TURBO_TRAY_GAMES) {
     turboTrayUnlocked = true;
     localStorage.setItem('bb_turbo_unlocked', '1');
-    setTimeout(() => showToast('⚡ TURBO TRAY UNLOCKED!'), 2000);
+    setTimeout(() => showUnlockCelebration({name:'TURBO TRAY', emoji:'⚡', colors:['#ffd60a','#ff9500','#ff2d55','#0af5ff','#30d158']}, 'FEATURE'), 2000);
   }
   const btn = document.getElementById('turbo-toggle-btn');
   if(btn) {
@@ -7192,6 +7831,7 @@ document.addEventListener('DOMContentLoaded', function() {
   updateXPBar();
   checkNewUnlocks();
   updatePowerUI();
+  updateMissionsBadge();
   // Show tutorial for first-time players
   window.addEventListener('resize', resizeCanvas);
   animParticles();
