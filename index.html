@@ -4573,7 +4573,7 @@ function initGame() {
   // Check for glory block BEFORE obstacles are added
   const _gloryRoll = !isDaily && Math.random() < 0.01;
   // Pre-roll insane piece so we know if board needs to be clear
-  const _insaneChance = !isDaily && (getLevel() >= 15 ? 0.75 : getLevel() >= 10 ? 0.5 : 0);
+  const _insaneChance = !isDaily && (getLevel() >= 15 ? 0.75 : getLevel() >= 10 ? 0.65 : 0);
   const _insaneRoll = _insaneChance > 0 && Math.random() < _insaneChance;
   // Pre-roll epic piece (T4) at level 5+, 50% chance — only if no nightmare
   const _epicRoll = !isDaily && !_insaneRoll && !_gloryRoll && getLevel() >= 5 && Math.random() < 0.5;
