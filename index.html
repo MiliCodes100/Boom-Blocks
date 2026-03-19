@@ -3168,6 +3168,30 @@ body.theme-onyx #board { animation: onyxPulse 5s ease-in-out infinite; }
   padding: 8px 0 0;
 }
 
+/* ══ OBSTACLE BLOCKS ══ */
+.cell.obstacle {
+  background: repeating-linear-gradient(
+    -45deg,
+    #ffd60a 0px,
+    #ffd60a 4px,
+    #1a1200 4px,
+    #1a1200 8px
+  ) !important;
+  border: 1.5px solid #ffd60a !important;
+  box-shadow: 0 0 8px rgba(255,214,10,0.5), inset 0 0 4px rgba(0,0,0,0.4) !important;
+  border-radius: 3px;
+  position: relative;
+  overflow: hidden;
+}
+@keyframes obstacleSpawn {
+  0%   { transform: scale(0) rotate(-20deg); opacity: 0; }
+  60%  { transform: scale(1.15) rotate(4deg); opacity: 1; }
+  100% { transform: scale(1) rotate(0deg); opacity: 1; }
+}
+.cell.obstacle.spawning {
+  animation: obstacleSpawn 0.4s cubic-bezier(0.175,0.885,0.32,1.275) forwards;
+}
+
 </style>
 <!-- AdMob -->
 <meta name="google-adsense-account" content="ca-pub-9829984726595934">
@@ -4642,6 +4666,70 @@ function addStartingObstacles() {
   }
 }
 
+const OBSTACLE_COLOR = 'OBSTACLE';
+
+function spawnObstacleBlock(rowsCleared, colsCleared) {
+  // Only 1 obstacle at a time — don't spawn if one already exists
+  for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++) {
+    if(board[r][c] === OBSTACLE_COLOR) return;
+  }
+
+  // Build candidate cells — positions that were on a cleared line
+  const candidates = [];
+  rowsCleared.forEach(r => {
+    for(let c=0;c<COLS;c++) if(!board[r][c]) candidates.push([r,c]);
+  });
+  colsCleared.forEach(col => {
+    for(let r=0;r<ROWS;r++) if(!board[r][col]) candidates.push([r,col]);
+  });
+
+  if(!candidates.length) return;
+
+  // Pick a random empty candidate cell
+  const [r, c] = candidates[Math.floor(Math.random() * candidates.length)];
+  board[r][c] = OBSTACLE_COLOR;
+  renderBoard();
+
+  // Add spawn animation to the cell
+  setTimeout(() => {
+    const cells = document.querySelectorAll('#board .cell');
+    const cell = cells[r * COLS + c];
+    if(cell) {
+      cell.classList.add('spawning');
+      setTimeout(() => cell.classList.remove('spawning'), 450);
+    }
+    haptic([10, 5, 20]);
+    // Show explanation popup first time only
+    if(!localStorage.getItem('bb_obstacle_seen')) {
+      localStorage.setItem('bb_obstacle_seen', '1');
+      setTimeout(() => showObstacleExplainer(), 400);
+    }
+  }, 50);
+}
+
+function showObstacleExplainer() {
+  const overlay = document.createElement('div');
+  overlay.id = 'obstacle-explainer';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:11000;display:flex;align-items:center;justify-content:center;padding:20px;animation:reviewFadeIn 0.3s ease;';
+  overlay.innerHTML = `
+    <div style="background:var(--surface);border:2px solid #ffd60a;border-radius:16px;padding:24px 20px 20px;max-width:300px;width:100%;display:flex;flex-direction:column;align-items:center;gap:10px;box-shadow:0 0 40px rgba(255,214,10,0.4),0 16px 48px rgba(0,0,0,0.6);animation:reviewCardIn 0.35s cubic-bezier(0.175,0.885,0.32,1.275);">
+      <div style="font-size:2.2rem;line-height:1">🚧</div>
+      <div style="font-family:'Press Start 2P',monospace;font-size:0.6rem;color:#ffd60a;letter-spacing:2px;text-align:center;text-shadow:0 0 12px rgba(255,214,10,0.6)">OBSTACLE BLOCK!</div>
+      <div style="font-family:'Press Start 2P',monospace;font-size:0.35rem;color:#aab;text-align:center;line-height:2;letter-spacing:0.5px">
+        A hazard block has appeared!<br><br>
+        It <b style="color:#fff">blocks line clears</b> in<br>
+        its row and column.<br><br>
+        Remove it with a<br>
+        <b style="color:#ffd60a">⚡ LASER</b>, <b style="color:#ffd60a">💣 BOMB</b>,<br>
+        <b style="color:#ffd60a">🔨 SHATTER</b> or <b style="color:#ffd60a">🔥 WILDFIRE</b>
+      </div>
+      <button onclick="document.getElementById('obstacle-explainer').remove()" style="width:100%;font-family:'Press Start 2P',monospace;font-size:0.45rem;letter-spacing:1px;padding:12px;background:#ffd60a;color:#000;border:none;border-radius:8px;cursor:pointer;margin-top:4px;box-shadow:0 0 16px rgba(255,214,10,0.4);">GOT IT ▶</button>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', e => { if(e.target === overlay) overlay.remove(); });
+}
+
 
 // Easy starter pieces — simple flat shapes only
 const EASY_PIECES = [
@@ -4798,7 +4886,22 @@ function renderBoard() {
     const cell = cells[r * COLS + c];
     if(!cell) continue;
 
-    if(color) {
+    if(color === OBSTACLE_COLOR) {
+      // Obstacle block — yellow hazard stripes
+      cell.className = 'cell filled obstacle';
+      cell.style.background = 'repeating-linear-gradient(-45deg,#ffd60a 0px,#ffd60a 4px,#1a1200 4px,#1a1200 8px)';
+      cell.style.boxShadow = '0 0 8px rgba(255,214,10,0.5), inset 0 0 4px rgba(0,0,0,0.4)';
+      cell.style.border = '1.5px solid #ffd60a';
+      cell.style.backdropFilter = '';
+      cell.style.webkitBackdropFilter = '';
+      cell.style.borderRadius = '3px';
+      cell.style.display = '';
+      cell.style.alignItems = '';
+      cell.style.justifyContent = '';
+      cell.style.fontSize = '';
+      cell.style.lineHeight = '';
+      cell.textContent = '';
+    } else if(color) {
       cell.className = 'cell filled';
       cell.style.background = color;
       if(isGlass) {
@@ -5135,8 +5238,8 @@ function refillPieces() {
 // ════════════════════════════════════
 function clearLines() {
   const rowsToClear=[], colsToClear=[];
-  for(let r=0;r<ROWS;r++) if(board[r].every(c=>c)) rowsToClear.push(r);
-  for(let c=0;c<COLS;c++) if(board.every(r=>r[c])) colsToClear.push(c);
+  for(let r=0;r<ROWS;r++) if(board[r].every(c=>c) && !board[r].some(c=>c===OBSTACLE_COLOR)) rowsToClear.push(r);
+  for(let c=0;c<COLS;c++) if(board.every(r=>r[c]) && !board.some(r=>r[c]===OBSTACLE_COLOR)) colsToClear.push(c);
   if(!rowsToClear.length&&!colsToClear.length){
     consecutiveClearCount=0;
     const cb=$id('combo-box'); if(cb) cb.style.display='none';
@@ -5214,6 +5317,10 @@ function clearLines() {
       addScore(bonus, 0, 0);
       showClearBonus();
       _missionOnBoardClear();
+    }
+    // Spawn obstacle block on cleared line (level 8+, not daily, not on board clear)
+    if(!isDaily && !boardCleared && getLevel() >= 8) {
+      spawnObstacleBlock(rowsToClear, colsToClear);
     }
   },400);
 }
