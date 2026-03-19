@@ -3979,7 +3979,19 @@ function sfxUnlock() {
   noise(0.05, 0.06, 0.1);
 }
 
-// ── DAILY COMPLETE ──
+// ── OBSTACLE BLOCK ──
+function sfxObstacle() {
+  // Heavy metallic clang
+  note(120, 'sawtooth', 0.001, 0.08, 0.35, 0.5);
+  note(90,  'sawtooth', 0.001, 0.06, 0.3,  0.4, 0.04);
+  note(60,  'sine',     0.001, 0.1,  0.5,  0.45, 0.08);
+  // Descending warning tone
+  note(440, 'square',   0.002, 0.05, 0.15, 0.18, 0.0,  220);
+  note(330, 'square',   0.002, 0.05, 0.15, 0.15, 0.12, 165);
+  // Metallic noise burst
+  noise(0.06, 0.05);
+  noise(0.03, 0.04, 0.08);
+}
 function sfxDailyComplete() {
   const melody = [523, 659, 784, 659, 784, 1047];
   melody.forEach((f, i) => {
@@ -4699,6 +4711,7 @@ function spawnObstacleBlock(rowsCleared, colsCleared) {
       setTimeout(() => cell.classList.remove('spawning'), 450);
     }
     haptic([10, 5, 20]);
+    sfxObstacle();
     // Show explanation popup first time only
     if(!localStorage.getItem('bb_obstacle_seen')) {
       localStorage.setItem('bb_obstacle_seen', '1');
