@@ -3168,7 +3168,53 @@ body.theme-onyx #board { animation: onyxPulse 5s ease-in-out infinite; }
   padding: 8px 0 0;
 }
 
-/* ══ OBSTACLE BLOCKS ══ */
+/* ══ STREAK SAVER PIECE ══ */
+@keyframes streakSaverPulse {
+  0%,100% {
+    box-shadow: 0 0 12px rgba(255,214,10,0.6), 0 0 28px rgba(255,180,0,0.3), inset 0 1px 0 rgba(255,255,200,0.6), inset 0 -1px 0 rgba(120,80,0,0.4);
+    border-color: #ffe066;
+  }
+  50% {
+    box-shadow: 0 0 24px rgba(255,214,10,1), 0 0 50px rgba(255,180,0,0.6), 0 0 80px rgba(255,150,0,0.2), inset 0 1px 0 rgba(255,255,220,0.8), inset 0 -1px 0 rgba(120,80,0,0.5);
+    border-color: #fff0a0;
+  }
+}
+@keyframes streakSaverShimmer {
+  0%   { left: -60%; }
+  100% { left: 140%; }
+}
+.piece-slot.streak-saver {
+  animation: streakSaverPulse 1s ease-in-out infinite !important;
+  border: 2px solid #ffe066 !important;
+  background: linear-gradient(160deg, #3a2e00, #1a1500, #2a2000) !important;
+  position: relative;
+  overflow: hidden;
+}
+/* Shimmer sweep */
+.piece-slot.streak-saver::before {
+  content: '';
+  position: absolute;
+  top: -50%; left: -60%;
+  width: 35%; height: 200%;
+  background: linear-gradient(90deg, transparent, rgba(255,240,150,0.35), transparent);
+  transform: skewX(-15deg);
+  animation: streakSaverShimmer 1.5s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 2;
+}
+/* Bevel highlight top edge */
+.piece-slot.streak-saver::after {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,200,0.9), transparent);
+  border-radius: 6px 6px 0 0;
+  pointer-events: none;
+  z-index: 2;
+}
+
+</style>
 .cell.obstacle {
   background: repeating-linear-gradient(
     -45deg,
@@ -3253,7 +3299,10 @@ body.theme-onyx #board { animation: onyxPulse 5s ease-in-out infinite; }
 <div id="game-screen" class="screen">
   <header>
     <button class="back-btn" onclick="goMenu()">◀ BACK</button>
-    <span class="mode-label" id="mode-label">CLASSIC</span>
+    <div class="score-box" style="text-align:center">
+      <div class="score-label" id="mode-label">CLASSIC</div>
+      <div class="score-val" id="header-best" style="font-size:0.7rem">0</div>
+    </div>
     <div class="header-scores">
       <div class="score-box">
         <div class="score-label">SCORE</div>
@@ -4407,13 +4456,19 @@ function updateMenuStats() {
 // ════════════════════════════════════
 //  GAME START
 // ════════════════════════════════════
+function updateHeaderBest() {
+  const el = $id('header-best');
+  if(el) el.textContent = best.toLocaleString();
+}
+
 function startClassic() {
   initMusic();
   sfxMenu(); isDaily=false;
-  $id('mode-label').textContent='CLASSIC';
+  $id('mode-label').textContent='BEST';
   $id('mode-label').className='mode-label';
   const dbw1=$id('daily-bar-wrap'); if(dbw1) dbw1.style.display='none';
   rng=Math.random;
+  updateHeaderBest();
   initGame(); showScreen('game-screen');
 }
 
@@ -4428,6 +4483,7 @@ function startDaily() {
   isDaily=true;
   $id('mode-label').textContent='★ DAILY';
   $id('mode-label').className='mode-label daily-mode';
+  updateHeaderBest();
   const dbw2=$id('daily-bar-wrap'); if(dbw2) dbw2.style.display='';
   const db0=$id('daily-bar'); if(db0) db0.style.width='0%';
   // Show yesterday's score
@@ -4991,6 +5047,7 @@ function renderTray() {
     slot.dataset.slot=i;
     if(piece){
       if(!canPlaceAny(piece)) slot.classList.add('cant-place');
+      if(piece.isStreakSaver) slot.classList.add('streak-saver');
       if(piece.isBomb) {
         slot.style.borderColor='var(--c1)';
         slot.style.boxShadow='0 0 12px rgba(255,45,85,0.4)';
@@ -5003,8 +5060,14 @@ function renderTray() {
         const pc=document.createElement('div');
         pc.className='piece-cell' + (val ? '' : ' empty-cell');
         if(val) {
-          pc.style.background=piece.color;
-          pc.style.boxShadow=`0 0 4px ${piece.color}`;
+          if(piece.isStreakSaver) {
+            pc.style.background = 'linear-gradient(145deg, #ffe066 0%, #ffd60a 40%, #cc9900 80%, #ffee88 100%)';
+            pc.style.boxShadow = '0 0 8px rgba(255,214,10,0.8), inset 0 1px 0 rgba(255,255,200,0.8), inset 0 -1px 0 rgba(120,80,0,0.4)';
+            pc.style.border = '1px solid rgba(255,240,100,0.5)';
+          } else {
+            pc.style.background=piece.color;
+            pc.style.boxShadow=`0 0 4px ${piece.color}`;
+          }
           const em = getEmojiForColor(piece.color);
           if (em) {
             pc.style.display='flex';
@@ -5249,7 +5312,59 @@ function refillPieces() {
       const ts = getTraySize(); pieces = Array.from({length: ts}, () => gen());
       attempts++;
     } while(attempts < 20 && !pieces.some(p => canPlaceAny(p)));
+
+    // Streak saver — if on a 3+ combo, replace one slot with the best piece to keep the streak going
+    if(consecutiveClearCount >= 3) {
+      const color = '#ffd60a'; // golden streak saver color
+
+      // Build a pool of small placeable shapes to evaluate
+      const saverPool = [
+        ...PIECES_T1,
+        [[1,1]], [[1],[1]],           // dominoes
+        [[1,1,1]], [[1],[1],[1]],     // trominoes
+        [[1,1],[1,0]], [[1,0],[1,1]], // L-shapes
+        [[1,1],[0,1]], [[0,1],[1,1]], // S/Z shapes
+        [[1]],                        // single
+      ].filter(s => canPlaceAny({ shape: s }));
+
+      // Score each candidate against the current board
+      let bestShape = null, bestScore = -1;
+      saverPool.forEach(s => {
+        const score = scorePieceUsefulness(s);
+        if(score > bestScore) { bestScore = score; bestShape = s; }
+      });
+
+      // Fall back to random T1 if nothing scored well
+      if(!bestShape) {
+        const t1s = PIECES_T1.filter(s => canPlaceAny({ shape: s }));
+        bestShape = t1s[Math.floor(Math.random() * t1s.length)] || PIECES_T1[0];
+      }
+
+      const slot = Math.floor(Math.random() * pieces.length);
+      pieces[slot] = { shape: bestShape, color, hex: color, isStreakSaver: true };
+      setTimeout(() => showStreakSaverHint(), 200);
+    }
   }
+}
+
+function showStreakSaverHint() {
+  const existing = document.querySelector('.streak-saver-hint');
+  if(existing) existing.remove();
+  const el = document.createElement('div');
+  el.className = 'streak-saver-hint';
+  el.style.cssText = `
+    position:fixed; bottom:90px; left:50%; transform:translateX(-50%);
+    background:rgba(10,10,24,0.97); border:2px solid #ffd60a;
+    border-radius:10px; padding:8px 14px; z-index:9500;
+    font-family:'Press Start 2P',monospace; font-size:0.32rem;
+    color:#ffd60a; letter-spacing:1px; text-align:center;
+    box-shadow:0 0 20px rgba(255,214,10,0.4); pointer-events:none;
+    animation:toastIn 0.3s ease; white-space:nowrap;
+  `;
+  el.textContent = '🔥 STREAK SAVER!';
+  document.body.appendChild(el);
+  haptic([15, 10, 30]);
+  setTimeout(() => el.remove(), 2200);
 }
 
 // ════════════════════════════════════
@@ -5352,6 +5467,7 @@ function addScore(pts,lines,combo,blockColor) {
   if(!isDaily&&score>best){
     best=score;
     localStorage.setItem('bb_best',best);
+    updateHeaderBest();
   }
   if(score>=250000 && !localStorage.getItem('bb_music_vibe')) {
     localStorage.setItem('bb_music_vibe','1');
@@ -6641,6 +6757,19 @@ function onWildfireClick(e) {
   if(!targetColor) return;
   usePower('wildfire');
 
+  // Obstacle block — remove it directly, no color matching needed
+  if(targetColor === OBSTACLE_COLOR) {
+    _trackObstacleBroken(r, c);
+    board[r][c] = null;
+    flashPower('#ffd60a');
+    sfxObstacle();
+    haptic([20, 10, 40]);
+    renderBoard();
+    clearLines();
+    checkGameOver();
+    return;
+  }
+
   // Find all cells with same color
   const boardEl = $id('board');
   let count = 0;
@@ -6671,6 +6800,24 @@ function onWildfireClick(e) {
   addScore(pts, count, 1);
 
   setTimeout(() => {
+    // Also burn any obstacle block on the board
+    for(let row = 0; row < ROWS; row++) {
+      for(let col = 0; col < COLS; col++) {
+        if(board[row][col] === OBSTACLE_COLOR) {
+          _trackObstacleBroken(row, col);
+          board[row][col] = null;
+          const boardEl2 = $id('board');
+          if(boardEl2) {
+            const cell = boardEl2.querySelectorAll('.cell')[row * COLS + col];
+            if(cell) {
+              cell.classList.add('clearing');
+              const rect3 = cell.getBoundingClientRect();
+              spawnParticles(rect3.left + rect3.width/2, rect3.top + rect3.height/2, '#ffd60a', 8);
+            }
+          }
+        }
+      }
+    }
     renderBoard();
     checkGameOver();
   }, 420);
@@ -8112,6 +8259,7 @@ function startPlayTutorial() {
   isDaily = false;
   $id('mode-label').textContent = 'TUTORIAL';
   $id('mode-label').className = 'mode-label';
+  updateHeaderBest();
   const dbw = $id('daily-bar-wrap'); if(dbw) dbw.style.display = 'none';
   rng = Math.random;
   initGame();
