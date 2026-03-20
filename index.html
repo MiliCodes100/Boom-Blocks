@@ -6342,12 +6342,12 @@ function checkGameOver() {
   const hasPower = usablePowers.some(type => {
     const count = powerInventory[type] || 0;
     if(count <= 0) return false;
+    // Only count powers that reliably create placeable space
     if(type === 'laser')    return true;
-    if(type === 'wildfire') return board.some(row => row.some(c => c));
-    if(type === 'shatter')  return board.some(row => row.some(c => c));
     if(type === 'bomb')     return true;
-    if(type === 'sniper')   return board.some(row => row.some(c => c));
-    if(type === 'gravity')  return board.some(row => row.some(c => c));
+    if(type === 'wildfire') return board.some(row => row.some(c => c && c !== OBSTACLE_COLOR));
+    if(type === 'shatter')  return board.some(row => row.some(c => c));
+    // sniper, gravity, turbo, shield — don't block game over
     return false;
   });
   if(hasPower) return;
@@ -7837,32 +7837,67 @@ function onSniperClick(e) {
 
 // ── GRAVITY ──
 function applyGravity() {
-  let moved = false;
-  // For each column, collect all non-null cells and drop them to the bottom
+  // Calculate moves before modifying board
+  const moves = []; // { fromR, toR, c, color }
   for(let c = 0; c < COLS; c++) {
-    const col = [];
-    for(let r = 0; r < ROWS; r++) if(board[r][c]) col.push(board[r][c]);
-    for(let r = 0; r < ROWS; r++) {
-      const val = r >= ROWS - col.length ? col[r - (ROWS - col.length)] : null;
-      if(board[r][c] !== val) moved = true;
-      board[r][c] = val;
-    }
+    const filled = [];
+    for(let r = 0; r < ROWS; r++) if(board[r][c]) filled.push({ r, color: board[r][c] });
+    if(!filled.length) continue;
+    const startRow = ROWS - filled.length;
+    filled.forEach((block, i) => {
+      const toR = startRow + i;
+      if(block.r !== toR) moves.push({ fromR: block.r, toR, c, color: block.color });
+    });
+  }
+
+  if(!moves.length) {
+    showToast('\u2b07\ufe0f NOTHING TO DROP!');
+    return;
   }
 
   flashPower('#bf5af2');
   sfxPowerActivate('gravity');
   haptic([20, 10, 30, 10, 20]);
-  shakeBoard(2);
-  renderBoard();
 
-  if(moved) {
-    setTimeout(() => {
-      clearLines();
-      checkGameOver();
-    }, 350);
-  } else {
-    showToast('⬇️ NOTHING TO DROP!');
-  }
+  // Animate blocks falling
+  const boardEl = $id('board');
+  const cells = boardEl ? boardEl.querySelectorAll('.cell') : [];
+  const cellH = (cells[0] ? cells[0].getBoundingClientRect().height : 0) || cellSize || 42;
+  const FALL_MS = 260;
+  const COL_STAGGER = 25;
+
+  moves.forEach(({ fromR, toR, c }) => {
+    const cell = cells[fromR * COLS + c];
+    if(!cell) return;
+    const dist = (toR - fromR) * cellH;
+    const delay = c * COL_STAGGER;
+    cell.style.transition = 'none';
+    cell.style.transform = 'translateY(0)';
+    cell.getBoundingClientRect(); // force reflow
+    cell.style.transition = `transform ${FALL_MS}ms cubic-bezier(0.55,0,1,1) ${delay}ms`;
+    cell.style.transform = `translateY(${dist}px)`;
+    cell.style.zIndex = '5';
+  });
+
+  const totalDelay = COLS * COL_STAGGER + FALL_MS + 60;
+  setTimeout(() => {
+    // Clear animation styles
+    moves.forEach(({ fromR, c }) => {
+      const cell = cells[fromR * COLS + c];
+      if(cell) { cell.style.transition = ''; cell.style.transform = ''; cell.style.zIndex = ''; }
+    });
+    // Update board data
+    for(let c = 0; c < COLS; c++) {
+      const col = [];
+      for(let r = 0; r < ROWS; r++) if(board[r][c]) col.push(board[r][c]);
+      for(let r = 0; r < ROWS; r++) {
+        board[r][c] = r >= ROWS - col.length ? col[r - (ROWS - col.length)] : null;
+      }
+    }
+    shakeBoard(2);
+    renderBoard();
+    setTimeout(() => { clearLines(); checkGameOver(); }, 350);
+  }, totalDelay);
 }
 
 // ── SHIELD ──
@@ -7876,6 +7911,13 @@ function usePower(type) {
   _movesSincePowerup = 0;
   _powerRemindShown = false;
   _missionOnPower();
+  // In roguelike: if no charges left, clear the slot back to locked (?)
+  // Exception: turbo and shield are permanent passives — don't clear them
+  if(isDaily && _drActive && powerInventory[type] <= 0 && type !== 'turbo' && type !== 'shield') {
+    const slot = _drUnlockedPowers.indexOf(type);
+    if(slot >= 0) _drUnlockedPowers[slot] = null;
+    _drRenderLockedPowers();
+  }
 }
 
 function flashPower(color) {
