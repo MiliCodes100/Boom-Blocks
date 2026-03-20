@@ -3672,6 +3672,10 @@ body.theme-onyx #board { animation: onyxPulse 5s ease-in-out infinite; }
       <div class="powerup-icon">🛡️</div>
       <div class="powerup-name">SHIELD</div>
     </button>
+    <button class="powerup-btn empty-power dr-only-power" id="pu-turbo" onclick="activatePower('turbo')" style="display:none">
+      <div class="powerup-icon">⚡</div>
+      <div class="powerup-name">TURBO</div>
+    </button>
   </div>
   <div class="tray" id="tray"></div>
   <div class="hint-text" id="hint-text">HOLD + DRAG TO PLACE</div>
@@ -4338,6 +4342,12 @@ function sfxPowerActivate(type) {
     chord([523, 659, 784], 'sine', 0.008, 0.2, 0.3, 0.25);
     note(1047, 'sine', 0.005, 0.15, 0.3, 0.2, 0.15);
     noise(0.03, 0.1, 0.1);
+  } else if(type === 'turbo') {
+    // Energetic charge-up
+    note(300, 'sawtooth', 0.008, 0.1, 0.1, 0.2, 0, 600);
+    note(600, 'sawtooth', 0.008, 0.1, 0.08, 0.15, 0.08, 900);
+    note(1200, 'sine',    0.006, 0.12, 0.15, 0.15, 0.16);
+    noise(0.06, 0.1, 0.1);
   }
 }
 
@@ -4899,6 +4909,7 @@ function startDaily() {
   // Lock all power slots for roguelike mode
   _drShieldActive = false;
   _sniperTargets = [];
+  _drTurboActive = false;
   _drLockAllPowers();
 
   $id('mode-label').textContent = '⚔️ ROGUELIKE';
@@ -5109,6 +5120,7 @@ const POWER_DESCS = {
   sniper:   'Tap any 2 blocks\nto remove them',
   gravity:  'Drops all blocks\ndown to fill gaps',
   shield:   'Survive one\ngame over\n★ RARE ★',
+  turbo:    'Unlocks a 4th\npiece in your tray\n★ RARE ★',
 };
 
 function _drShowCardPicker(onChosen) {
@@ -5118,7 +5130,8 @@ function _drShowCardPicker(onChosen) {
 
   // Build pool — all powers, respecting roguelike-only and shield-once rules
   let pool = Object.keys(POWERS).filter(t => {
-    if(t === 'shield') return !shieldOwned && Math.random() < 0.12; // 12% chance shield appears, once per run
+    if(t === 'shield') return !shieldOwned && Math.random() < 0.12; // 12% chance, once per run
+    if(t === 'turbo')  return !alreadyUnlocked.includes('turbo') && Math.random() < 0.15; // 15% chance, once per run
     return true;
   });
 
@@ -5177,12 +5190,12 @@ function _drShowCardPicker(onChosen) {
 }
 
 function _drApplyPowerChoice(type) {
-  // Shield always goes in its fixed slot (index 6)
-  // Other powers fill the next empty slot
+  // Shield always slot 6, turbo always slot 7, others fill next empty slot (0-5)
   if(type === 'shield') {
     _drUnlockedPowers[6] = 'shield';
+  } else if(type === 'turbo') {
+    _drUnlockedPowers[7] = 'turbo';
   } else {
-    // Fill next empty non-shield slot (0-5)
     const emptySlot = _drUnlockedPowers.slice(0, 6).indexOf(null);
     if(emptySlot >= 0) _drUnlockedPowers[emptySlot] = type;
   }
@@ -5204,7 +5217,8 @@ function _drFinishRun(cleared) {
   _drActive = false;
 
   // Restore normal power UI
-  powerInventory = { laser:0, shatter:0, wildfire:0, bomb:0, sniper:0, gravity:0, shield:0 };
+  powerInventory = { laser:0, shatter:0, wildfire:0, bomb:0, sniper:0, gravity:0, shield:0, turbo:0 };
+  _drTurboActive = false;
   updatePowerUI();
   // Hide roguelike-only buttons
   document.querySelectorAll('.dr-only-power').forEach(el => el.style.display = 'none');
@@ -7332,9 +7346,10 @@ const POWERS = {
   sniper:   { color:'#30d158', glow:'rgba(48,209,88,0.4)',   icon:'🎯', name:'SNIPER',  rogueLikeOnly:true },
   gravity:  { color:'#bf5af2', glow:'rgba(191,90,242,0.4)',  icon:'⬇️', name:'GRAVITY', rogueLikeOnly:true },
   shield:   { color:'#ffffff', glow:'rgba(255,255,255,0.4)', icon:'🛡️', name:'SHIELD',  rogueLikeOnly:true, rare:true },
+  turbo:    { color:'#ff9f0a', glow:'rgba(255,159,10,0.4)',  icon:'⚡', name:'TURBO TRAY', rogueLikeOnly:true, rare:true },
 };
 
-let powerInventory = { laser:0, shatter:0, wildfire:0, bomb:0, sniper:0, gravity:0, shield:0 };
+let powerInventory = { laser:0, shatter:0, wildfire:0, bomb:0, sniper:0, gravity:0, shield:0, turbo:0 };
 let _movesSincePowerup = 0;   // moves placed since player first got a powerup
 let _powerRemindShown = false; // only show once per game
 let activePower = null; // currently selected power waiting for board tap
@@ -7344,14 +7359,14 @@ let activePower = null; // currently selected power waiting for board tap
 // ════════════════════════════════════
 // Which power slots are unlocked in roguelike mode
 // null = locked (?), string = unlocked power type
-let _drUnlockedPowers = [null, null, null, null, null, null, null]; // 7 slots
-const _drPowerSlots = ['laser', 'shatter', 'wildfire', 'bomb', 'sniper', 'gravity', 'shield'];
+let _drUnlockedPowers = [null, null, null, null, null, null, null, null]; // 8 slots
+const _drPowerSlots = ['laser', 'shatter', 'wildfire', 'bomb', 'sniper', 'gravity', 'shield', 'turbo'];
 
 function _drLockAllPowers() {
   // Reset inventory, cancel any active power, and lock all slots visually
-  powerInventory = { laser:0, shatter:0, wildfire:0, bomb:0, sniper:0, gravity:0, shield:0 };
+  powerInventory = { laser:0, shatter:0, wildfire:0, bomb:0, sniper:0, gravity:0, shield:0, turbo:0 };
   activePower = null;
-  _drUnlockedPowers = [null, null, null, null, null, null, null];
+  _drUnlockedPowers = [null, null, null, null, null, null, null, null];
   // Show roguelike-only buttons
   document.querySelectorAll('.dr-only-power').forEach(el => el.style.display = '');
   _drRenderLockedPowers();
@@ -7374,12 +7389,14 @@ function _drRenderLockedPowers() {
       // Unlocked — show normally
       const p = POWERS[unlocked];
       const count = powerInventory[unlocked];
-      btn.className = 'powerup-btn ' + (count > 0 ? 'has-power' : 'empty-power');
+      const isTurboActive = unlocked === 'turbo' && _drTurboActive;
+      const isPassive = (unlocked === 'shield' && count > 0) || isTurboActive;
+      btn.className = 'powerup-btn ' + (isTurboActive ? 'has-power' : count > 0 ? 'has-power' : 'empty-power');
       btn.style.setProperty('--pu-color', p.color);
       btn.style.setProperty('--pu-glow', p.glow);
       btn.innerHTML = `
         <div class="powerup-icon">${p.icon}</div>
-        <div class="powerup-name">${p.name}</div>
+        <div class="powerup-name">${isTurboActive ? 'ACTIVE' : p.name}</div>
       `;
       btn.removeAttribute('onclick');
       btn.onclick = () => activatePower(unlocked);
@@ -7557,6 +7574,15 @@ function activatePower(type) {
     // Shield is passive — toggling it just shows info
     cancelPower();
     showToast('🛡️ SHIELD ACTIVE — you will survive one game over!');
+  } else if(type === 'turbo') {
+    // Turbo tray — permanently activates 4th piece slot for rest of run
+    usePower('turbo');
+    _drTurboActive = true;
+    renderTray(); // force tray refresh to show 4 slots immediately
+    cancelPower();
+    flashPower('#ff9f0a');
+    haptic([20, 10, 40, 10, 60]);
+    showToast('⚡ TURBO TRAY ACTIVE — 4 pieces per turn!');
   }
 }
 
@@ -7841,6 +7867,7 @@ function applyGravity() {
 
 // ── SHIELD ──
 let _drShieldActive = false;
+let _drTurboActive = false;
 
 function usePower(type) {
   powerInventory[type] = Math.max(0, powerInventory[type] - 1);
@@ -7860,7 +7887,7 @@ function flashPower(color) {
 }
 
 function resetPowers() {
-  powerInventory = { laser:0, shatter:0, wildfire:0, bomb:0, sniper:0, gravity:0, shield:0 };
+  powerInventory = { laser:0, shatter:0, wildfire:0, bomb:0, sniper:0, gravity:0, shield:0, turbo:0 };
   activePower = null;
   _movesSincePowerup = 0;
   _powerRemindShown = false;
@@ -8868,6 +8895,7 @@ function toggleTurboTray() {
 }
 
 function getTraySize() {
+  if(isDaily && _drActive && _drTurboActive) return 4;
   return (!isDaily && turboTrayActive && turboTrayUnlocked) ? 4 : 3;
 }
 
