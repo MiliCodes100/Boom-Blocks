@@ -3480,6 +3480,17 @@ body.theme-onyx #board { animation: onyxPulse 5s ease-in-out infinite; }
 
 </style>
 <style>
+/* Sniper selected cell */
+.cell.sniper-selected {
+  outline: 2px solid #30d158 !important;
+  box-shadow: 0 0 12px rgba(48,209,88,0.8) !important;
+  animation: sniperPulse 0.5s ease-in-out infinite;
+}
+@keyframes sniperPulse {
+  0%,100% { outline-color: #30d158; }
+  50%      { outline-color: #fff; }
+}
+
 .powerup-btn.dr-locked {
   background: rgba(10,10,24,0.6) !important;
   border: 1px solid rgba(255,255,255,0.08) !important;
@@ -3648,6 +3659,18 @@ body.theme-onyx #board { animation: onyxPulse 5s ease-in-out infinite; }
     <button class="powerup-btn empty-power" id="pu-bomb" onclick="activatePower('bomb')">
       <div class="powerup-icon">💣</div>
       <div class="powerup-name">BOMB</div>
+    </button>
+    <button class="powerup-btn empty-power dr-only-power" id="pu-sniper" onclick="activatePower('sniper')" style="display:none">
+      <div class="powerup-icon">🎯</div>
+      <div class="powerup-name">SNIPER</div>
+    </button>
+    <button class="powerup-btn empty-power dr-only-power" id="pu-gravity" onclick="activatePower('gravity')" style="display:none">
+      <div class="powerup-icon">⬇️</div>
+      <div class="powerup-name">GRAVITY</div>
+    </button>
+    <button class="powerup-btn empty-power dr-only-power" id="pu-shield" onclick="activatePower('shield')" style="display:none">
+      <div class="powerup-icon">🛡️</div>
+      <div class="powerup-name">SHIELD</div>
     </button>
   </div>
   <div class="tray" id="tray"></div>
@@ -4299,6 +4322,22 @@ function sfxPowerActivate(type) {
     note(160, 'square', 0.005, 0.08, 0.08, 0.2, 0.08);
     note(320, 'sine', 0.005, 0.06, 0.08, 0.15, 0.16);
     noise(0.05, 0.08, 0.2);
+  } else if(type === 'sniper') {
+    // Precise scope-in click
+    note(1200, 'sine',     0.005, 0.04, 0.05, 0.08);
+    note(1800, 'sine',     0.005, 0.03, 0.04, 0.06, 0.06);
+    noise(0.02, 0.03, 0.05);
+  } else if(type === 'gravity') {
+    // Heavy whoosh downward
+    note(300, 'sawtooth',  0.01, 0.15, 0.2, 0.25, 0, 80);
+    note(150, 'sawtooth',  0.01, 0.12, 0.18, 0.2, 0.05, 60);
+    note(80,  'sine',      0.01, 0.15, 0.25, 0.2, 0.1, 40);
+    noise(0.06, 0.12, 0.08);
+  } else if(type === 'shield') {
+    // Protective shimmer
+    chord([523, 659, 784], 'sine', 0.008, 0.2, 0.3, 0.25);
+    note(1047, 'sine', 0.005, 0.15, 0.3, 0.2, 0.15);
+    noise(0.03, 0.1, 0.1);
   }
 }
 
@@ -4356,6 +4395,20 @@ function sfxObstacle() {
   // Metallic noise burst
   noise(0.06, 0.05);
   noise(0.03, 0.04, 0.08);
+}
+
+// ── SNIPER SHOT ──
+function sfxSniperShot() {
+  note(2400, 'sine',     0.005, 0.02, 0.04, 0.08);
+  note(1800, 'square',   0.003, 0.03, 0.05, 0.06, 0.02, 600);
+  noise(0.04, 0.06, 0.01);
+}
+
+// ── SHIELD BREAK ──
+function sfxShieldBreak() {
+  chord([523, 659, 784, 1047], 'sine', 0.01, 0.1, 0.15, 0.2);
+  note(200, 'sawtooth', 0.008, 0.2, 0.4, 0.3, 0.1, 50);
+  noise(0.1, 0.25, 0.05);
 }
 function sfxDailyComplete() {
   const melody = [523, 659, 784, 659, 784, 1047];
@@ -4491,6 +4544,12 @@ function getActivePieces() {
   if (sessionLinesCleared >= 35) pool = [...pool, ...PIECES_T4, ...PIECES_T4];
   if (sessionLinesCleared >= 70 && getLevel() >= 8)  pool = [...pool, ...PIECES_T5, ...PIECES_T5];
   if (getLevel() >= 12) pool = [...pool, ...PIECES_FRAME];
+
+  // Roguelike: add nightmare (T5) pieces from stage 2 onwards, more each stage
+  if (isDaily && _drActive && _drStage >= 1) {
+    const weight = _drStage; // stage 2 = 1x, stage 3 = 2x, etc.
+    for (let i = 0; i < weight; i++) pool = [...pool, ...PIECES_T5];
+  }
 
   return pool;
 }
@@ -4838,6 +4897,8 @@ function startDaily() {
   _drTransitioning = false;
 
   // Lock all power slots for roguelike mode
+  _drShieldActive = false;
+  _sniperTargets = [];
   _drLockAllPowers();
 
   $id('mode-label').textContent = '⚔️ ROGUELIKE';
@@ -4863,6 +4924,10 @@ function _drStartFloor(floorIdx) {
       showScreen('game-screen');
     }
     // Stage 2+ floor 0: board keeps going, just update baselines
+    // Warn player about nightmare pieces from stage 2
+    if(_drStage >= 1) {
+      setTimeout(() => showToast(`💀 STAGE ${_drStage + 1} — NIGHTMARE PIECES ACTIVE!`), 800);
+    }
   }
 
   // Capture baseline for this floor
@@ -4984,15 +5049,41 @@ function _drShowFloorComplete(floor, floorScore, isLastFloorOfStage) {
   theme.colors.forEach(col => spawnParticles(cx, cy, col, 5));
 
   const globalFloor = _drStage * DAILY_RUN_FLOORS.length + _drFloor + 1;
+  const _drFloorTitles = [
+    `FLOOR ${globalFloor} CLEAR!`, `FLOOR ${globalFloor} DONE!`,
+    `NICE WORK!`, `KEEP IT UP!`, `SMASHED IT!`, `CRUSHED IT!`,
+    `FLOOR ${globalFloor} ✓`, `NOT BAD!`, `LET'S GO!`, `BOOM!`,
+  ];
+  const _drStageTitles = [
+    `STAGE ${_drStage + 1} CLEAR!`, `STAGE ${_drStage + 1} COMPLETE!`,
+    `STAGE ${_drStage + 1} DONE!`, `END OF STAGE ${_drStage + 1}!`,
+    `SURVIVED STAGE ${_drStage + 1}!`,
+  ];
+  const _drFloorDescs = [
+    floor.desc, `FLOOR ${globalFloor} DOWN!`, `KEEP PUSHING!`,
+    `LINES CLEARED!`, `ONTO THE NEXT!`, `STAY FOCUSED!`,
+    `YOU GOT THIS!`, `STACK SMARTER!`, `DON'T CHOKE NOW!`,
+  ];
+  const _drStageDescs = [
+    `STAGE ${_drStage + 2} INCOMING...`, `BRACE YOURSELF!`,
+    `IT GETS HARDER...`, `NEXT STAGE AWAITS!`, `CAN YOU HANDLE MORE?`,
+    `THE PRESSURE IS ON!`, `STAY ALIVE!`,
+  ];
+  const _drNextTexts = [
+    `CHOOSE YOUR REWARD...`, `PICK A POWER!`, `YOUR CHOICE...`,
+    `WHAT'LL IT BE?`, `REWARD TIME!`, `POWER UP!`, `CHOOSE WISELY...`,
+  ];
+  const _pick = arr => arr[Math.floor(Math.random() * arr.length)];
+
   const popup = document.createElement('div');
   popup.id = 'dr-floor-complete';
   popup.innerHTML = `
     <div id="dr-floor-complete-card">
       <div class="dr-fc-emoji">${isLastFloorOfStage ? '🏆' : floor.emoji}</div>
-      <div class="dr-fc-title">${isLastFloorOfStage ? `STAGE ${_drStage + 1} CLEAR!` : `FLOOR ${globalFloor} CLEAR!`}</div>
-      <div class="dr-fc-floor">${isLastFloorOfStage ? `STAGE ${_drStage + 2} INCOMING...` : floor.desc}</div>
+      <div class="dr-fc-title">${_pick(isLastFloorOfStage ? _drStageTitles : _drFloorTitles)}</div>
+      <div class="dr-fc-floor">${_pick(isLastFloorOfStage ? _drStageDescs : _drFloorDescs)}</div>
       <div class="dr-fc-score">+${floorScore.toLocaleString()}</div>
-      <div class="dr-fc-next">CHOOSE YOUR REWARD...</div>
+      <div class="dr-fc-next">${_pick(_drNextTexts)}</div>
     </div>
   `;
   document.body.appendChild(popup);
@@ -5015,20 +5106,35 @@ const POWER_DESCS = {
   shatter:  'Destroys a cross\npattern of blocks',
   wildfire: 'Burns all blocks\nof one color',
   bomb:     'Explodes a 3×3\narea of blocks',
+  sniper:   'Tap any 2 blocks\nto remove them',
+  gravity:  'Drops all blocks\ndown to fill gaps',
+  shield:   'Survive one\ngame over\n★ RARE ★',
 };
 
 function _drShowCardPicker(onChosen) {
-  // Pick 2 different powers to offer — prefer ones not yet unlocked
+  cancelPower(); // clear any active power selection before showing picker
   const alreadyUnlocked = _drUnlockedPowers.filter(v => v !== null);
-  const allTypes = Object.keys(POWERS);
+  const shieldOwned = alreadyUnlocked.includes('shield');
 
-  // Build a weighted pool: unowned first, then owned as fallback
-  const unowned = allTypes.filter(t => !alreadyUnlocked.includes(t));
-  const pool = unowned.length >= 2 ? unowned : allTypes;
+  // Build pool — all powers, respecting roguelike-only and shield-once rules
+  let pool = Object.keys(POWERS).filter(t => {
+    if(t === 'shield') return !shieldOwned && Math.random() < 0.12; // 12% chance shield appears, once per run
+    return true;
+  });
 
-  // Seeded pick of 2 distinct options
-  const shuffled = [...pool].sort(() => rng() - 0.5);
+  // Prefer unowned, fall back to all if needed
+  const unowned = pool.filter(t => !alreadyUnlocked.includes(t));
+  const candidates = unowned.length >= 2 ? unowned : pool.length >= 2 ? pool : Object.keys(POWERS);
+
+  // Pick 2 distinct options
+  const shuffled = [...candidates].sort(() => Math.random() - 0.5);
   const options = shuffled.slice(0, 2);
+
+  // Ensure we always have 2 options
+  while(options.length < 2) {
+    const extra = Object.keys(POWERS).find(t => !options.includes(t) && t !== 'shield');
+    if(extra) options.push(extra); else break;
+  }
 
   const overlay = document.createElement('div');
   overlay.id = 'dr-card-select';
@@ -5043,6 +5149,7 @@ function _drShowCardPicker(onChosen) {
   options.forEach(type => {
     const p = POWERS[type];
     const isOwned = alreadyUnlocked.includes(type);
+    const isShield = type === 'shield';
     const card = document.createElement('div');
     card.className = 'dr-power-card';
     card.style.setProperty('--pu-color', p.color);
@@ -5051,16 +5158,14 @@ function _drShowCardPicker(onChosen) {
       <div class="dr-pc-icon">${p.icon}</div>
       <div class="dr-pc-name" style="color:${p.color}">${p.name}</div>
       <div class="dr-pc-desc">${POWER_DESCS[type].replace(/\n/g, '<br>')}</div>
-      <div class="dr-pc-charge">${isOwned ? '+1 CHARGE' : 'NEW UNLOCK'}</div>
+      <div class="dr-pc-charge" style="${isShield ? 'color:#fff' : ''}">${isShield ? '★ RARE — ONCE PER RUN ★' : isOwned ? '+1 CHARGE' : 'NEW UNLOCK'}</div>
     `;
     card.addEventListener('click', () => {
-      // Animate selection
       card.classList.add('selected');
       card.style.borderColor = p.color;
       card.style.boxShadow = `0 0 30px ${p.glow}`;
       haptic([20, 10, 50]);
       sfxUnlock();
-
       setTimeout(() => {
         overlay.remove();
         _drApplyPowerChoice(type);
@@ -5072,12 +5177,15 @@ function _drShowCardPicker(onChosen) {
 }
 
 function _drApplyPowerChoice(type) {
-  // Add to unlocked slots
-  const emptySlot = _drUnlockedPowers.indexOf(null);
-  if(emptySlot >= 0) {
-    _drUnlockedPowers[emptySlot] = type;
+  // Shield always goes in its fixed slot (index 6)
+  // Other powers fill the next empty slot
+  if(type === 'shield') {
+    _drUnlockedPowers[6] = 'shield';
+  } else {
+    // Fill next empty non-shield slot (0-5)
+    const emptySlot = _drUnlockedPowers.slice(0, 6).indexOf(null);
+    if(emptySlot >= 0) _drUnlockedPowers[emptySlot] = type;
   }
-  // Give 1 charge
   powerInventory[type] = (powerInventory[type] || 0) + 1;
   _drRenderLockedPowers();
 }
@@ -5096,8 +5204,10 @@ function _drFinishRun(cleared) {
   _drActive = false;
 
   // Restore normal power UI
-  powerInventory = { laser:0, shatter:0, wildfire:0, bomb:0 };
+  powerInventory = { laser:0, shatter:0, wildfire:0, bomb:0, sniper:0, gravity:0, shield:0 };
   updatePowerUI();
+  // Hide roguelike-only buttons
+  document.querySelectorAll('.dr-only-power').forEach(el => el.style.display = 'none');
   _drUpdateHeaderFloor(); // restores BEST label
 
   // Hide HUD
@@ -6210,15 +6320,44 @@ function checkGameOver() {
   if(avail.some(p => canPlaceAny(p))) return;
 
   // No placeable pieces — but check if a power-up could rescue them
-  const hasPower = Object.entries(powerInventory).some(([type, count]) => {
+  // In roguelike, only count actually unlocked powers
+  const usablePowers = (isDaily && _drActive)
+    ? _drUnlockedPowers.filter(v => v !== null)
+    : Object.keys(POWERS);
+
+  const hasPower = usablePowers.some(type => {
+    const count = powerInventory[type] || 0;
     if(count <= 0) return false;
-    if(type === 'laser')    return true; // always clears a row, always helps
-    if(type === 'wildfire') return board.some(row => row.some(c => c)); // board has blocks
-    if(type === 'shatter')  return board.some(row => row.some(c => c)); // can remove a block
-    if(type === 'bomb')     return true; // always clears space
+    if(type === 'laser')    return true;
+    if(type === 'wildfire') return board.some(row => row.some(c => c));
+    if(type === 'shatter')  return board.some(row => row.some(c => c));
+    if(type === 'bomb')     return true;
+    if(type === 'sniper')   return board.some(row => row.some(c => c));
+    if(type === 'gravity')  return board.some(row => row.some(c => c));
     return false;
   });
   if(hasPower) return;
+
+  // Shield — survive one game over
+  if(isDaily && _drActive && powerInventory['shield'] > 0) {
+    powerInventory['shield'] = 0;
+    _drShieldActive = false;
+    _drRenderLockedPowers();
+    flashPower('#ffffff');
+    sfxShieldBreak();
+    haptic([50, 20, 50, 20, 100]);
+    showToast('🛡️ SHIELD SAVED YOU!');
+    spawnParticles(window.innerWidth/2, window.innerHeight/2, '#ffffff', 20);
+    // Clear some space by removing a random row to give the player a chance
+    const rows = [];
+    for(let r = 0; r < ROWS; r++) if(board[r].some(c => c)) rows.push(r);
+    if(rows.length) {
+      const row = rows[Math.floor(Math.random() * rows.length)];
+      for(let c = 0; c < COLS; c++) board[row][c] = null;
+      renderBoard();
+    }
+    return;
+  }
 
   sfxGameOver(); hapticGameOver();
   gamesPlayed++;
@@ -7189,9 +7328,13 @@ const POWERS = {
   shatter:  { color:'#0af5ff', glow:'rgba(10,245,255,0.4)',  icon:'🔨', name:'SHATTER' },
   wildfire: { color:'#ff6b35', glow:'rgba(255,107,53,0.4)',  icon:'🔥', name:'WILDFIRE' },
   bomb:     { color:'#ff2d55', glow:'rgba(255,45,85,0.5)',   icon:'💣', name:'BOMB' },
+  // Roguelike-only
+  sniper:   { color:'#30d158', glow:'rgba(48,209,88,0.4)',   icon:'🎯', name:'SNIPER',  rogueLikeOnly:true },
+  gravity:  { color:'#bf5af2', glow:'rgba(191,90,242,0.4)',  icon:'⬇️', name:'GRAVITY', rogueLikeOnly:true },
+  shield:   { color:'#ffffff', glow:'rgba(255,255,255,0.4)', icon:'🛡️', name:'SHIELD',  rogueLikeOnly:true, rare:true },
 };
 
-let powerInventory = { laser:0, shatter:0, wildfire:0, bomb:0 };
+let powerInventory = { laser:0, shatter:0, wildfire:0, bomb:0, sniper:0, gravity:0, shield:0 };
 let _movesSincePowerup = 0;   // moves placed since player first got a powerup
 let _powerRemindShown = false; // only show once per game
 let activePower = null; // currently selected power waiting for board tap
@@ -7201,13 +7344,16 @@ let activePower = null; // currently selected power waiting for board tap
 // ════════════════════════════════════
 // Which power slots are unlocked in roguelike mode
 // null = locked (?), string = unlocked power type
-let _drUnlockedPowers = [null, null, null, null]; // 4 slots
-const _drPowerSlots = ['laser', 'shatter', 'wildfire', 'bomb']; // slot order matches HTML
+let _drUnlockedPowers = [null, null, null, null, null, null, null]; // 7 slots
+const _drPowerSlots = ['laser', 'shatter', 'wildfire', 'bomb', 'sniper', 'gravity', 'shield'];
 
 function _drLockAllPowers() {
-  // Reset inventory and lock all slots visually
-  powerInventory = { laser:0, shatter:0, wildfire:0, bomb:0 };
-  _drUnlockedPowers = [null, null, null, null];
+  // Reset inventory, cancel any active power, and lock all slots visually
+  powerInventory = { laser:0, shatter:0, wildfire:0, bomb:0, sniper:0, gravity:0, shield:0 };
+  activePower = null;
+  _drUnlockedPowers = [null, null, null, null, null, null, null];
+  // Show roguelike-only buttons
+  document.querySelectorAll('.dr-only-power').forEach(el => el.style.display = '');
   _drRenderLockedPowers();
 }
 
@@ -7217,14 +7363,15 @@ function _drRenderLockedPowers() {
     if(!btn) return;
     const unlocked = _drUnlockedPowers[i];
     if(unlocked === null) {
-      // Locked — show ?
+      // Locked — show ? and block all clicks
       btn.className = 'powerup-btn dr-locked';
       btn.style.removeProperty('--pu-color');
       btn.style.removeProperty('--pu-glow');
       btn.innerHTML = `<div class="powerup-icon">❓</div><div class="powerup-name">LOCKED</div>`;
+      btn.removeAttribute('onclick');
       btn.onclick = null;
     } else {
-      // Unlocked — show normally but keep count from inventory
+      // Unlocked — show normally
       const p = POWERS[unlocked];
       const count = powerInventory[unlocked];
       btn.className = 'powerup-btn ' + (count > 0 ? 'has-power' : 'empty-power');
@@ -7234,6 +7381,7 @@ function _drRenderLockedPowers() {
         <div class="powerup-icon">${p.icon}</div>
         <div class="powerup-name">${p.name}</div>
       `;
+      btn.removeAttribute('onclick');
       btn.onclick = () => activatePower(unlocked);
     }
   });
@@ -7343,6 +7491,8 @@ function updatePowerUI() {
 
 function activatePower(type) {
   if(powerInventory[type] <= 0) return;
+  // In roguelike, only allow unlocked powers
+  if(isDaily && _drActive && !_drUnlockedPowers.includes(type)) return;
   sfxPowerActivate(type);
   haptic(30);
   if(activePower === type) {
@@ -7390,6 +7540,23 @@ function activatePower(type) {
     // Drop a bomb piece into the tray
     usePower('bomb');
     dropBombIntoTray();
+  } else if(type === 'sniper') {
+    if(boardEl) {
+      boardEl.classList.add('select-mode');
+      boardEl.querySelectorAll('.cell.filled').forEach(cell => {
+        cell.addEventListener('click', onSniperClick, {once:false});
+      });
+    }
+    if(hint) hint.textContent = 'TAP 2 BLOCKS TO SNIPE | TAP POWER TO CANCEL';
+    showSelectHint('SNIPER - TAP 2 BLOCKS');
+  } else if(type === 'gravity') {
+    // Instant — no tap needed
+    usePower('gravity');
+    applyGravity();
+  } else if(type === 'shield') {
+    // Shield is passive — toggling it just shows info
+    cancelPower();
+    showToast('🛡️ SHIELD ACTIVE — you will survive one game over!');
   }
 }
 
@@ -7410,9 +7577,10 @@ function clearBoardSelectMode() {
     cell.removeEventListener('click', onLaserClick);
     cell.removeEventListener('click', onShatterClick);
     cell.removeEventListener('click', onWildfireClick);
+    cell.removeEventListener('click', onSniperClick);
     cell.removeEventListener('pointerenter', onLaserHover);
     cell.removeEventListener('pointerleave', onLaserUnhover);
-    cell.classList.remove('row-hover');
+    cell.classList.remove('row-hover', 'sniper-selected');
   });
 }
 
@@ -7594,6 +7762,86 @@ function onWildfireClick(e) {
   }, 420);
 }
 
+// ── SNIPER ──
+let _sniperTargets = [];
+function onSniperClick(e) {
+  if(activePower !== 'sniper') return;
+  e.stopPropagation();
+  const r = parseInt(e.currentTarget.dataset.r);
+  const c = parseInt(e.currentTarget.dataset.c);
+  if(!board[r][c]) return;
+
+  // Check not already selected
+  if(_sniperTargets.some(t => t.r === r && t.c === c)) return;
+
+  // Highlight selected cell
+  e.currentTarget.classList.add('sniper-selected');
+  _sniperTargets.push({r, c});
+
+  // After 2 taps — fire
+  if(_sniperTargets.length === 2) {
+    usePower('sniper');
+    const targets = [..._sniperTargets];
+    _sniperTargets = [];
+
+    flashPower('#30d158');
+    sfxSniperShot();
+    haptic([15, 10, 15, 10, 40]);
+
+    targets.forEach(({r, c}) => {
+      const cell = document.querySelectorAll('#board .cell')[r * COLS + c];
+      if(cell) {
+        cell.classList.add('clearing');
+        const rect = cell.getBoundingClientRect();
+        spawnParticles(rect.left + rect.width/2, rect.top + rect.height/2, '#30d158', 8);
+      }
+      _trackObstacleBroken(r, c);
+      board[r][c] = null;
+    });
+
+    setTimeout(() => {
+      renderBoard();
+      clearLines();
+      checkGameOver();
+    }, 350);
+  } else {
+    showSelectHint('SNIPER — TAP 1 MORE BLOCK');
+  }
+}
+
+// ── GRAVITY ──
+function applyGravity() {
+  let moved = false;
+  // For each column, collect all non-null cells and drop them to the bottom
+  for(let c = 0; c < COLS; c++) {
+    const col = [];
+    for(let r = 0; r < ROWS; r++) if(board[r][c]) col.push(board[r][c]);
+    for(let r = 0; r < ROWS; r++) {
+      const val = r >= ROWS - col.length ? col[r - (ROWS - col.length)] : null;
+      if(board[r][c] !== val) moved = true;
+      board[r][c] = val;
+    }
+  }
+
+  flashPower('#bf5af2');
+  sfxPowerActivate('gravity');
+  haptic([20, 10, 30, 10, 20]);
+  shakeBoard(2);
+  renderBoard();
+
+  if(moved) {
+    setTimeout(() => {
+      clearLines();
+      checkGameOver();
+    }, 350);
+  } else {
+    showToast('⬇️ NOTHING TO DROP!');
+  }
+}
+
+// ── SHIELD ──
+let _drShieldActive = false;
+
 function usePower(type) {
   powerInventory[type] = Math.max(0, powerInventory[type] - 1);
   cancelPower();
@@ -7612,7 +7860,7 @@ function flashPower(color) {
 }
 
 function resetPowers() {
-  powerInventory = { laser:0, shatter:0, wildfire:0, bomb:0 };
+  powerInventory = { laser:0, shatter:0, wildfire:0, bomb:0, sniper:0, gravity:0, shield:0 };
   activePower = null;
   _movesSincePowerup = 0;
   _powerRemindShown = false;
