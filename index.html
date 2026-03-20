@@ -4680,6 +4680,12 @@ function addStartingObstacles() {
 
 const OBSTACLE_COLOR = 'OBSTACLE';
 
+function _trackObstacleBroken(r, c) {
+  if(board[r] && board[r][c] === OBSTACLE_COLOR) {
+    incStat('obstacles_broken');
+  }
+}
+
 function spawnObstacleBlock(rowsCleared, colsCleared) {
   // Only 1 obstacle at a time — don't spawn if one already exists
   for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++) {
@@ -5320,8 +5326,8 @@ function clearLines() {
   }
 
   setTimeout(()=>{
-    rowsToClear.forEach(r=>{for(let c=0;c<COLS;c++) board[r][c]=null;});
-    colsToClear.forEach(c=>{for(let r=0;r<ROWS;r++) board[r][c]=null;});
+    rowsToClear.forEach(r=>{for(let c=0;c<COLS;c++){_trackObstacleBroken(r,c); board[r][c]=null;}});
+    colsToClear.forEach(c=>{for(let r=0;r<ROWS;r++){_trackObstacleBroken(r,c); board[r][c]=null;}});
     renderBoard();
     // Check for full board clear bonus
     const boardCleared = board.every(row => row.every(c => c === null));
@@ -5331,8 +5337,8 @@ function clearLines() {
       showClearBonus();
       _missionOnBoardClear();
     }
-    // Spawn obstacle block on cleared line (level 8+, not daily, not on board clear)
-    if(!isDaily && !boardCleared && getLevel() >= 8) {
+    // Spawn obstacle block on cleared line (level 1+ for testing, not daily, not on board clear)
+    if(!isDaily && !boardCleared && getLevel() >= 1) {
       spawnObstacleBlock(rowsToClear, colsToClear);
     }
   },400);
@@ -6137,6 +6143,7 @@ function renderStats() {
   const totalPieces  = getStat('total_pieces');
   const bestCombo    = getStat('best_combo');
   const bestLines    = getStat('best_lines');
+  const obstaclesBroken = getStat('obstacles_broken');
   const avgScore     = totalGames > 0 ? Math.floor(totalScore / totalGames) : 0;
   const avgLines     = totalGames > 0 ? Math.floor(totalLines / totalGames) : 0;
   const level        = getLevel();
@@ -6188,6 +6195,12 @@ function renderStats() {
         <div class="stat-card-icon">🧩</div>
         <div class="stat-card-val">${totalPieces.toLocaleString()}</div>
         <div class="stat-card-label">PIECES PLACED</div>
+      </div>
+
+      <div class="stat-card" style="--sc:#ffd60a">
+        <div class="stat-card-icon">🚧</div>
+        <div class="stat-card-val">${obstaclesBroken.toLocaleString()}</div>
+        <div class="stat-card-label">OBSTACLES BROKEN</div>
       </div>
 
       <div class="stat-card wide" style="--sc:var(--c3)">
@@ -6287,6 +6300,7 @@ function triggerBombExplosion(centerRow, centerCol, hex) {
   // Clear cells after animation
   setTimeout(() => {
     affected.forEach(({r, c}) => {
+      _trackObstacleBroken(r, c);
       board[r][c] = null;
     });
     const pts = affected.length * 500;
@@ -6384,7 +6398,7 @@ let activePower = null; // currently selected power waiting for board tap
 function awardPower(lines, combo) {
   // Combos are more rewarding than multi-line clears
   if(combo >= 4 || lines >= 4) {
-    const chance = combo >= 4 ? 0.60 : 0.35; // combo 60%, lines-only 35%
+    const chance = combo >= 4 ? 0.68 : 0.42; // combo 68%, lines-only 42%
     if(Math.random() > chance) return;
     const roll = Math.random();
     if(roll < 0.35) givePower('bomb');
@@ -6392,20 +6406,20 @@ function awardPower(lines, combo) {
     else if(roll < 0.85) givePower('laser');
     else givePower('shatter');
   } else if(combo >= 3 || lines >= 3) {
-    const chance = combo >= 3 ? 0.35 : 0.18; // combo 35%, lines-only 18%
+    const chance = combo >= 3 ? 0.42 : 0.24; // combo 42%, lines-only 24%
     if(Math.random() > chance) return;
     const roll = Math.random();
     if(roll < 0.5) givePower('wildfire');
     else if(roll < 0.8) givePower('laser');
     else givePower('shatter');
   } else if(combo >= 2 || lines >= 2) {
-    const chance = combo >= 2 ? 0.15 : 0.07; // combo 15%, lines-only 7%
+    const chance = combo >= 2 ? 0.20 : 0.10; // combo 20%, lines-only 10%
     if(Math.random() > chance) return;
     const roll = Math.random();
     if(roll < 0.5) givePower('laser');
     else givePower('shatter');
-  } else if(Math.random() < 0.03) {
-    // 3% on single line
+  } else if(Math.random() < 0.05) {
+    // 5% on single line (was 3%)
     givePower('laser');
   }
 }
@@ -6610,7 +6624,7 @@ function onShatterClick(e) {
   shakeBoard(2);
 
   setTimeout(() => {
-    targets.forEach(t => board[t.r][t.c] = null);
+    targets.forEach(t => { _trackObstacleBroken(t.r, t.c); board[t.r][t.c] = null; });
     renderBoard();
     addScore(targets.length * 80, targets.length, 1);
     checkGameOver();
@@ -6633,6 +6647,7 @@ function onWildfireClick(e) {
   for(let row = 0; row < ROWS; row++) {
     for(let col = 0; col < COLS; col++) {
       if(board[row][col] === targetColor) {
+        _trackObstacleBroken(row, col);
         board[row][col] = null;
         count++;
         if(boardEl) {
