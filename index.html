@@ -4921,6 +4921,7 @@ function goMenu() {
   if(typeof _ptActive !== 'undefined' && _ptActive) playTutSkip();
   // Clean up roguelike if active
   if(_drActive) { _drActive = false; }
+  if(_drRescueTimer) { clearInterval(_drRescueTimer); _drRescueTimer = null; _drClearRescueHint(); }
   const hud = $id('daily-run-hud');
   if(hud) hud.style.display = 'none';
   showScreen('menu-screen');
@@ -4997,6 +4998,7 @@ let _drFloorLines = 0;     // lines at start of current floor
 let _drTotalScore = 0;     // cumulative score across floors
 let _drFloorResults = [];  // { floor, score, lines, passed } per floor
 let _drTransitioning = false;
+let _drRescueTimer = null; // timer waiting for player to use a power to rescue themselves
 
 function startDaily() {
   initMusic();
@@ -5009,6 +5011,7 @@ function startDaily() {
   _drTotalScore = 0;
   _drFloorResults = [];
   _drTransitioning = false;
+  if(_drRescueTimer) { clearInterval(_drRescueTimer); _drRescueTimer = null; _drClearRescueHint(); }
 
   // Lock all power slots for roguelike mode
   _drShieldActive = false;
@@ -5316,6 +5319,66 @@ function _drApplyPowerChoice(type) {
   _drRenderLockedPowers();
 }
 
+function _drStartRescueCountdown() {
+  const RESCUE_SECS = 10;
+  let remaining = RESCUE_SECS;
+
+  // Show pulsing hint on power buttons
+  _drShowRescueHint(remaining);
+  haptic([15, 10, 15]);
+
+  _drRescueTimer = setInterval(() => {
+    remaining--;
+    _drUpdateRescueHint(remaining);
+    if(remaining <= 0) {
+      clearInterval(_drRescueTimer);
+      _drRescueTimer = null;
+      _drClearRescueHint();
+      // Time's up — trigger game over for real
+      checkGameOver();
+    }
+  }, 1000);
+}
+
+function _drShowRescueHint(secs) {
+  // Remove any existing hint
+  _drClearRescueHint();
+
+  const el = document.createElement('div');
+  el.id = 'dr-rescue-hint';
+  el.style.cssText = `
+    position:fixed; bottom:90px; left:50%; transform:translateX(-50%);
+    background:rgba(10,10,24,0.97); border:2px solid var(--c2);
+    border-radius:12px; padding:10px 16px; z-index:9400;
+    font-family:'Press Start 2P',monospace; font-size:0.32rem;
+    color:var(--c2); letter-spacing:1px; text-align:center;
+    box-shadow:0 0 20px var(--glow2); pointer-events:none;
+    animation:toastIn 0.3s ease; white-space:nowrap;
+  `;
+  el.innerHTML = `⚡ USE A POWER-UP! <span id="dr-rescue-count" style="color:var(--c1)">${secs}s</span>`;
+  document.body.appendChild(el);
+
+  // Pulse all power buttons that have charges
+  _drUnlockedPowers.forEach((type, i) => {
+    if(!type || !powerInventory[type]) return;
+    if(type === 'turbo' || type === 'overclock' || type === 'shield') return;
+    const btn = $id('pu-' + _drPowerSlots[i]);
+    if(btn) btn.classList.add('hint-pulse');
+  });
+}
+
+function _drUpdateRescueHint(secs) {
+  const el = $id('dr-rescue-count');
+  if(el) el.textContent = secs + 's';
+}
+
+function _drClearRescueHint() {
+  const el = $id('dr-rescue-hint');
+  if(el) el.remove();
+  // Remove pulse from all power buttons
+  document.querySelectorAll('.powerup-btn').forEach(btn => btn.classList.remove('hint-pulse'));
+}
+
 function _drOnGameOver() {
   if(!_drActive) return;
   // Player failed this floor — run ends
@@ -5328,8 +5391,7 @@ function _drOnGameOver() {
 
 function _drFinishRun(cleared) {
   _drActive = false;
-
-  // Restore normal power UI
+  if(_drRescueTimer) { clearInterval(_drRescueTimer); _drRescueTimer = null; _drClearRescueHint(); }
   powerInventory = { laser:0, shatter:0, wildfire:0, bomb:0, sniper:0, gravity:0, shield:0, turbo:0, airstrike:0, beam:0, magnet:0, overclock:0 };
   _drTurboActive = false;
   _drOverclockActive = false;
@@ -6250,7 +6312,23 @@ function refillPieces() {
       attempts++;
     } while(attempts < 20 && !pieces.some(p => canPlaceAny(p)));
 
-    // Streak saver — if on a 3+ combo, replace one slot with the best piece to keep the streak going
+    // In roguelike: max 1 nightmare (T5) piece per tray
+    if(isDaily && _drActive) {
+      const t5Indices = pieces.reduce((acc, p, i) => {
+        if(p && PIECES_T5.includes(p.shape)) acc.push(i);
+        return acc;
+      }, []);
+      // If more than 1 T5, replace extras with regular rngPiece (non-T5)
+      while(t5Indices.length > 1) {
+        const idx = t5Indices.pop(); // keep first, replace rest
+        let replacement, tries = 0;
+        do {
+          replacement = rngPiece();
+          tries++;
+        } while(PIECES_T5.includes(replacement.shape) && tries < 15);
+        pieces[idx] = replacement;
+      }
+    }
     if(consecutiveClearCount >= 3) {
       const color = '#ffd60a'; // golden streak saver color
 
@@ -6473,23 +6551,36 @@ function canPlaceAny(piece) {
 function checkGameOver() {
   const avail = pieces.filter(p => p !== null);
   // Still have a placeable piece — not over
-  if(avail.some(p => canPlaceAny(p))) return;
+  if(avail.some(p => canPlaceAny(p))) {
+    // Cancel any active rescue timer — player found a move
+    if(_drRescueTimer) { clearInterval(_drRescueTimer); _drRescueTimer = null; _drClearRescueHint(); }
+    return;
+  }
 
-  // No placeable pieces — but check if a power-up could rescue them
-  // In roguelike, only count actually unlocked powers
+  // No placeable pieces — check for powers
   const usablePowers = (isDaily && _drActive)
     ? _drUnlockedPowers.filter(v => v !== null)
     : Object.keys(POWERS);
 
+  // In roguelike mode: if ANY power has charges, give the player 10s to use it
+  if(isDaily && _drActive) {
+    const anyPower = usablePowers.some(type => (powerInventory[type] || 0) > 0
+      && type !== 'turbo' && type !== 'overclock' && type !== 'shield');
+    if(anyPower && !_drRescueTimer) {
+      _drStartRescueCountdown();
+      return;
+    }
+    if(_drRescueTimer) return; // countdown already running — wait for it
+  }
+
+  // Classic mode: only count proven rescue powers
   const hasPower = usablePowers.some(type => {
     const count = powerInventory[type] || 0;
     if(count <= 0) return false;
-    // Only count powers that reliably create placeable space
     if(type === 'laser')    return true;
     if(type === 'bomb')     return true;
     if(type === 'wildfire') return board.some(row => row.some(c => c && c !== OBSTACLE_COLOR));
     if(type === 'shatter')  return board.some(row => row.some(c => c));
-    // sniper, gravity, turbo, shield — don't block game over
     return false;
   });
   if(hasPower) return;
@@ -8364,8 +8455,13 @@ function usePower(type) {
   _movesSincePowerup = 0;
   _powerRemindShown = false;
   _missionOnPower();
+  // Cancel rescue countdown if active
+  if(_drRescueTimer) {
+    clearInterval(_drRescueTimer);
+    _drRescueTimer = null;
+    _drClearRescueHint();
+  }
   // In roguelike: if no charges left, clear the slot back to locked (?)
-  // Exception: turbo and shield are permanent passives — don't clear them
   if(isDaily && _drActive && powerInventory[type] <= 0 && type !== 'turbo' && type !== 'shield') {
     const slot = _drUnlockedPowers.indexOf(type);
     if(slot >= 0) _drUnlockedPowers[slot] = null;
