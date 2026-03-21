@@ -3847,14 +3847,15 @@ body.theme-onyx #board { animation: onyxPulse 5s ease-in-out infinite; }
     <button class="back-btn" onclick="goMenu()">◀ BACK</button>
     <div class="missions-title" style="color:var(--c2)">ROGUELIKE</div>
   </div>
-  <div class="dr-rc-title" id="dr-rc-title">RUN COMPLETE!</div>
-  <div class="dr-rc-sub" id="dr-rc-sub">All floors cleared!</div>
+  <div class="dr-rc-title" id="dr-rc-title">RUN OVER</div>
+  <div class="dr-rc-sub" id="dr-rc-sub"></div>
   <div class="dr-rc-floors" id="dr-rc-floors"></div>
   <div style="font-family:'Press Start 2P',monospace;font-size:0.35rem;color:var(--muted);letter-spacing:1px">TOTAL SCORE</div>
   <div class="dr-rc-score-big" id="dr-rc-score">0</div>
   <div style="width:100%" id="dr-rc-stats"></div>
-  <button class="menu-btn primary" onclick="goMenu()" style="width:100%;margin-top:8px">◀ BACK TO MENU</button>
+  <button class="menu-btn daily" onclick="startDaily()" style="width:100%;margin-top:8px">⚔️ PLAY AGAIN</button>
   <button class="menu-btn ghost" onclick="shareScoreImage()" style="width:100%;margin-top:0">📸 SHARE RESULT</button>
+  <button class="menu-btn ghost" onclick="goMenu()" style="width:100%;margin-top:0">◀ BACK TO MENU</button>
 </div>
   <div class="dc-emoji">🌟</div>
   <div class="dc-title">ROGUELIKE<br>COMPLETE!</div>
@@ -3906,7 +3907,7 @@ body.theme-onyx #board { animation: onyxPulse 5s ease-in-out infinite; }
   justify-content:center;
   gap:16px;
 ">
-  <div style="font-family:'Press Start 2P',monospace;font-size:0.55rem;color:var(--muted);letter-spacing:2px">GAME OVER</div>
+  <div id="watch-ad-mode-label" style="font-family:'Press Start 2P',monospace;font-size:0.55rem;color:var(--muted);letter-spacing:2px">GAME OVER</div>
   <div style="font-size:3rem">📺</div>
   <div style="font-family:'Press Start 2P',monospace;font-size:0.65rem;color:#ffd60a;letter-spacing:2px;text-align:center;line-height:1.8">WATCH AD TO<br>SUPPORT THE GAME</div>
   <div id="watch-ad-timer" style="font-family:'Press Start 2P',monospace;font-size:1.5rem;color:var(--c1);text-shadow:0 0 20px var(--glow1)">5</div>
@@ -5327,53 +5328,77 @@ function _drShowRunComplete(result) {
   showScreen('dr-run-complete');
 
   const title = $id('dr-rc-title');
-  const sub = $id('dr-rc-sub');
-  if(title) title.textContent = '💀 RUN OVER';
-  if(title) title.style.color = 'var(--c1)';
+  const sub   = $id('dr-rc-sub');
+  const sc    = $id('dr-rc-score');
+
   const stagesCleared = _drStage;
   const floorsCleared = _drFloorResults.filter(r => r.passed).length;
-  if(sub) sub.textContent = stagesCleared > 0
-    ? `${stagesCleared} stage${stagesCleared > 1 ? 's' : ''} cleared — floor ${floorsCleared % DAILY_RUN_FLOORS.length + 1} of stage ${stagesCleared + 1}`
-    : `Reached floor ${floorsCleared + 1} of stage 1`;
+  const globalFloor   = stagesCleared * DAILY_RUN_FLOORS.length + (_drFloor + 1);
 
-  // Score
-  const sc = $id('dr-rc-score');
-  if(sc) sc.textContent = result.totalScore.toLocaleString();
+  // Title
+  if(title) {
+    title.textContent = result.cleared ? '🏆 RUN COMPLETE!' : '💀 RUN OVER';
+    title.style.color = result.cleared ? 'var(--c3)' : 'var(--c1)';
+  }
 
-  // Floor pips
+  // Subtitle
+  if(sub) {
+    if(stagesCleared > 0) {
+      sub.textContent = `${stagesCleared} STAGE${stagesCleared > 1 ? 'S' : ''} CLEARED — FLOOR ${globalFloor}`;
+    } else {
+      sub.textContent = `REACHED FLOOR ${_drFloor + 1} OF STAGE 1`;
+    }
+  }
+
+  // Floor pips — show one pip per floor completed this stage
   const floorPips = $id('dr-rc-floors');
   if(floorPips) {
     floorPips.innerHTML = '';
     DAILY_RUN_FLOORS.forEach((f, i) => {
       const pip = document.createElement('div');
-      const res = result.floorResults[i];
+      const res = result.floorResults[stagesCleared * DAILY_RUN_FLOORS.length + i];
       pip.className = 'dr-rc-pip' + (!res ? '' : res.passed ? ' done' : ' failed');
       pip.title = f.label;
       floorPips.appendChild(pip);
     });
   }
 
-  // Stats
-  const stats = $id('dr-rc-stats');
-  if(stats) {
-    stats.innerHTML = result.floorResults.map(r => `
-      <div class="dr-rc-stat-row">
-        <span>${DAILY_RUN_FLOORS[r.floor-1].emoji} FLOOR ${r.floor} — ${DAILY_RUN_FLOORS[r.floor-1].desc}</span>
-        <span class="dr-rc-stat-val">${r.passed ? '+'+r.score.toLocaleString() : '✗ FAILED'}</span>
+  // Score count-up
+  if(sc) { sc.textContent = '0'; countUp(sc, result.totalScore, 1200); }
+
+  // Stats breakdown
+  const statsEl = $id('dr-rc-stats');
+  if(statsEl) {
+    const rows = result.floorResults.slice(-DAILY_RUN_FLOORS.length).map((r, i) => {
+      const floorDef = DAILY_RUN_FLOORS[i % DAILY_RUN_FLOORS.length];
+      return `
+        <div class="dr-rc-stat-row">
+          <span>${floorDef.emoji} FLOOR ${r.floor} — ${floorDef.desc}</span>
+          <span class="dr-rc-stat-val" style="${r.passed ? '' : 'color:var(--c1)'}">${r.passed ? '+' + r.score.toLocaleString() : '✗ FAILED'}</span>
+        </div>`;
+    }).join('');
+
+    statsEl.innerHTML = rows + `
+      <div class="dr-rc-stat-row" style="margin-top:8px;border-top:1px solid rgba(255,255,255,0.1);padding-top:10px">
+        <span>⚔️ STAGES CLEARED</span>
+        <span class="dr-rc-stat-val">${stagesCleared}</span>
       </div>
-    `).join('') + `
-      <div class="dr-rc-stat-row" style="margin-top:6px;border-top:1px solid rgba(255,255,255,0.1);padding-top:10px">
-        <span style="color:var(--text)">🔥 STREAK</span>
+      <div class="dr-rc-stat-row">
+        <span>📋 FLOORS CLEARED</span>
+        <span class="dr-rc-stat-val">${floorsCleared}</span>
+      </div>
+      <div class="dr-rc-stat-row">
+        <span>🔥 STREAK</span>
         <span class="dr-rc-stat-val">${streak} DAYS</span>
       </div>
     `;
   }
 
-  // Particles if cleared
+  // Particles
   if(result.cleared) {
-    const cx = window.innerWidth/2, cy = window.innerHeight/2;
-    const theme = THEMES.find(t=>t.id===activeTheme)||THEMES[0];
-    for(let i=0;i<4;i++) setTimeout(()=>theme.colors.forEach(c=>spawnParticles(cx,cy,c,4)),i*200);
+    const cx = window.innerWidth / 2, cy = window.innerHeight / 2;
+    const theme = THEMES.find(t => t.id === activeTheme) || THEMES[0];
+    for(let i = 0; i < 4; i++) setTimeout(() => theme.colors.forEach(c => spawnParticles(cx, cy, c, 4)), i * 200);
   }
 }
 
@@ -6451,9 +6476,13 @@ function checkGameOver() {
   _missionOnGameEnd();
   checkReviewPrompt();
   deathFlood(() => {
-    if(isDaily && _drActive) _drOnGameOver();
-    else if(isDaily) finishDaily();
-    else showWatchAdOverlay(finishClassic);
+    if(isDaily && _drActive) {
+      showWatchAdOverlay(() => _drOnGameOver());
+    } else if(isDaily) {
+      finishDaily();
+    } else {
+      showWatchAdOverlay(finishClassic);
+    }
   });
 }
 
@@ -7435,7 +7464,7 @@ function _drLockAllPowers() {
   // Reset inventory, cancel any active power, and lock all slots visually
   powerInventory = { laser:0, shatter:0, wildfire:0, bomb:0, sniper:0, gravity:0, shield:0, turbo:0, airstrike:0 };
   activePower = null;
-  _drUnlockedPowers = [null, null, null, null, null, null, null, null];
+  _drUnlockedPowers = [null, null, null, null, null, null, null, null, null];
   // Show roguelike-only buttons
   document.querySelectorAll('.dr-only-power').forEach(el => el.style.display = '');
   _drRenderLockedPowers();
@@ -7446,7 +7475,7 @@ function _drRenderLockedPowers() {
     const btn = $id('pu-' + type);
     if(!btn) return;
     const unlocked = _drUnlockedPowers[i];
-    if(unlocked === null) {
+    if(unlocked === null || unlocked === undefined) {
       // Locked — show ? and block all clicks
       btn.className = 'powerup-btn dr-locked';
       btn.style.removeProperty('--pu-color');
@@ -9257,9 +9286,11 @@ window.onAdRewarded = function(type) {
 
 
 function showWatchAdOverlay(callback) {
-  if(isDaily) { callback(); return; } // skip for daily
   const overlay = $id('watch-ad-overlay');
   if(!overlay) { callback(); return; }
+  // Update label based on mode
+  const label = $id('watch-ad-mode-label');
+  if(label) label.textContent = (isDaily && _drActive) ? '⚔️ RUN OVER' : 'GAME OVER';
   overlay.style.display = 'flex';
   let count = 5;
   const timerEl = $id('watch-ad-timer');
