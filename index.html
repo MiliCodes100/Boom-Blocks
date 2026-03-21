@@ -6353,9 +6353,15 @@ function clearLines() {
       showClearBonus();
       _missionOnBoardClear();
     }
-    // Spawn obstacle block on cleared line (level 1+ for testing, not daily, not on board clear)
-    if(!isDaily && !boardCleared && getLevel() >= 1) {
-      spawnObstacleBlock(rowsToClear, colsToClear);
+    // Spawn obstacle block — classic mode only, tier-based probability
+    // Tier 3 (30+ lines): 30% chance, Tier 5 (50+ lines): 50% chance
+    if(!isDaily && !boardCleared) {
+      let obstacleChance = 0;
+      if(sessionLinesCleared >= 50) obstacleChance = 0.50;       // Tier 5+
+      else if(sessionLinesCleared >= 30) obstacleChance = 0.30;  // Tier 3+
+      if(obstacleChance > 0 && Math.random() < obstacleChance) {
+        spawnObstacleBlock(rowsToClear, colsToClear);
+      }
     }
   },400);
 }
@@ -8452,16 +8458,17 @@ function closeUnlockCelebration() {
 
 
 const TIER_STAMPS = {
-  10:  { label:'DIFFICULTY UP',   name:'TIER 2',           sub:'PIECES UNLOCKED',   color:'#ffcc00' },
-  30:  { label:'DANGER ZONE',     name:'TIER 3',           sub:'HARDER PIECES',     color:'#ff6030' },
-  50:  { label:'NIGHTMARE MODE',  name:'TIER 4',           sub:'CHAOS PIECES',      color:'#ff2d55' },
+  10:  { label:'DIFFICULTY UP',   name:'TIER 2',           sub:'PIECES UNLOCKED',    color:'#ffcc00' },
+  30:  { label:'DANGER ZONE',     name:'TIER 3',           sub:'HARDER PIECES',      color:'#ff6030' },
+  50:  { label:'NIGHTMARE MODE',  name:'TIER 4',           sub:'CHAOS PIECES',       color:'#ff2d55' },
+  75:  { label:'GOOD LUCK...',    name:'TIER 5',           sub:'MAXIMUM CHAOS',      color:'#bf5af2' },
   100: { label:'ARE YOU INSANE?', name:'IMPOSSIBLE ZONE',  sub:'YOU ASKED FOR THIS', color:'#bf5af2' },
 };
 let lastTierShown = 0;
 
 function checkTierStamp() {
   if(isDaily) return; // no tier stamps in roguelike mode
-  const thresholds = [10, 30, 50, 100];
+  const thresholds = [10, 30, 50, 75, 100];
   for (const t of thresholds) {
     if (sessionLinesCleared >= t && lastTierShown < t) {
       lastTierShown = t;
