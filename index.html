@@ -330,7 +330,6 @@ header {
 
 #board {
   width:100%; aspect-ratio:1;
-  max-height: min(calc(100vw - 24px), 420px);
   display:grid;
   grid-template-columns:repeat(8,1fr);
   gap:2px;
@@ -3728,26 +3727,6 @@ body.theme-onyx #board { animation: onyxPulse 5s ease-in-out infinite; }
       <div class="powerup-icon">💣</div>
       <div class="powerup-name">BOMB</div>
     </button>
-    <div class="dr-row-break" id="dr-row-break"></div>
-    <button class="powerup-btn empty-power dr-only-power" id="pu-sniper" onclick="activatePower('sniper')" style="display:none">
-      <div class="powerup-icon">🎯</div>
-      <div class="powerup-name">SNIPER</div>
-    </button>    <button class="powerup-btn empty-power dr-only-power" id="pu-gravity" onclick="activatePower('gravity')" style="display:none">
-      <div class="powerup-icon">⬇️</div>
-      <div class="powerup-name">GRAVITY</div>
-    </button>
-    <button class="powerup-btn empty-power dr-only-power" id="pu-shield" onclick="activatePower('shield')" style="display:none">
-      <div class="powerup-icon">🛡️</div>
-      <div class="powerup-name">SHIELD</div>
-    </button>
-    <button class="powerup-btn empty-power dr-only-power" id="pu-turbo" onclick="activatePower('turbo')" style="display:none">
-      <div class="powerup-icon">⚡</div>
-      <div class="powerup-name">TURBO</div>
-    </button>
-    <button class="powerup-btn empty-power dr-only-power" id="pu-airstrike" onclick="activatePower('airstrike')" style="display:none">
-      <div class="powerup-icon">🚀</div>
-      <div class="powerup-name">AIRSTRIKE</div>
-    </button>
   </div>
   <div class="tray" id="tray"></div>
   <div class="hint-text" id="hint-text">HOLD + DRAG TO PLACE</div>
@@ -5282,15 +5261,9 @@ function _drShowCardPicker(onChosen) {
 }
 
 function _drApplyPowerChoice(type) {
-  // Shield always slot 6, turbo always slot 7, others fill next empty slot (0-5)
-  if(type === 'shield') {
-    _drUnlockedPowers[6] = 'shield';
-  } else if(type === 'turbo') {
-    _drUnlockedPowers[7] = 'turbo';
-  } else {
-    const emptySlot = _drUnlockedPowers.slice(0, 6).indexOf(null);
-    if(emptySlot >= 0) _drUnlockedPowers[emptySlot] = type;
-  }
+  // Fill the next empty slot (any power goes anywhere)
+  const emptySlot = _drUnlockedPowers.indexOf(null);
+  if(emptySlot >= 0) _drUnlockedPowers[emptySlot] = type;
   powerInventory[type] = (powerInventory[type] || 0) + 1;
   _drRenderLockedPowers();
 }
@@ -5312,9 +5285,6 @@ function _drFinishRun(cleared) {
   powerInventory = { laser:0, shatter:0, wildfire:0, bomb:0, sniper:0, gravity:0, shield:0, turbo:0, airstrike:0 };
   _drTurboActive = false;
   updatePowerUI();
-  // Hide roguelike-only buttons and row break
-  document.querySelectorAll('.dr-only-power').forEach(el => el.style.display = 'none');
-  const rb = $id('dr-row-break'); if(rb) rb.classList.remove('visible');
   _drUpdateHeaderFloor(); // restores BEST label
 
   // Hide HUD
@@ -7485,17 +7455,13 @@ let activePower = null; // currently selected power waiting for board tap
 // ════════════════════════════════════
 // Which power slots are unlocked in roguelike mode
 // null = locked (?), string = unlocked power type
-let _drUnlockedPowers = [null, null, null, null, null, null, null, null, null]; // 9 slots
-const _drPowerSlots = ['laser', 'shatter', 'wildfire', 'bomb', 'sniper', 'gravity', 'shield', 'turbo', 'airstrike'];
+let _drUnlockedPowers = [null, null, null, null]; // 4 slots
+const _drPowerSlots = ['laser', 'shatter', 'wildfire', 'bomb']; // 4 slots — any power type can go in any slot
 
 function _drLockAllPowers() {
-  // Reset inventory, cancel any active power, and lock all slots visually
   powerInventory = { laser:0, shatter:0, wildfire:0, bomb:0, sniper:0, gravity:0, shield:0, turbo:0, airstrike:0 };
   activePower = null;
-  _drUnlockedPowers = [null, null, null, null, null, null, null, null, null];
-  // Show roguelike-only buttons and row break
-  document.querySelectorAll('.dr-only-power').forEach(el => el.style.display = '');
-  const rb = $id('dr-row-break'); if(rb) rb.classList.add('visible');
+  _drUnlockedPowers = [null, null, null, null];
   _drRenderLockedPowers();
 }
 
