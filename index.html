@@ -3845,6 +3845,7 @@ body.theme-onyx #board { animation: onyxPulse 5s ease-in-out infinite; }
 </div>
 
 <div id="daily-complete">
+</div>
 
 <!-- Roguelike HUD (shown during roguelike run) -->
 <div id="daily-run-hud" style="display:none">
@@ -3873,17 +3874,6 @@ body.theme-onyx #board { animation: onyxPulse 5s ease-in-out infinite; }
   <button class="menu-btn daily" onclick="startDaily()" style="width:100%;margin-top:8px">⚔️ PLAY AGAIN</button>
   <button class="menu-btn ghost" onclick="shareScoreImage()" style="width:100%;margin-top:0">📸 SHARE RESULT</button>
   <button class="menu-btn ghost" onclick="goMenu()" style="width:100%;margin-top:0">◀ BACK TO MENU</button>
-</div>
-  <div class="dc-emoji">🌟</div>
-  <div class="dc-title">ROGUELIKE<br>COMPLETE!</div>
-  <div class="dc-score" id="dc-score">0</div>
-  <div class="dc-streak">
-    <div class="dc-streak-label">CURRENT STREAK</div>
-    <div class="dc-streak-val">🔥 <span id="dc-streak">0</span> DAYS</div>
-  </div>
-  <div style="max-width:280px;width:100%;margin-top:8px">
-    <button class="btn primary" onclick="goMenu()" style="min-width:220px;padding:16px;font-size:0.6rem">◀ MENU</button>
-  </div>
 </div>
 
 
@@ -5416,13 +5406,7 @@ function _drFinishRun(cleared) {
   localStorage.setItem('bb_daily_score_'+dk, _drTotalScore);
 
   // Update streak
-  const yesterday = new Date(); yesterday.setDate(yesterday.getDate()-1);
-  const yk = `${yesterday.getFullYear()}-${yesterday.getMonth()+1}-${yesterday.getDate()}`;
-  if(lastPlayedDay===yk||lastPlayedDay===dk){ if(lastPlayedDay!==dk) streak++; }
-  else streak=1;
-  lastPlayedDay=dk;
-  localStorage.setItem('bb_streak',streak);
-  localStorage.setItem('bb_last_day',dk);
+  updateStreak();
 
   if(_drTotalScore > dailyBest){ dailyBest=_drTotalScore; localStorage.setItem('bb_daily_best',dailyBest); }
   if(_drTotalScore > best){ best=_drTotalScore; localStorage.setItem('bb_best',best); updateHeaderBest(); }
@@ -6675,10 +6659,27 @@ function deathFlood(callback) {
   setTimeout(callback, emptyCells.length * delay + 150);
 }
 
+function updateStreak() {
+  const dk = todayKey();
+  const yesterday = new Date(); yesterday.setDate(yesterday.getDate()-1);
+  const yk = `${yesterday.getFullYear()}-${yesterday.getMonth()+1}-${yesterday.getDate()}`;
+  if(lastPlayedDay === yk || lastPlayedDay === dk) { if(lastPlayedDay !== dk) streak++; }
+  else streak = 1;
+  lastPlayedDay = dk;
+  localStorage.setItem('bb_streak', streak);
+  localStorage.setItem('bb_last_day', dk);
+  // LOVER unlock trigger (14 day streak)
+  if(streak >= 14 && !localStorage.getItem('bb_music_lover')) {
+    localStorage.setItem('bb_music_lover', '1');
+    setTimeout(() => showUnlockCelebration({name:'LOVER', emoji:'💜', colors:['#bf5af2','#ff2d55','#ffd60a','#0af5ff','#30d158']}, 'MUSIC TRACK'), 2000);
+  }
+}
+
 function finishClassic() {
   // Level is now based on cumulative score — just update bar
   addXP(0);
   checkNewUnlocks();
+  updateStreak(); // classic games count toward daily streak
   pendingScore = score;
   showAdInterstitial(() => {
     if(!playerName) {
@@ -6835,18 +6836,7 @@ function finishDaily() {
   localStorage.setItem('bb_daily_done',dk);
   localStorage.setItem('bb_daily_score',score);
   localStorage.setItem('bb_daily_score_'+dk, score);
-  const yesterday=new Date(); yesterday.setDate(yesterday.getDate()-1);
-  const yk=`${yesterday.getFullYear()}-${yesterday.getMonth()+1}-${yesterday.getDate()}`;
-  if(lastPlayedDay===yk||lastPlayedDay===dk){ if(lastPlayedDay!==dk) streak++; }
-  else streak=1;
-  lastPlayedDay=dk;
-  localStorage.setItem('bb_streak',streak);
-  localStorage.setItem('bb_last_day',dk);
-  // LOVER unlock trigger (14 day streak)
-  if(streak >= 14 && !localStorage.getItem('bb_music_lover')) {
-    localStorage.setItem('bb_music_lover', '1');
-    setTimeout(() => showUnlockCelebration({name:'LOVER', emoji:'💜', colors:['#bf5af2','#ff2d55','#ffd60a','#0af5ff','#30d158']}, 'MUSIC TRACK'), 2000);
-  }
+  updateStreak();
   if(score>dailyBest){ dailyBest=score; localStorage.setItem('bb_daily_best',dailyBest); }
   if(score>best){ best=score; localStorage.setItem('bb_best',best); }
   showAdInterstitial(() => {
@@ -7589,7 +7579,7 @@ const POWERS = {
   shield:   { color:'#ffffff', glow:'rgba(255,255,255,0.4)', icon:'🛡️', name:'SHIELD',  rogueLikeOnly:true, rare:true },
   turbo:    { color:'#ff9f0a', glow:'rgba(255,159,10,0.4)',  icon:'⚡', name:'TURBO TRAY', rogueLikeOnly:true, rare:true },
   airstrike: { color:'#ff2d55', glow:'rgba(255,45,85,0.5)',  icon:'🚀', name:'AIRSTRIKE',   rogueLikeOnly:true },
-  beam:      { color:'#0af5ff', glow:'rgba(10,245,255,0.5)',  icon:'🔵', name:'BEAM',         rogueLikeOnly:true },
+  beam:      { color:'#0af5ff', glow:'rgba(10,245,255,0.5)',  icon:'⛈️', name:'BEAM',         rogueLikeOnly:true },
   magnet:    { color:'#bf5af2', glow:'rgba(191,90,242,0.4)',  icon:'🧲', name:'MAGNET',        rogueLikeOnly:true },
   overclock: { color:'#ffd60a', glow:'rgba(255,214,10,0.5)',  icon:'⏩', name:'OVERCLOCK',     rogueLikeOnly:true, rare:true },
 };
@@ -8122,9 +8112,77 @@ function onSniperClick(e) {
 }
 
 // ── GRAVITY ──
+
+// Shared smooth block-shift animation for gravity and magnet
+// Uses floating clones so the board itself never jumps
+function _animateBlockShift(moves, direction, onComplete) {
+  const boardEl = $id('board');
+  if(!boardEl || !moves.length) { onComplete(); return; }
+
+  const cells = boardEl.querySelectorAll('.cell');
+  const boardRect = boardEl.getBoundingClientRect();
+
+  // Hide source cells and spawn floating clones
+  const clones = [];
+  const COL_STAGGER = 18; // ms between columns
+  const DURATION = 300;
+
+  moves.forEach(({ fromR, toR, c, color }) => {
+    const srcCell = cells[fromR * COLS + c];
+    const dstCell = cells[toR   * COLS + c];
+    if(!srcCell || !dstCell) return;
+
+    const srcRect = srcCell.getBoundingClientRect();
+    const dstRect = dstCell.getBoundingClientRect();
+
+    // Create a floating clone that looks like the block
+    const clone = document.createElement('div');
+    clone.style.cssText = `
+      position:fixed;
+      left:${srcRect.left}px;
+      top:${srcRect.top}px;
+      width:${srcRect.width}px;
+      height:${srcRect.height}px;
+      background:${color};
+      box-shadow:0 0 6px ${color};
+      border-radius:3px;
+      z-index:999;
+      pointer-events:none;
+      will-change:transform;
+    `;
+    document.body.appendChild(clone);
+    clones.push(clone);
+
+    // Hide the original cell while clone is flying
+    srcCell.style.opacity = '0';
+
+    // Animate clone to destination with staggered delay per column
+    const delay = c * COL_STAGGER;
+    const dy = dstRect.top - srcRect.top;
+    const easing = direction === 'down'
+      ? 'cubic-bezier(0.25, 0.46, 0.45, 0.94)' // ease-out quad — natural fall
+      : 'cubic-bezier(0.16, 1, 0.3, 1)';         // ease-out expo — snappy pull up
+
+    setTimeout(() => {
+      clone.style.transition = `transform ${DURATION}ms ${easing}`;
+      clone.style.transform = `translateY(${dy}px)`;
+    }, delay);
+  });
+
+  const totalWait = COLS * COL_STAGGER + DURATION + 30;
+  setTimeout(() => {
+    // Restore source cells (renderBoard will repaint everything cleanly)
+    const boardCells = boardEl.querySelectorAll('.cell');
+    boardCells.forEach(c => { c.style.opacity = ''; });
+    // Remove all clones
+    clones.forEach(cl => cl.remove());
+    onComplete();
+  }, totalWait);
+}
+
 function applyGravity() {
-  // Calculate moves before modifying board
-  const moves = []; // { fromR, toR, c, color }
+  // Calculate destination for each filled cell
+  const moves = [];
   for(let c = 0; c < COLS; c++) {
     const filled = [];
     for(let r = 0; r < ROWS; r++) if(board[r][c]) filled.push({ r, color: board[r][c] });
@@ -8136,72 +8194,26 @@ function applyGravity() {
     });
   }
 
-  if(!moves.length) {
-    showToast('\u2b07\ufe0f NOTHING TO DROP!');
-    return;
-  }
+  if(!moves.length) { showToast('\u2b07\ufe0f NOTHING TO DROP!'); return; }
 
   flashPower('#bf5af2');
   sfxPowerActivate('gravity');
   haptic([20, 10, 30, 10, 20]);
 
-  // Animate blocks falling
-  const boardEl = $id('board');
-  const cells = boardEl ? boardEl.querySelectorAll('.cell') : [];
-  const cellH = (cells[0] ? cells[0].getBoundingClientRect().height : 0) || cellSize || 42;
-  const FALL_MS = 320;
-  const COL_STAGGER = 25;
-
-  // Prime will-change before animating
-  moves.forEach(({ fromR, c }) => {
-    const cell = cells[fromR * COLS + c];
-    if(cell) cell.style.willChange = 'transform';
-  });
-
-  // Stagger by distance so far-travelling blocks get a head start
-  const maxDist = Math.max(...moves.map(m => Math.abs(m.toR - m.fromR)));
-  moves.forEach(({ fromR, toR, c }) => {
-    const cell = cells[fromR * COLS + c];
-    if(!cell) return;
-    const dist = (toR - fromR) * cellH;
-    // Slight per-column stagger but much tighter — feels like a wave not a sequence
-    const delay = c * COL_STAGGER * 0.4;
-    requestAnimationFrame(() => {
-      cell.style.transition = `transform ${FALL_MS}ms cubic-bezier(0.25, 0.46, 0.45, 0.94) ${delay}ms`;
-      cell.style.transform = `translateY(${dist}px)`;
-      cell.style.zIndex = '5';
-    });
-  });
-
-  const totalDelay = COLS * COL_STAGGER * 0.4 + FALL_MS + 80;
-  setTimeout(() => {
-    // Fade out animated cells while renderBoard paints real positions
-    moves.forEach(({ fromR, c }) => {
-      const cell = cells[fromR * COLS + c];
-      if(cell) {
-        cell.style.transition = 'opacity 60ms ease';
-        cell.style.opacity = '0';
-      }
-    });
+  _animateBlockShift(moves, 'down', () => {
     // Update board data
     for(let c = 0; c < COLS; c++) {
       const col = [];
       for(let r = 0; r < ROWS; r++) if(board[r][c]) col.push(board[r][c]);
-      for(let r = 0; r < ROWS; r++) {
-        board[r][c] = r >= ROWS - col.length ? col[r - (ROWS - col.length)] : null;
-      }
+      for(let r = 0; r < ROWS; r++) board[r][c] = r >= ROWS - col.length ? col[r - (ROWS - col.length)] : null;
     }
-    setTimeout(() => {
-      moves.forEach(({ fromR, c }) => {
-        const cell = cells[fromR * COLS + c];
-        if(cell) { cell.style.transition = ''; cell.style.transform = ''; cell.style.zIndex = ''; cell.style.opacity = ''; cell.style.willChange = ''; }
-      });
-      shakeBoard(2);
-      renderBoard();
-      setTimeout(() => { clearLines(); checkGameOver(); }, 300);
-    }, 70);
-  }, totalDelay);
+    shakeBoard(2);
+    renderBoard();
+    setTimeout(() => { clearLines(); checkGameOver(); }, 250);
+  });
 }
+
+
 
 // ── AIRSTRIKE ──
 function applyAirstrike() {
@@ -8373,7 +8385,7 @@ function onBeamUnhover() {
 }
 
 function applyMagnet() {
-  // Calculate moves — pack filled cells to top of each column
+  // Calculate destination for each filled cell (pack to top)
   const moves = [];
   for(let c = 0; c < COLS; c++) {
     const filled = [];
@@ -8384,69 +8396,26 @@ function applyMagnet() {
     });
   }
 
-  if(!moves.length) {
-    showToast('🧲 NOTHING TO PULL!');
-    return;
-  }
+  if(!moves.length) { showToast('\U0001f9f2 NOTHING TO PULL!'); return; }
 
   flashPower('#bf5af2');
   sfxPowerActivate('magnet');
   haptic([20, 10, 30, 10, 20]);
 
-  // Animate blocks flying UP
-  const boardEl = $id('board');
-  const cells = boardEl ? boardEl.querySelectorAll('.cell') : [];
-  const cellH = (cells[0] ? cells[0].getBoundingClientRect().height : 0) || cellSize || 42;
-  const RISE_MS = 300;
-  const COL_STAGGER = 25;
-
-  // Prime will-change
-  moves.forEach(({ fromR, c }) => {
-    const cell = cells[fromR * COLS + c];
-    if(cell) cell.style.willChange = 'transform';
-  });
-
-  moves.forEach(({ fromR, toR, c }) => {
-    const cell = cells[fromR * COLS + c];
-    if(!cell) return;
-    const dist = (toR - fromR) * cellH; // negative = upward
-    const delay = c * COL_STAGGER * 0.4;
-    requestAnimationFrame(() => {
-      // Ease-out with slight deceleration — snappy but smooth
-      cell.style.transition = `transform ${RISE_MS}ms cubic-bezier(0.22, 0.61, 0.36, 1) ${delay}ms`;
-      cell.style.transform = `translateY(${dist}px)`;
-      cell.style.zIndex = '5';
-    });
-  });
-
-  const totalDelay = COLS * COL_STAGGER * 0.4 + RISE_MS + 80;
-  setTimeout(() => {
-    moves.forEach(({ fromR, c }) => {
-      const cell = cells[fromR * COLS + c];
-      if(cell) {
-        cell.style.transition = 'opacity 60ms ease';
-        cell.style.opacity = '0';
-      }
-    });
-    // Update board — pack to top
+  _animateBlockShift(moves, 'up', () => {
+    // Update board data
     for(let c = 0; c < COLS; c++) {
       const col = [];
       for(let r = 0; r < ROWS; r++) if(board[r][c]) col.push(board[r][c]);
-      for(let r = 0; r < ROWS; r++) {
-        board[r][c] = r < col.length ? col[r] : null;
-      }
+      for(let r = 0; r < ROWS; r++) board[r][c] = r < col.length ? col[r] : null;
     }
-    setTimeout(() => {
-      moves.forEach(({ fromR, c }) => {
-        const cell = cells[fromR * COLS + c];
-        if(cell) { cell.style.transition = ''; cell.style.transform = ''; cell.style.zIndex = ''; cell.style.opacity = ''; cell.style.willChange = ''; }
-      });
-      shakeBoard(2);
-      renderBoard();
-      setTimeout(() => { clearLines(); checkGameOver(); }, 300);
-    }, 70);
-  }, totalDelay);
+    shakeBoard(2);
+    renderBoard();
+    setTimeout(() => { clearLines(); checkGameOver(); }, 250);
+  });
 }
+
+
 
 function usePower(type) {
   powerInventory[type] = Math.max(0, powerInventory[type] - 1);
