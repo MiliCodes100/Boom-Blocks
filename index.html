@@ -5367,7 +5367,7 @@ function _drFinishRun(cleared) {
 
   _missionOnDailyComplete();
 
-  showAdInterstitial(() => _drShowRunComplete(result));
+  setTimeout(() => _drShowRunComplete(result), 300);
 }
 
 function _drShowRunComplete(result) {
@@ -8058,28 +8058,39 @@ function applyGravity() {
   const boardEl = $id('board');
   const cells = boardEl ? boardEl.querySelectorAll('.cell') : [];
   const cellH = (cells[0] ? cells[0].getBoundingClientRect().height : 0) || cellSize || 42;
-  const FALL_MS = 260;
+  const FALL_MS = 320;
   const COL_STAGGER = 25;
 
+  // Prime will-change before animating
+  moves.forEach(({ fromR, c }) => {
+    const cell = cells[fromR * COLS + c];
+    if(cell) cell.style.willChange = 'transform';
+  });
+
+  // Stagger by distance so far-travelling blocks get a head start
+  const maxDist = Math.max(...moves.map(m => Math.abs(m.toR - m.fromR)));
   moves.forEach(({ fromR, toR, c }) => {
     const cell = cells[fromR * COLS + c];
     if(!cell) return;
     const dist = (toR - fromR) * cellH;
-    const delay = c * COL_STAGGER;
-    cell.style.transition = 'none';
-    cell.style.transform = 'translateY(0)';
-    cell.getBoundingClientRect(); // force reflow
-    cell.style.transition = `transform ${FALL_MS}ms cubic-bezier(0.55,0,1,1) ${delay}ms`;
-    cell.style.transform = `translateY(${dist}px)`;
-    cell.style.zIndex = '5';
+    // Slight per-column stagger but much tighter — feels like a wave not a sequence
+    const delay = c * COL_STAGGER * 0.4;
+    requestAnimationFrame(() => {
+      cell.style.transition = `transform ${FALL_MS}ms cubic-bezier(0.25, 0.46, 0.45, 0.94) ${delay}ms`;
+      cell.style.transform = `translateY(${dist}px)`;
+      cell.style.zIndex = '5';
+    });
   });
 
-  const totalDelay = COLS * COL_STAGGER + FALL_MS + 60;
+  const totalDelay = COLS * COL_STAGGER * 0.4 + FALL_MS + 80;
   setTimeout(() => {
-    // Clear animation styles
+    // Fade out animated cells while renderBoard paints real positions
     moves.forEach(({ fromR, c }) => {
       const cell = cells[fromR * COLS + c];
-      if(cell) { cell.style.transition = ''; cell.style.transform = ''; cell.style.zIndex = ''; }
+      if(cell) {
+        cell.style.transition = 'opacity 60ms ease';
+        cell.style.opacity = '0';
+      }
     });
     // Update board data
     for(let c = 0; c < COLS; c++) {
@@ -8089,9 +8100,15 @@ function applyGravity() {
         board[r][c] = r >= ROWS - col.length ? col[r - (ROWS - col.length)] : null;
       }
     }
-    shakeBoard(2);
-    renderBoard();
-    setTimeout(() => { clearLines(); checkGameOver(); }, 350);
+    setTimeout(() => {
+      moves.forEach(({ fromR, c }) => {
+        const cell = cells[fromR * COLS + c];
+        if(cell) { cell.style.transition = ''; cell.style.transform = ''; cell.style.zIndex = ''; cell.style.opacity = ''; cell.style.willChange = ''; }
+      });
+      shakeBoard(2);
+      renderBoard();
+      setTimeout(() => { clearLines(); checkGameOver(); }, 300);
+    }, 70);
   }, totalDelay);
 }
 
@@ -8289,27 +8306,36 @@ function applyMagnet() {
   const boardEl = $id('board');
   const cells = boardEl ? boardEl.querySelectorAll('.cell') : [];
   const cellH = (cells[0] ? cells[0].getBoundingClientRect().height : 0) || cellSize || 42;
-  const RISE_MS = 260;
+  const RISE_MS = 300;
   const COL_STAGGER = 25;
+
+  // Prime will-change
+  moves.forEach(({ fromR, c }) => {
+    const cell = cells[fromR * COLS + c];
+    if(cell) cell.style.willChange = 'transform';
+  });
 
   moves.forEach(({ fromR, toR, c }) => {
     const cell = cells[fromR * COLS + c];
     if(!cell) return;
-    const dist = (toR - fromR) * cellH; // negative = moving up
-    const delay = c * COL_STAGGER;
-    cell.style.transition = 'none';
-    cell.style.transform = 'translateY(0)';
-    cell.getBoundingClientRect();
-    cell.style.transition = `transform ${RISE_MS}ms cubic-bezier(0, 0, 0.45, 1.15) ${delay}ms`;
-    cell.style.transform = `translateY(${dist}px)`;
-    cell.style.zIndex = '5';
+    const dist = (toR - fromR) * cellH; // negative = upward
+    const delay = c * COL_STAGGER * 0.4;
+    requestAnimationFrame(() => {
+      // Ease-out with slight deceleration — snappy but smooth
+      cell.style.transition = `transform ${RISE_MS}ms cubic-bezier(0.22, 0.61, 0.36, 1) ${delay}ms`;
+      cell.style.transform = `translateY(${dist}px)`;
+      cell.style.zIndex = '5';
+    });
   });
 
-  const totalDelay = COLS * COL_STAGGER + RISE_MS + 60;
+  const totalDelay = COLS * COL_STAGGER * 0.4 + RISE_MS + 80;
   setTimeout(() => {
     moves.forEach(({ fromR, c }) => {
       const cell = cells[fromR * COLS + c];
-      if(cell) { cell.style.transition = ''; cell.style.transform = ''; cell.style.zIndex = ''; }
+      if(cell) {
+        cell.style.transition = 'opacity 60ms ease';
+        cell.style.opacity = '0';
+      }
     });
     // Update board — pack to top
     for(let c = 0; c < COLS; c++) {
@@ -8319,9 +8345,15 @@ function applyMagnet() {
         board[r][c] = r < col.length ? col[r] : null;
       }
     }
-    shakeBoard(2);
-    renderBoard();
-    setTimeout(() => { clearLines(); checkGameOver(); }, 350);
+    setTimeout(() => {
+      moves.forEach(({ fromR, c }) => {
+        const cell = cells[fromR * COLS + c];
+        if(cell) { cell.style.transition = ''; cell.style.transform = ''; cell.style.zIndex = ''; cell.style.opacity = ''; cell.style.willChange = ''; }
+      });
+      shakeBoard(2);
+      renderBoard();
+      setTimeout(() => { clearLines(); checkGameOver(); }, 300);
+    }, 70);
   }, totalDelay);
 }
 
@@ -9489,12 +9521,15 @@ window.onAdRewarded = function(type) {
 function showWatchAdOverlay(callback) {
   const overlay = $id('watch-ad-overlay');
   if(!overlay) { callback(); return; }
+  // Clear any previous interval
+  if(overlay._interval) { clearInterval(overlay._interval); overlay._interval = null; }
   // Update label based on mode
   const label = $id('watch-ad-mode-label');
   if(label) label.textContent = (isDaily && _drActive) ? '⚔️ RUN OVER' : 'GAME OVER';
   overlay.style.display = 'flex';
   let count = 5;
   const timerEl = $id('watch-ad-timer');
+  if(timerEl) timerEl.textContent = count;
 
   // Try to show an interstitial ad behind the overlay
   try {
