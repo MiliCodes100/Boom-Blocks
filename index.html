@@ -257,6 +257,9 @@ header {
   width:100%;
   padding:10px 12px 6px;
   display:flex; align-items:center; gap:8px;
+  flex-shrink: 0;
+  min-height: 52px;
+  box-sizing: border-box;
 }
 
 .back-btn {
@@ -291,6 +294,7 @@ header {
   border-radius:4px;
   padding:5px 10px;
   box-shadow: 0 0 10px rgba(10,245,255,0.05);
+  min-width: 70px;
 }
 
 .score-label {
@@ -306,6 +310,8 @@ header {
   color: var(--c2);
   text-shadow: 0 0 8px var(--glow2);
   line-height:1.3;
+  white-space: nowrap;
+  overflow: hidden;
 }
 
 .sound-btn {
@@ -330,6 +336,10 @@ header {
 
 #board {
   width:100%; aspect-ratio:1;
+  max-width: calc(100vh - 270px);
+  max-height: calc(100vh - 270px);
+  max-width: calc(100dvh - 270px);
+  max-height: calc(100dvh - 270px);
   display:grid;
   grid-template-columns:repeat(8,1fr);
   gap:2px;
@@ -1114,6 +1124,7 @@ header {
   gap:5px;
   align-items:center;
   justify-content:center;
+  flex-shrink: 0;
 }
 
 .powerup-btn {
