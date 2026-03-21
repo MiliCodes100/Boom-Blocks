@@ -4412,10 +4412,26 @@ function sfxPowerActivate(type) {
     note(1200, 'sine',    0.006, 0.12, 0.15, 0.15, 0.16);
     noise(0.06, 0.1, 0.1);
   } else if(type === 'airstrike') {
-    // Launch whoosh
     note(600, 'sawtooth', 0.006, 0.08, 0.1, 0.2, 0, 200);
     note(400, 'sawtooth', 0.005, 0.08, 0.1, 0.15, 0.06, 100);
     noise(0.05, 0.08, 0.05);
+  } else if(type === 'beam') {
+    // Charging zap
+    note(150, 'sawtooth', 0.006, 0.1, 0.05, 0.25, 0, 800);
+    note(600, 'square',   0.003, 0.06, 0.04, 0.15, 0.05, 1600);
+    noise(0.04, 0.08, 0.05);
+  } else if(type === 'magnet') {
+    // Magnetic pull whoosh upward
+    note(80,  'sawtooth', 0.008, 0.15, 0.2, 0.25, 0, 400);
+    note(200, 'sawtooth', 0.006, 0.12, 0.15, 0.2, 0.05, 600);
+    note(400, 'sine',     0.005, 0.1, 0.15, 0.15, 0.1);
+    noise(0.05, 0.1, 0.08);
+  } else if(type === 'overclock') {
+    // Electric surge
+    note(440, 'square',   0.006, 0.1, 0.08, 0.2, 0, 880);
+    note(880, 'square',   0.005, 0.08, 0.06, 0.15, 0.08, 1320);
+    note(1320,'sine',     0.005, 0.1, 0.12, 0.15, 0.14);
+    noise(0.04, 0.08, 0.1);
   }
 }
 
@@ -4491,13 +4507,20 @@ function sfxShieldBreak() {
 
 // ── AIRSTRIKE IMPACT ──
 function sfxAirstrike() {
-  // Whistling drop + explosion boom
-  note(800, 'sawtooth', 0.006, 0.1, 0.15, 0.2, 0, 80);  // whistle
+  note(800, 'sawtooth', 0.006, 0.1, 0.15, 0.2, 0, 80);
   note(400, 'sawtooth', 0.005, 0.08, 0.1, 0.15, 0.08, 40);
-  note(80,  'sine',     0.008, 0.25, 0.4, 0.5, 0.15, 30); // boom
+  note(80,  'sine',     0.008, 0.25, 0.4, 0.5, 0.15, 30);
   note(120, 'sine',     0.006, 0.2, 0.35, 0.4, 0.18, 40);
   noise(0.15, 0.3, 0.12);
   noise(0.08, 0.2, 0.25);
+}
+
+// ── BEAM (column clear) ──
+function sfxBeam() {
+  note(200, 'sawtooth', 0.008, 0.12, 0.05, 0.3, 0, 1600);
+  note(400, 'square',   0.004, 0.08, 0.04, 0.2, 0.03, 2400);
+  note(1600,'sine',     0.006, 0.06, 0.08, 0.15, 0.08);
+  noise(0.06, 0.12, 0.05);
 }
 function sfxDailyComplete() {
   const melody = [523, 659, 784, 659, 784, 1047];
@@ -4991,6 +5014,7 @@ function startDaily() {
   _drShieldActive = false;
   _sniperTargets = [];
   _drTurboActive = false;
+  _drOverclockActive = false;
   _drLockAllPowers();
 
   $id('mode-label').textContent = '⚔️ ROGUELIKE';
@@ -5127,6 +5151,15 @@ function _drCheckFloorComplete() {
     _drTotalScore += floorScore;
     const isLastFloorOfStage = _drFloor === DAILY_RUN_FLOORS.length - 1;
     _drFloorResults.push({ floor: floor.floor, stage: _drStage, score: floorScore, passed: true });
+
+    // Overclock — double XP earned from this floor
+    if(_drOverclockActive) {
+      const xpBonus = Math.floor(floorScore / 40); // double what we'd normally get
+      addXP(xpBonus);
+      _drOverclockActive = false;
+      _drRenderLockedPowers();
+      showToast('⏩ OVERCLOCK! DOUBLE XP EARNED!');
+    }
     _drShowFloorComplete(floor, floorScore, isLastFloorOfStage);
   }
 }
@@ -5203,6 +5236,9 @@ const POWER_DESCS = {
   shield:   'Survive one\ngame over\n★ RARE ★',
   turbo:     'Unlocks a 4th\npiece in your tray\n★ RARE ★',
   airstrike: 'Bombs 3 random\n2×2 areas\n(may miss!)',
+  beam:      'Clears an entire\ncolumn of blocks',
+  magnet:    'Pulls all blocks\nup to the top',
+  overclock: 'Next floor score\ncounts as double XP\n★ RARE ★',
 };
 
 function _drShowCardPicker(onChosen) {
@@ -5212,8 +5248,9 @@ function _drShowCardPicker(onChosen) {
 
   // Build pool — all powers, respecting roguelike-only and shield-once rules
   let pool = Object.keys(POWERS).filter(t => {
-    if(t === 'shield') return !shieldOwned && Math.random() < 0.12; // 12% chance, once per run
-    if(t === 'turbo')  return !alreadyUnlocked.includes('turbo') && Math.random() < 0.15; // 15% chance, once per run
+    if(t === 'shield')    return !shieldOwned && Math.random() < 0.12;
+    if(t === 'turbo')     return !alreadyUnlocked.includes('turbo') && Math.random() < 0.15;
+    if(t === 'overclock') return !alreadyUnlocked.includes('overclock') && Math.random() < 0.18; // 18% once per run
     return true;
   });
 
@@ -5293,8 +5330,9 @@ function _drFinishRun(cleared) {
   _drActive = false;
 
   // Restore normal power UI
-  powerInventory = { laser:0, shatter:0, wildfire:0, bomb:0, sniper:0, gravity:0, shield:0, turbo:0, airstrike:0 };
+  powerInventory = { laser:0, shatter:0, wildfire:0, bomb:0, sniper:0, gravity:0, shield:0, turbo:0, airstrike:0, beam:0, magnet:0, overclock:0 };
   _drTurboActive = false;
+  _drOverclockActive = false;
   updatePowerUI();
   _drUpdateHeaderFloor(); // restores BEST label
 
@@ -7459,10 +7497,13 @@ const POWERS = {
   gravity:  { color:'#bf5af2', glow:'rgba(191,90,242,0.4)',  icon:'⬇️', name:'GRAVITY', rogueLikeOnly:true },
   shield:   { color:'#ffffff', glow:'rgba(255,255,255,0.4)', icon:'🛡️', name:'SHIELD',  rogueLikeOnly:true, rare:true },
   turbo:    { color:'#ff9f0a', glow:'rgba(255,159,10,0.4)',  icon:'⚡', name:'TURBO TRAY', rogueLikeOnly:true, rare:true },
-  airstrike:{ color:'#ff2d55', glow:'rgba(255,45,85,0.5)',  icon:'🚀', name:'AIRSTRIKE',  rogueLikeOnly:true },
+  airstrike: { color:'#ff2d55', glow:'rgba(255,45,85,0.5)',  icon:'🚀', name:'AIRSTRIKE',   rogueLikeOnly:true },
+  beam:      { color:'#0af5ff', glow:'rgba(10,245,255,0.5)',  icon:'🔵', name:'BEAM',         rogueLikeOnly:true },
+  magnet:    { color:'#bf5af2', glow:'rgba(191,90,242,0.4)',  icon:'🧲', name:'MAGNET',        rogueLikeOnly:true },
+  overclock: { color:'#ffd60a', glow:'rgba(255,214,10,0.5)',  icon:'⏩', name:'OVERCLOCK',     rogueLikeOnly:true, rare:true },
 };
 
-let powerInventory = { laser:0, shatter:0, wildfire:0, bomb:0, sniper:0, gravity:0, shield:0, turbo:0, airstrike:0 };
+let powerInventory = { laser:0, shatter:0, wildfire:0, bomb:0, sniper:0, gravity:0, shield:0, turbo:0, airstrike:0, beam:0, magnet:0, overclock:0 };
 let _movesSincePowerup = 0;   // moves placed since player first got a powerup
 let _powerRemindShown = false; // only show once per game
 let activePower = null; // currently selected power waiting for board tap
@@ -7476,7 +7517,7 @@ let _drUnlockedPowers = [null, null, null, null]; // 4 slots
 const _drPowerSlots = ['laser', 'shatter', 'wildfire', 'bomb']; // 4 slots — any power type can go in any slot
 
 function _drLockAllPowers() {
-  powerInventory = { laser:0, shatter:0, wildfire:0, bomb:0, sniper:0, gravity:0, shield:0, turbo:0, airstrike:0 };
+  powerInventory = { laser:0, shatter:0, wildfire:0, bomb:0, sniper:0, gravity:0, shield:0, turbo:0, airstrike:0, beam:0, magnet:0, overclock:0 };
   activePower = null;
   _drUnlockedPowers = [null, null, null, null];
   _drRenderLockedPowers();
@@ -7500,13 +7541,14 @@ function _drRenderLockedPowers() {
       const p = POWERS[unlocked];
       const count = powerInventory[unlocked];
       const isTurboActive = unlocked === 'turbo' && _drTurboActive;
-      const isPassive = (unlocked === 'shield' && count > 0) || isTurboActive;
-      btn.className = 'powerup-btn ' + (isTurboActive ? 'has-power' : count > 0 ? 'has-power' : 'empty-power');
+      const isOverclockActive = unlocked === 'overclock' && _drOverclockActive;
+      const isPassive = (unlocked === 'shield' && count > 0) || isTurboActive || isOverclockActive;
+      btn.className = 'powerup-btn ' + ((isTurboActive || isOverclockActive) ? 'has-power' : count > 0 ? 'has-power' : 'empty-power');
       btn.style.setProperty('--pu-color', p.color);
       btn.style.setProperty('--pu-glow', p.glow);
       btn.innerHTML = `
         <div class="powerup-icon">${p.icon}</div>
-        <div class="powerup-name">${isTurboActive ? 'ACTIVE' : p.name}</div>
+        <div class="powerup-name">${(isTurboActive || isOverclockActive) ? 'ACTIVE' : p.name}</div>
       `;
       btn.removeAttribute('onclick');
       btn.onclick = () => activatePower(unlocked);
@@ -7704,6 +7746,35 @@ function activatePower(type) {
     usePower('airstrike');
     cancelPower();
     applyAirstrike();
+  } else if(type === 'beam') {
+    // Beam — tap a column to clear it
+    const boardEl = $id('board');
+    if(boardEl) {
+      boardEl.classList.add('select-mode');
+      boardEl.querySelectorAll('.cell').forEach(cell => {
+        cell.addEventListener('click', onBeamClick, {once:false});
+        cell.addEventListener('pointerenter', onBeamHover);
+        cell.addEventListener('pointerleave', onBeamUnhover);
+      });
+    }
+    sfxPowerActivate('beam');
+    const hint = $id('hint-text');
+    if(hint) hint.textContent = 'TAP A COLUMN TO BEAM | TAP POWER TO CANCEL';
+    showSelectHint('BEAM — TAP A COLUMN');
+  } else if(type === 'magnet') {
+    usePower('magnet');
+    cancelPower();
+    sfxPowerActivate('magnet');
+    applyMagnet();
+  } else if(type === 'overclock') {
+    usePower('overclock');
+    cancelPower();
+    _drOverclockActive = true;
+    _drRenderLockedPowers();
+    flashPower('#ffd60a');
+    sfxPowerActivate('overclock');
+    haptic([20, 10, 40, 10, 60]);
+    showToast('⏩ OVERCLOCK! Next floor XP doubled!');
   }
 }
 
@@ -7725,6 +7796,9 @@ function clearBoardSelectMode() {
     cell.removeEventListener('click', onShatterClick);
     cell.removeEventListener('click', onWildfireClick);
     cell.removeEventListener('click', onSniperClick);
+    cell.removeEventListener('click', onBeamClick);
+    cell.removeEventListener('pointerenter', onBeamHover);
+    cell.removeEventListener('pointerleave', onBeamUnhover);
     cell.removeEventListener('pointerenter', onLaserHover);
     cell.removeEventListener('pointerleave', onLaserUnhover);
     cell.classList.remove('row-hover', 'sniper-selected');
@@ -8143,6 +8217,113 @@ function _airstrikeImpact(r, c, cx, cy, cw, ch, boardEl) {
   });
 }
 let _drTurboActive = false;
+let _drShieldActive = false;
+let _drOverclockActive = false; // doubles XP earned this floor
+
+// ── BEAM (vertical laser — clears a full column) ──
+function onBeamClick(e) {
+  if(activePower !== 'beam') return;
+  e.stopPropagation();
+  const c = parseInt(e.currentTarget.dataset.c);
+  usePower('beam');
+
+  // Highlight the whole column
+  const cells = document.querySelectorAll('#board .cell');
+  for(let r = 0; r < ROWS; r++) {
+    const cell = cells[r * COLS + c];
+    if(cell) { cell.classList.add('clearing'); }
+    const rect = cell?.getBoundingClientRect();
+    if(rect && board[r][c]) spawnParticles(rect.left + rect.width/2, rect.top + rect.height/2, board[r][c], 6);
+  }
+
+  flashPower('#0af5ff');
+  haptic([20, 10, 40, 10, 60]);
+  // Beam sound — like laser but rising pitch
+  sfxBeam();
+
+  setTimeout(() => {
+    for(let r = 0; r < ROWS; r++) {
+      _trackObstacleBroken(r, c);
+      board[r][c] = null;
+    }
+    renderBoard();
+    clearLines();
+    checkGameOver();
+  }, 400);
+}
+
+// ── MAGNET (reverse gravity — pulls everything UP) ──
+function onBeamHover(e) {
+  if(activePower !== 'beam') return;
+  const c = parseInt(e.currentTarget.dataset.c);
+  document.querySelectorAll('#board .cell').forEach(cell => {
+    cell.classList.toggle('row-hover', parseInt(cell.dataset.c) === c);
+  });
+}
+function onBeamUnhover() {
+  document.querySelectorAll('#board .cell').forEach(cell => cell.classList.remove('row-hover'));
+}
+
+function applyMagnet() {
+  // Calculate moves — pack filled cells to top of each column
+  const moves = [];
+  for(let c = 0; c < COLS; c++) {
+    const filled = [];
+    for(let r = 0; r < ROWS; r++) if(board[r][c]) filled.push({ r, color: board[r][c] });
+    if(!filled.length) continue;
+    filled.forEach((block, i) => {
+      if(block.r !== i) moves.push({ fromR: block.r, toR: i, c, color: block.color });
+    });
+  }
+
+  if(!moves.length) {
+    showToast('🧲 NOTHING TO PULL!');
+    return;
+  }
+
+  flashPower('#bf5af2');
+  sfxPowerActivate('magnet');
+  haptic([20, 10, 30, 10, 20]);
+
+  // Animate blocks flying UP
+  const boardEl = $id('board');
+  const cells = boardEl ? boardEl.querySelectorAll('.cell') : [];
+  const cellH = (cells[0] ? cells[0].getBoundingClientRect().height : 0) || cellSize || 42;
+  const RISE_MS = 260;
+  const COL_STAGGER = 25;
+
+  moves.forEach(({ fromR, toR, c }) => {
+    const cell = cells[fromR * COLS + c];
+    if(!cell) return;
+    const dist = (toR - fromR) * cellH; // negative = moving up
+    const delay = c * COL_STAGGER;
+    cell.style.transition = 'none';
+    cell.style.transform = 'translateY(0)';
+    cell.getBoundingClientRect();
+    cell.style.transition = `transform ${RISE_MS}ms cubic-bezier(0, 0, 0.45, 1.15) ${delay}ms`;
+    cell.style.transform = `translateY(${dist}px)`;
+    cell.style.zIndex = '5';
+  });
+
+  const totalDelay = COLS * COL_STAGGER + RISE_MS + 60;
+  setTimeout(() => {
+    moves.forEach(({ fromR, c }) => {
+      const cell = cells[fromR * COLS + c];
+      if(cell) { cell.style.transition = ''; cell.style.transform = ''; cell.style.zIndex = ''; }
+    });
+    // Update board — pack to top
+    for(let c = 0; c < COLS; c++) {
+      const col = [];
+      for(let r = 0; r < ROWS; r++) if(board[r][c]) col.push(board[r][c]);
+      for(let r = 0; r < ROWS; r++) {
+        board[r][c] = r < col.length ? col[r] : null;
+      }
+    }
+    shakeBoard(2);
+    renderBoard();
+    setTimeout(() => { clearLines(); checkGameOver(); }, 350);
+  }, totalDelay);
+}
 
 function usePower(type) {
   powerInventory[type] = Math.max(0, powerInventory[type] - 1);
@@ -8169,7 +8350,7 @@ function flashPower(color) {
 }
 
 function resetPowers() {
-  powerInventory = { laser:0, shatter:0, wildfire:0, bomb:0, sniper:0, gravity:0, shield:0, turbo:0, airstrike:0 };
+  powerInventory = { laser:0, shatter:0, wildfire:0, bomb:0, sniper:0, gravity:0, shield:0, turbo:0, airstrike:0, beam:0, magnet:0, overclock:0 };
   activePower = null;
   _movesSincePowerup = 0;
   _powerRemindShown = false;
