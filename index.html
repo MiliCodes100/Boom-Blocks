@@ -3671,7 +3671,6 @@ body.theme-onyx #board { animation: onyxPulse 5s ease-in-out infinite; }
 
   <div class="xp-bar-wrap"><div class="xp-bar-label"><span>LEVEL <span id="xp-level">1</span></span><span id="xp-label">0 / 500 XP</span></div><div class="xp-bar-bg"><div class="xp-bar-fill" id="xp-bar" style="width:0%"></div></div></div>
   <button class="menu-btn primary" onclick="startClassic()">▶ PLAY</button>
-  <button id="turbo-toggle-btn" class="menu-btn ghost" onclick="toggleTurboTray()" style="display:none;border-color:#ff9f0a;color:#ff9f0a;box-shadow:0 0 15px rgba(255,159,10,0.15)">⚡ TURBO TRAY: OFF</button>
   <button class="menu-btn daily" onclick="startDaily()">
     ⚔️ ROGUELIKE
     <span class="daily-done-tag" id="daily-badge">TODAY</span>
@@ -5241,6 +5240,12 @@ function _drShowFloorComplete(floor, floorScore, isLastFloorOfStage) {
     if(isLastFloorOfStage) {
       // Start next stage
       _drStage++;
+      // Persist best stages cleared for theme unlocks
+      const bestStages = parseInt(localStorage.getItem('bb_dr_best_stages') || '0');
+      if(_drStage > bestStages) {
+        localStorage.setItem('bb_dr_best_stages', _drStage);
+        checkNewUnlocks();
+      }
       _drShowCardPicker(() => _drStartFloor(0));
     } else {
       _drShowCardPicker(() => _drStartFloor(_drFloor + 1));
@@ -6598,6 +6603,12 @@ function addScore(pts,lines,combo,blockColor) {
     localStorage.setItem('bb_best',best);
     updateHeaderBest();
   }
+  if(score>=100000 && !localStorage.getItem('bb_score100k')) {
+    localStorage.setItem('bb_score100k','1');
+  }
+  if(score>=250000 && !localStorage.getItem('bb_score250k')) {
+    localStorage.setItem('bb_score250k','1');
+  }
   if(score>=250000 && !localStorage.getItem('bb_music_vibe')) {
     localStorage.setItem('bb_music_vibe','1');
     setTimeout(()=>showUnlockCelebration({name:'VIBE', emoji:'🔥', colors:['#ff6b35','#ff2d55','#ffd60a','#bf5af2','#0af5ff']}, 'MUSIC TRACK'), 600);
@@ -6796,6 +6807,12 @@ function updateStreak() {
   lastPlayedDay = dk;
   localStorage.setItem('bb_streak', streak);
   localStorage.setItem('bb_last_day', dk);
+  // Persist streak milestones so themes stay unlocked even if streak resets
+  if(streak >= 7 && !localStorage.getItem('bb_streak7'))   localStorage.setItem('bb_streak7', '1');
+  if(streak >= 10 && !localStorage.getItem('bb_streak10')) localStorage.setItem('bb_streak10', '1');
+  if(streak >= 30 && !localStorage.getItem('bb_streak30')) localStorage.setItem('bb_streak30', '1');
+  // Persist games played milestone
+  if(gamesPlayed >= 100 && !localStorage.getItem('bb_games100')) localStorage.setItem('bb_games100', '1');
   // LOVER unlock trigger (14 day streak)
   if(streak >= 14 && !localStorage.getItem('bb_music_lover')) {
     localStorage.setItem('bb_music_lover', '1');
@@ -8650,10 +8667,18 @@ function resetPowers() {
 //  PROGRESSION SYSTEM
 // ════════════════════════════════════
 
+const THEME_CATEGORIES = [
+  { id:'default',   label:'DEFAULT',          icon:'🎮', color:'var(--c4)' },
+  { id:'level',     label:'LEVEL UNLOCKS',    icon:'⭐', color:'var(--c2)' },
+  { id:'roguelike', label:'ROGUELIKE',        icon:'⚔️', color:'var(--c1)' },
+  { id:'score',     label:'HIGH SCORE',       icon:'🏆', color:'var(--c6)' },
+  { id:'special',   label:'SPECIAL',          icon:'💎', color:'var(--c5)' },
+];
+
 const THEMES = [
   // ── DEFAULT ──
   {
-    id:'arcade', name:'ARCADE', req:0, reqLabel:'DEFAULT',
+    id:'arcade', name:'ARCADE', req:0, reqLabel:'DEFAULT', category:'default',
     bg:'#080810', surface:'#0e0e1e', surface2:'#141428',
     colors:['#ff2d55','#ffd60a','#30d158','#0af5ff','#bf5af2','#ff6b35','#ff375f'],
     boardBg:'#0e0e1e', boardBorder:'rgba(10,245,255,0.15)',
@@ -8662,7 +8687,7 @@ const THEMES = [
   },
   // ── LEVEL UNLOCKS ──
   {
-    id:'neon-city', name:'NEON CITY', req:1, reqLabel:'LEVEL 1',
+    id:'neon-city', name:'NEON CITY', req:2, reqLabel:'LEVEL 2', category:'level',
     bg:'#0a0014', surface:'#12001f', surface2:'#1a0030',
     colors:['#ff00c8','#00eeff','#ff0090','#00ffcc','#cc00ff','#ff4dff','#00ccff'],
     boardBg:'#12001f', boardBorder:'rgba(255,0,200,0.3)',
@@ -8670,15 +8695,7 @@ const THEMES = [
     emoji:'🌃'
   },
   {
-    id:'toxic', name:'TOXIC', req:1, reqLabel:'LEVEL 1',
-    bg:'#010d01', surface:'#041504', surface2:'#082008',
-    colors:['#00ff41','#39ff14','#7fff00','#adff2f','#00e600','#33ff33','#b3ff00'],
-    boardBg:'#041504', boardBorder:'rgba(0,255,65,0.3)',
-    preview:['#00ff41','#39ff14','#7fff00','#adff2f','#00e600'],
-    emoji:'☢️'
-  },
-  {
-    id:'candy', name:'CANDY', req:1, reqLabel:'LEVEL 1',
+    id:'candy', name:'CANDY', req:3, reqLabel:'LEVEL 3', category:'level',
     bg:'#1a0520', surface:'#220a2a', surface2:'#2e1038',
     colors:['#ff99cc','#ffaaff','#aaffee','#ffffaa','#ffccaa','#ccaaff','#aaffcc'],
     boardBg:'#220a2a', boardBorder:'rgba(255,153,204,0.3)',
@@ -8686,7 +8703,7 @@ const THEMES = [
     emoji:'🍬', font:"'Pacifico', cursive"
   },
   {
-    id:'lava', name:'LAVA', req:1, reqLabel:'LEVEL 1',
+    id:'lava', name:'LAVA', req:4, reqLabel:'LEVEL 4', category:'level',
     bg:'#0f0000', surface:'#1a0300', surface2:'#250500',
     colors:['#ff3c00','#ff6a00','#ff9500','#ffb700','#ff4500','#e63900','#ff2200'],
     boardBg:'#1a0300', boardBorder:'rgba(255,60,0,0.35)',
@@ -8694,7 +8711,7 @@ const THEMES = [
     emoji:'🌋'
   },
   {
-    id:'midnight', name:'MIDNIGHT', req:1, reqLabel:'LEVEL 1',
+    id:'midnight', name:'MIDNIGHT', req:5, reqLabel:'LEVEL 5', category:'level',
     bg:'#000005', surface:'#05050f', surface2:'#0a0a1a',
     colors:['#4040ff','#6060ff','#3030cc','#8080ff','#5050ee','#2020bb','#7070ff'],
     boardBg:'#05050f', boardBorder:'rgba(80,80,255,0.2)',
@@ -8702,7 +8719,7 @@ const THEMES = [
     emoji:'🌙'
   },
   {
-    id:'hologram', name:'HOLOGRAM', req:1, reqLabel:'LEVEL 1',
+    id:'hologram', name:'HOLOGRAM', req:6, reqLabel:'LEVEL 6', category:'level',
     bg:'#f0f4ff', surface:'#e8eeff', surface2:'#dde4ff',
     colors:['#6600ff','#0066ff','#ff0066','#00ccff','#cc00cc','#ff6600','#0099ff'],
     boardBg:'#e8eeff', boardBorder:'rgba(100,100,255,0.4)',
@@ -8710,7 +8727,7 @@ const THEMES = [
     emoji:'💿'
   },
   {
-    id:'void', name:'THE VOID', req:1, reqLabel:'LEVEL 1',
+    id:'void', name:'THE VOID', req:15, reqLabel:'LEVEL 15', category:'level',
     bg:'#000000', surface:'#050005', surface2:'#0a000a',
     colors:['#ffffff','#cc00ff','#ff00ff','#aa00ff','#ee00ee','#ff44ff','#dd00dd'],
     boardBg:'#050005', boardBorder:'rgba(200,0,255,0.4)',
@@ -8719,7 +8736,24 @@ const THEMES = [
     font: "'Audiowide', sans-serif"
   },
   {
-    id:'crt', name:'CRT', req:1, reqLabel:'LEVEL 1',
+    id:'emoji', name:'EMOJI', req:20, reqLabel:'LEVEL 20', category:'level',
+    bg:'#0d0d1a', surface:'#13132a', surface2:'#1a1a38',
+    colors:['#ff6b6b','#ffd93d','#6bcb77','#4d96ff','#ff6bff','#ffb347','#b8f0ff'],
+    boardBg:'#13132a', boardBorder:'rgba(255,255,255,0.15)',
+    preview:['#ff6b6b','#ffd93d','#6bcb77','#4d96ff','#ff6bff'],
+    emoji:'😀'
+  },
+  // ── ROGUELIKE STAGE UNLOCKS ──
+  {
+    id:'toxic', name:'TOXIC', req:'stage1', reqLabel:'CLEAR STAGE 1', category:'roguelike',
+    bg:'#010d01', surface:'#041504', surface2:'#082008',
+    colors:['#00ff41','#39ff14','#7fff00','#adff2f','#00e600','#33ff33','#b3ff00'],
+    boardBg:'#041504', boardBorder:'rgba(0,255,65,0.3)',
+    preview:['#00ff41','#39ff14','#7fff00','#adff2f','#00e600'],
+    emoji:'☢️'
+  },
+  {
+    id:'crt', name:'CRT', req:'stage5', reqLabel:'CLEAR STAGE 5', category:'roguelike',
     bg:'#0a0a00', surface:'#111100', surface2:'#1a1a00',
     colors:['#33ff00','#ffb000','#ff6600','#00ffcc','#ccff00','#ff9900','#aaff33'],
     boardBg:'#0d0d00', boardBorder:'rgba(51,255,0,0.25)',
@@ -8728,24 +8762,16 @@ const THEMES = [
     crtStyle: true
   },
   {
-    id:'bloodmoon', name:'BLOOD MOON', req:1, reqLabel:'LEVEL 1',
-    bg:'#0d0000', surface:'#1a0000', surface2:'#240000',
-    colors:['#cc0000','#990000','#ff1a1a','#800000','#e60000','#b30000','#ff3333'],
-    boardBg:'#110000', boardBorder:'rgba(200,0,0,0.4)',
-    preview:['#cc0000','#990000','#ff1a1a','#800000','#e60000'],
-    emoji:'🩸',
-    font: "'Almendra', serif"
+    id:'pastel', name:'CHILL', req:'stage10', reqLabel:'CLEAR STAGE 10', category:'roguelike',
+    bg:'#e2eaff', surface:'#d4dcff', surface2:'#c8d0f8',
+    emoji:'☁️',
+    colors:['#b5d5f5','#f5b5d5','#b5f5d5','#f5e6b5','#d5b5f5','#b5f0e6','#f5c8b5'],
+    boardBg:'#c8ccd8', boardBorder:'rgba(160,170,200,0.5)',
+    preview:['#b5d5f5','#f5b5d5','#b5f5d5','#f5e6b5'],
   },
+  // ── SCORE UNLOCKS ──
   {
-    id:'wood', name:'WOOD', req:1, reqLabel:'LEVEL 1',
-    bg:'#1a0f00', surface:'#2d1a00', surface2:'#3d2400',
-    colors:['#8B4513','#A0522D','#CD853F','#DEB887','#D2691E','#8B6914','#C68642'],
-    boardBg:'#2d1a00', boardBorder:'rgba(139,69,19,0.5)',
-    preview:['#8B4513','#A0522D','#CD853F','#DEB887','#D2691E'],
-    emoji:'🌳'
-  },
-  {
-    id:'liquidglass', name:'LIQUID GLASS', req:1, reqLabel:'LEVEL 1',
+    id:'liquidglass', name:'LIQUID GLASS', req:'score100k', reqLabel:'SCORE 100,000', category:'score',
     bg:'#e8f4ff', surface:'rgba(255,255,255,0.45)', surface2:'rgba(255,255,255,0.3)',
     colors:['rgba(120,200,255,0.85)','rgba(180,140,255,0.85)','rgba(120,240,200,0.85)','rgba(255,160,200,0.85)','rgba(255,220,120,0.85)','rgba(140,220,255,0.85)','rgba(200,160,255,0.85)'],
     boardBg:'rgba(220,240,255,0.4)', boardBorder:'rgba(180,220,255,0.6)',
@@ -8754,42 +8780,25 @@ const THEMES = [
     glassStyle: true,
     font: "'Cormorant Garamond', serif"
   },
-  // ── STREAK UNLOCKS ──
   {
-    id:'pastel', name:'CHILL', req:1, reqLabel:'LEVEL 1',
-    bg:'#e2eaff', surface:'#d4dcff', surface2:'#c8d0f8',
-    emoji:'☁️',
-    colors:['#b5d5f5','#f5b5d5','#b5f5d5','#f5e6b5','#d5b5f5','#b5f0e6','#f5c8b5'],
-    boardBg:'#c8ccd8', boardBorder:'rgba(160,170,200,0.5)',
-    preview:['#b5d5f5','#f5b5d5','#b5f5d5','#f5e6b5'],
+    id:'wood', name:'WOOD', req:'score250k', reqLabel:'SCORE 250,000', category:'score',
+    bg:'#1a0f00', surface:'#2d1a00', surface2:'#3d2400',
+    colors:['#8B4513','#A0522D','#CD853F','#DEB887','#D2691E','#8B6914','#C68642'],
+    boardBg:'#2d1a00', boardBorder:'rgba(139,69,19,0.5)',
+    preview:['#8B4513','#A0522D','#CD853F','#DEB887','#D2691E'],
+    emoji:'🌳'
   },
   {
-    id:'ice', name:'ICE', req:1, reqLabel:'LEVEL 1',
-    bg:'#000d1f', surface:'#001428', surface2:'#001e38',
-    colors:['#96deff','#b8ecff','#70c8ff','#d4f4ff','#50b0ff','#aae0ff','#c8f0ff'],
-    boardBg:'#001428', boardBorder:'rgba(150,220,255,0.25)',
-    preview:['#96deff','#b8ecff','#70c8ff','#d4f4ff','#50b0ff'],
-    emoji:'❄️'
+    id:'rainbow', name:'RAINBOW', req:'score500k', reqLabel:'SCORE 500,000', category:'score',
+    bg:'#0d0010', surface:'#130018', surface2:'#1a0020',
+    colors:['#ff0000','#ff7700','#ffee00','#00cc00','#0099ff','#7700ff','#ff00cc'],
+    boardBg:'#100015', boardBorder:'rgba(255,100,255,0.3)',
+    preview:['#ff0000','#ff7700','#ffee00','#00cc00','#0099ff'],
+    emoji:'🌈'
   },
+  // ── SPECIAL UNLOCKS ──
   {
-    id:'emoji', name:'EMOJI', req:1, reqLabel:'LEVEL 1',
-    bg:'#0d0d1a', surface:'#13132a', surface2:'#1a1a38',
-    colors:['#ff6b6b','#ffd93d','#6bcb77','#4d96ff','#ff6bff','#ffb347','#b8f0ff'],
-    boardBg:'#13132a', boardBorder:'rgba(255,255,255,0.15)',
-    preview:['#ff6b6b','#ffd93d','#6bcb77','#4d96ff','#ff6bff'],
-    emoji:'😀'
-  },
-  // ── OTHER UNLOCKS ──
-  {
-    id:'onyx', name:'ONYX', req:1, reqLabel:'LEVEL 1',
-    bg:'#000000', surface:'#0a0a0a', surface2:'#111111',
-    colors:['#e8e8e8','#cccccc','#aaaaaa','#ffffff','#d0d0d0','#b8b8b8','#f0f0f0'],
-    boardBg:'#080808', boardBorder:'rgba(255,255,255,0.12)',
-    preview:['#ffffff','#e0e0e0','#cccccc','#aaaaaa','#888888'],
-    emoji:'🖤'
-  },
-  {
-    id:'blossom', name:'BLOSSOM', req:1, reqLabel:'LEVEL 1',
+    id:'blossom', name:'BLOSSOM', req:'streak10', reqLabel:'10 DAY STREAK', category:'special',
     bg:'#1a0010', surface:'#2a0018', surface2:'#380020',
     colors:['#ff99bb','#ff66aa','#ffb3cc','#ff4d94','#ffd6e8','#cc3377','#ffcce0'],
     boardBg:'#200015', boardBorder:'rgba(255,100,180,0.35)',
@@ -8798,12 +8807,29 @@ const THEMES = [
     font: "'Courgette', cursive"
   },
   {
-    id:'rainbow', name:'RAINBOW', req:1, reqLabel:'LEVEL 1',
-    bg:'#0d0010', surface:'#130018', surface2:'#1a0020',
-    colors:['#ff0000','#ff7700','#ffee00','#00cc00','#0099ff','#7700ff','#ff00cc'],
-    boardBg:'#100015', boardBorder:'rgba(255,100,255,0.3)',
-    preview:['#ff0000','#ff7700','#ffee00','#00cc00','#0099ff'],
-    emoji:'🌈'
+    id:'ice', name:'ICE', req:'streak30', reqLabel:'30 DAY STREAK', category:'special',
+    bg:'#000d1f', surface:'#001428', surface2:'#001e38',
+    colors:['#96deff','#b8ecff','#70c8ff','#d4f4ff','#50b0ff','#aae0ff','#c8f0ff'],
+    boardBg:'#001428', boardBorder:'rgba(150,220,255,0.25)',
+    preview:['#96deff','#b8ecff','#70c8ff','#d4f4ff','#50b0ff'],
+    emoji:'❄️'
+  },
+  {
+    id:'onyx', name:'ONYX', req:'games100', reqLabel:'PLAY 100 GAMES', category:'special',
+    bg:'#000000', surface:'#0a0a0a', surface2:'#111111',
+    colors:['#e8e8e8','#cccccc','#aaaaaa','#ffffff','#d0d0d0','#b8b8b8','#f0f0f0'],
+    boardBg:'#080808', boardBorder:'rgba(255,255,255,0.12)',
+    preview:['#ffffff','#e0e0e0','#cccccc','#aaaaaa','#888888'],
+    emoji:'🖤'
+  },
+  {
+    id:'bloodmoon', name:'BLOOD MOON', req:'dex50pct', reqLabel:'50% BLOCK DEX', category:'special',
+    bg:'#0d0000', surface:'#1a0000', surface2:'#240000',
+    colors:['#cc0000','#990000','#ff1a1a','#800000','#e60000','#b30000','#ff3333'],
+    boardBg:'#110000', boardBorder:'rgba(200,0,0,0.4)',
+    preview:['#cc0000','#990000','#ff1a1a','#800000','#e60000'],
+    emoji:'🩸',
+    font: "'Almendra', serif"
   },
 ];
 
@@ -8858,10 +8884,39 @@ function updateXPBar() {
   const xlbl = $id('xp-label'); if(xlbl) xlbl.textContent = current.toLocaleString() + ' / ' + needed.toLocaleString() + ' PTS';
 }
 
+function isThemeUnlocked(t) {
+  if(t.req === 0) return true;
+  if(typeof t.req === 'string') {
+    if(t.req === 'lines100')  return !!localStorage.getItem('bb_cleared_100');
+    if(t.req === 'score500k') return !!localStorage.getItem('bb_score500k');
+    if(t.req === 'score100k') return best >= 100000 || !!localStorage.getItem('bb_score100k');
+    if(t.req === 'score250k') return best >= 250000 || !!localStorage.getItem('bb_score250k');
+    if(t.req === 'games100')  return gamesPlayed >= 100 || !!localStorage.getItem('bb_games100');
+    if(t.req === 'dex50pct') {
+      const seen = getSeenPieces().length;
+      const total = PIECE_DEX.length;
+      return total > 0 && seen >= Math.ceil(total / 2);
+    }
+    if(t.req === 'streak7')   return streak >= 7  || !!localStorage.getItem('bb_streak7');
+    if(t.req === 'streak10')  return streak >= 10 || !!localStorage.getItem('bb_streak10');
+    if(t.req === 'streak30')  return streak >= 30 || !!localStorage.getItem('bb_streak30');
+    // Roguelike stage requirements: 'stage1', 'stage2', etc.
+    const stageMatch = t.req.match(/^stage(\d+)$/);
+    if(stageMatch) {
+      const needed = parseInt(stageMatch[1]);
+      const bestStages = parseInt(localStorage.getItem('bb_dr_best_stages') || '0');
+      return bestStages >= needed;
+    }
+    return false;
+  }
+  // Numeric = level requirement
+  return getLevel() >= t.req;
+}
+
 function checkNewUnlocks() {
   const newOnes = [];
   THEMES.forEach(t => {
-    const tUnlocked = t.req === 0 ? true : t.req === 'lines100' ? !!localStorage.getItem('bb_cleared_100') : t.req === 'streak7' ? (streak >= 7 || !!localStorage.getItem('bb_streak7')) : t.req === 'streak10' ? (streak >= 10 || !!localStorage.getItem('bb_streak10')) : t.req === 'streak30' ? (streak >= 30 || !!localStorage.getItem('bb_streak30')) : t.req === 'games100' ? (gamesPlayed >= 100 || !!localStorage.getItem('bb_games100')) : t.req === 'score500k' ? !!localStorage.getItem('bb_score500k') : getLevel() >= t.req;
+    const tUnlocked = isThemeUnlocked(t);
     if(t.req !== 0 && tUnlocked && !seenUnlocks.includes('theme_'+t.id)) {
       newOnes.push(t);
       seenUnlocks.push('theme_'+t.id);
@@ -9326,6 +9381,8 @@ function markPieceSeen(shape) {
   if (!seen.includes(key)) {
     seen.push(key);
     localStorage.setItem('bb_seen_pieces', JSON.stringify(seen));
+    // Check if this discovery unlocked a new theme
+    checkNewUnlocks();
   }
 }
 
@@ -9885,16 +9942,34 @@ function renderThemeGrid() {
   const grid = $id('theme-grid');
   if(!grid) return;
   grid.innerHTML = '';
+
+  let lastCategory = null;
   THEMES.forEach(theme => {
-    let unlocked;
-    if (theme.req === 0) unlocked = true;
-    else if (theme.req === 'lines100') unlocked = !!localStorage.getItem('bb_cleared_100');
-    else if (theme.req === 'score500k') unlocked = !!localStorage.getItem('bb_score500k');
-    else if (theme.req === 'games100') unlocked = !!localStorage.getItem('bb_games100') || gamesPlayed >= 100;
-    else if (theme.req === 'streak7') unlocked = !!localStorage.getItem('bb_streak7') || streak >= 7;
-    else if (theme.req === 'streak10') unlocked = !!localStorage.getItem('bb_streak10') || streak >= 10;
-    else if (theme.req === 'streak30') unlocked = !!localStorage.getItem('bb_streak30') || streak >= 30;
-    else unlocked = getLevel() >= theme.req;
+    // Section header when category changes
+    if(theme.category && theme.category !== lastCategory && theme.category !== 'default') {
+      lastCategory = theme.category;
+      const cat = THEME_CATEGORIES.find(c => c.id === theme.category);
+      if(cat) {
+        const header = document.createElement('div');
+        header.style.cssText = `
+          grid-column:1/-1;
+          font-family:'Press Start 2P',monospace;
+          font-size:0.42rem;
+          color:${cat.color};
+          letter-spacing:2px;
+          padding:12px 4px 4px;
+          border-bottom:1px solid ${cat.color}33;
+          text-shadow:0 0 8px ${cat.color};
+          margin-top:4px;
+        `;
+        header.textContent = cat.icon + ' ' + cat.label;
+        grid.appendChild(header);
+      }
+    } else if(theme.category === 'default') {
+      lastCategory = 'default';
+    }
+
+    const unlocked = isThemeUnlocked(theme);
     const isActive = activeTheme === theme.id;
     const isNew = unlocked && !seenUnlocks.includes('theme_'+theme.id);
     const card = document.createElement('div');
