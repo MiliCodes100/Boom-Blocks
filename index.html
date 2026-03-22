@@ -1205,6 +1205,26 @@ header {
   margin: 2px 0;
 }
 .dr-row-break.visible { display: block; }
+
+/* Passive power indicator chips (shield / turbo) shown below powerup bar */
+.dr-passive-chip {
+  display:flex; align-items:center; gap:4px;
+  background:var(--surface);
+  border-radius:20px;
+  padding:3px 8px 3px 5px;
+  font-family:'Press Start 2P', monospace;
+  font-size:0.26rem;
+  letter-spacing:0.5px;
+  white-space:nowrap;
+  animation: passiveChipPulse 2s ease-in-out infinite;
+}
+@keyframes passiveChipPulse {
+  0%,100% { box-shadow: 0 0 4px var(--chip-glow, rgba(255,255,255,0.2));
+             border-color: rgba(255,255,255,0.15); }
+  50%      { box-shadow: 0 0 10px var(--chip-glow, rgba(255,255,255,0.5));
+             border-color: var(--chip-color, rgba(255,255,255,0.4)); }
+}
+.dr-passive-chip .chip-icon { font-size:0.8rem; line-height:1; }
 #board.select-mode .cell.filled {
   cursor:pointer;
   animation:selectPulse 1s ease-in-out infinite;
@@ -3272,9 +3292,9 @@ body.theme-onyx #board { animation: onyxPulse 5s ease-in-out infinite; }
 }
 .dr-floor-label {
   font-family: 'Press Start 2P', monospace;
-  font-size: 0.32rem;
+  font-size: 0.24rem;
   color: var(--c2);
-  letter-spacing: 1px;
+  letter-spacing: 0.5px;
   white-space: nowrap;
   text-shadow: 0 0 8px var(--glow2);
 }
@@ -3739,6 +3759,8 @@ body.theme-onyx #board { animation: onyxPulse 5s ease-in-out infinite; }
       <div class="powerup-name">BOMB</div>
     </button>
   </div>
+  <!-- Passive power indicator — shows shield/turbo when active in roguelike -->
+  <div id="dr-passive-bar" style="display:none;gap:6px;align-items:center;justify-content:center;padding:2px 0 0;width:100%"></div>
   <div class="tray" id="tray"></div>
   <div class="hint-text" id="hint-text">HOLD + DRAG TO PLACE</div>
 
@@ -4865,6 +4887,7 @@ let lastPlayedDay=localStorage.getItem('bb_last_day')||'';
 let playerName=localStorage.getItem('bb_name')||'';
 let pendingScore=0;
 let consecutiveClearCount=0;
+let _lastPlacedWasStreakSaver = false; // true if last placed piece was the golden streak saver
 let ghostCellSize=36;
 
 // ════════════════════════════════════
@@ -5243,9 +5266,9 @@ function _drShowCardPicker(onChosen) {
 
   // Build pool — all powers, respecting roguelike-only and shield-once rules
   let pool = Object.keys(POWERS).filter(t => {
-    if(t === 'shield')    return !shieldOwned && Math.random() < 0.12;
-    if(t === 'turbo')     return !alreadyUnlocked.includes('turbo') && Math.random() < 0.15;
-    if(t === 'overclock') return !alreadyUnlocked.includes('overclock') && Math.random() < 0.18; // 18% once per run
+    if(t === 'shield')    return !_drShieldActive && Math.random() < 0.12;
+    if(t === 'turbo')     return !_drTurboActive && Math.random() < 0.15;
+    if(t === 'overclock') return !alreadyUnlocked.includes('overclock') && !_drOverclockActive && Math.random() < 0.18;
     return true;
   });
 
@@ -5277,15 +5300,20 @@ function _drShowCardPicker(onChosen) {
     const p = POWERS[type];
     const isOwned = alreadyUnlocked.includes(type);
     const isShield = type === 'shield';
+    const isOverclock = type === 'overclock';
+    const isTurbo = type === 'turbo';
+    const isInstant = isShield || isOverclock || isTurbo;
     const card = document.createElement('div');
     card.className = 'dr-power-card';
     card.style.setProperty('--pu-color', p.color);
     card.style.setProperty('--pu-glow', p.glow);
+    const chargeColor = isShield ? 'color:#fff' : isOverclock ? 'color:#ffd60a' : isTurbo ? 'color:#ff9f0a' : '';
+    const chargeLabel = isInstant ? '⚡ ACTIVATES INSTANTLY' : isOwned ? '+1 CHARGE' : 'NEW UNLOCK';
     card.innerHTML = `
       <div class="dr-pc-icon">${p.icon}</div>
       <div class="dr-pc-name" style="color:${p.color}">${p.name}</div>
       <div class="dr-pc-desc">${POWER_DESCS[type].replace(/\n/g, '<br>')}</div>
-      <div class="dr-pc-charge" style="${isShield ? 'color:#fff' : ''}">${isShield ? '★ RARE — ONCE PER RUN ★' : isOwned ? '+1 CHARGE' : 'NEW UNLOCK'}</div>
+      <div class="dr-pc-charge" style="${chargeColor}">${chargeLabel}</div>
     `;
     card.addEventListener('click', () => {
       card.classList.add('selected');
@@ -5295,7 +5323,34 @@ function _drShowCardPicker(onChosen) {
       sfxUnlock();
       setTimeout(() => {
         overlay.remove();
-        _drApplyPowerChoice(type);
+        if(type === 'overclock') {
+          // Overclock activates immediately — no slot needed
+          _drOverclockActive = true;
+          flashPower('#ffd60a');
+          sfxPowerActivate('overclock');
+          haptic([20, 10, 40, 10, 60]);
+          showToast('⏩ OVERCLOCK ACTIVE! Next floor XP doubled!');
+        } else if(type === 'shield') {
+          // Shield is passive — no slot, shows as indicator
+          powerInventory['shield'] = 1;
+          _drShieldActive = true;
+          _drUpdatePassiveBar();
+          flashPower('#ffffff');
+          sfxPowerActivate('shield');
+          haptic([20, 10, 40, 10, 60]);
+          showToast('🛡️ SHIELD ACTIVE! Survive one game over!');
+        } else if(type === 'turbo') {
+          // Turbo is passive — no slot, shows as indicator
+          _drTurboActive = true;
+          _drUpdatePassiveBar();
+          flashPower('#ff9f0a');
+          sfxPowerActivate('turbo');
+          haptic([20, 10, 40, 10, 60]);
+          showToast('⚡ TURBO TRAY! 4th piece slot unlocked!');
+          refillPieces(); renderTray();
+        } else {
+          _drApplyPowerChoice(type);
+        }
         onChosen();
       }, 400);
     });
@@ -5304,9 +5359,23 @@ function _drShowCardPicker(onChosen) {
 }
 
 function _drApplyPowerChoice(type) {
-  // Fill the next empty slot (any power goes anywhere)
-  const emptySlot = _drUnlockedPowers.indexOf(null);
-  if(emptySlot >= 0) _drUnlockedPowers[emptySlot] = type;
+  let targetSlot = _drUnlockedPowers.indexOf(null); // first empty slot
+
+  if(targetSlot === -1) {
+    // All slots full — replace the one that's been there the longest
+    let oldestAge = Infinity, oldestSlot = 0;
+    _drSlotAge.forEach((age, i) => {
+      if(age < oldestAge) { oldestAge = age; oldestSlot = i; }
+    });
+    targetSlot = oldestSlot;
+    // Remove the old power's inventory
+    const evicted = _drUnlockedPowers[targetSlot];
+    if(evicted) powerInventory[evicted] = 0;
+    showToast(`🔄 ${POWERS[evicted]?.name || evicted} replaced!`);
+  }
+
+  _drUnlockedPowers[targetSlot] = type;
+  _drSlotAge[targetSlot] = ++_drSlotAgeCounter;
   powerInventory[type] = (powerInventory[type] || 0) + 1;
   _drRenderLockedPowers();
 }
@@ -5385,6 +5454,9 @@ function _drFinishRun(cleared) {
   _drActive = false;
   _powerAnimating = false; // ensure no stale animation lock
   if(_drRescueTimer) { clearInterval(_drRescueTimer); _drRescueTimer = null; _drClearRescueHint(); }
+  // Clear passive bar
+  const passiveBar = $id('dr-passive-bar');
+  if(passiveBar) { passiveBar.style.display = 'none'; passiveBar.innerHTML = ''; }
   powerInventory = { laser:0, shatter:0, wildfire:0, bomb:0, sniper:0, gravity:0, shield:0, turbo:0, airstrike:0, beam:0, magnet:0, overclock:0 };
   _drTurboActive = false;
   _drOverclockActive = false;
@@ -6275,6 +6347,7 @@ function placePiece(piece,startRow,startCol) {
   }));
   if(cellCount > 0) addScore(cellCount * 5, 0, 0, piece.color);
   renderBoard();
+  _lastPlacedWasStreakSaver = !!piece.isStreakSaver;
   clearLines();
 
   // Check level up once after all scoring — only show highest level reached
@@ -6380,6 +6453,7 @@ function clearLines() {
   for(let c=0;c<COLS;c++) if(board.every(r=>r[c]) && !board.some(r=>r[c]===OBSTACLE_COLOR)) colsToClear.push(c);
   if(!rowsToClear.length&&!colsToClear.length){
     consecutiveClearCount=0;
+    _lastPlacedWasStreakSaver = false; // no lines cleared — reset flag
     const cb=$id('combo-box'); if(cb) cb.style.display='none';
     return;
   }
@@ -6428,6 +6502,20 @@ function clearLines() {
 
   const pts=lines*lines*800*Math.max(1,consecutiveClearCount);
   addScore(pts,lines,consecutiveClearCount);
+
+  // Mega bonus — streak saver piece completed a line
+  if(_lastPlacedWasStreakSaver) {
+    _lastPlacedWasStreakSaver = false;
+    const megaBonus = Math.max(5000, pts * 2);
+    setTimeout(() => {
+      addScore(megaBonus, 0, 0, '#ffd60a');
+      flashPower('#ffd60a');
+      haptic([20, 10, 40, 10, 80, 10, 120]);
+      showToast('⭐ STREAK SAVER BONUS! +' + megaBonus.toLocaleString());
+    }, 350);
+  } else {
+    _lastPlacedWasStreakSaver = false;
+  }
 
   sfxClear(lines);
   if(lines>=2||consecutiveClearCount>=2){ hapticCombo(); sfxCombo(consecutiveClearCount); }
@@ -6582,7 +6670,7 @@ function checkGameOver() {
   if(isDaily && _drActive && powerInventory['shield'] > 0) {
     powerInventory['shield'] = 0;
     _drShieldActive = false;
-    _drRenderLockedPowers();
+    _drUpdatePassiveBar();
     flashPower('#ffffff');
     sfxShieldBreak();
     haptic([50, 20, 50, 20, 100]);
@@ -7606,13 +7694,45 @@ let activePower = null; // currently selected power waiting for board tap
 // Which power slots are unlocked in roguelike mode
 // null = locked (?), string = unlocked power type
 let _drUnlockedPowers = [null, null, null, null]; // 4 slots
+let _drSlotAge = [0, 0, 0, 0]; // tracks when each slot was last filled — lower = older
+let _drSlotAgeCounter = 0; // increments each time a slot is filled
 const _drPowerSlots = ['laser', 'shatter', 'wildfire', 'bomb']; // 4 slots — any power type can go in any slot
 
 function _drLockAllPowers() {
   powerInventory = { laser:0, shatter:0, wildfire:0, bomb:0, sniper:0, gravity:0, shield:0, turbo:0, airstrike:0, beam:0, magnet:0, overclock:0 };
   activePower = null;
   _drUnlockedPowers = [null, null, null, null];
+  _drSlotAge = [0, 0, 0, 0];
+  _drSlotAgeCounter = 0;
   _drRenderLockedPowers();
+}
+
+function _drUpdatePassiveBar() {
+  const bar = $id('dr-passive-bar');
+  if(!bar) return;
+  bar.innerHTML = '';
+  const passives = [];
+  if(_drShieldActive || powerInventory['shield'] > 0) {
+    passives.push({ icon: '🛡️', label: 'SHIELD', color: '#ffffff', glow: 'rgba(255,255,255,0.5)' });
+  }
+  if(_drTurboActive) {
+    passives.push({ icon: '⚡', label: 'TURBO', color: '#ff9f0a', glow: 'rgba(255,159,10,0.6)' });
+  }
+  if(passives.length) {
+    bar.style.display = 'flex';
+    passives.forEach(p => {
+      const chip = document.createElement('div');
+      chip.className = 'dr-passive-chip';
+      chip.style.setProperty('--chip-color', p.color);
+      chip.style.setProperty('--chip-glow', p.glow);
+      chip.style.border = `1px solid ${p.color}44`;
+      chip.style.color = p.color;
+      chip.innerHTML = `<span class="chip-icon">${p.icon}</span>${p.label}`;
+      bar.appendChild(chip);
+    });
+  } else {
+    bar.style.display = 'none';
+  }
 }
 
 function _drRenderLockedPowers() {
@@ -7633,14 +7753,13 @@ function _drRenderLockedPowers() {
       const p = POWERS[unlocked];
       const count = powerInventory[unlocked];
       const isTurboActive = unlocked === 'turbo' && _drTurboActive;
-      const isOverclockActive = unlocked === 'overclock' && _drOverclockActive;
-      const isPassive = (unlocked === 'shield' && count > 0) || isTurboActive || isOverclockActive;
-      btn.className = 'powerup-btn ' + ((isTurboActive || isOverclockActive) ? 'has-power' : count > 0 ? 'has-power' : 'empty-power');
+      const isPassive = (unlocked === 'shield' && count > 0) || isTurboActive;
+      btn.className = 'powerup-btn ' + (isTurboActive ? 'has-power' : count > 0 ? 'has-power' : 'empty-power');
       btn.style.setProperty('--pu-color', p.color);
       btn.style.setProperty('--pu-glow', p.glow);
       btn.innerHTML = `
         <div class="powerup-icon">${p.icon}</div>
-        <div class="powerup-name">${(isTurboActive || isOverclockActive) ? 'ACTIVE' : p.name}</div>
+        <div class="powerup-name">${isTurboActive ? 'ACTIVE' : p.name}</div>
       `;
       btn.removeAttribute('onclick');
       btn.onclick = () => activatePower(unlocked);
@@ -7662,6 +7781,7 @@ function _drUnlockRandomPower(floorIdx) {
   const pickedPower = available[Math.floor(rng() * available.length)];
 
   _drUnlockedPowers[pickedSlot] = pickedPower;
+  _drSlotAge[pickedSlot] = ++_drSlotAgeCounter;
 
   // Give 1 of the unlocked power to start with
   powerInventory[pickedPower] = (powerInventory[pickedPower] || 0) + 1;
@@ -7858,15 +7978,6 @@ function activatePower(type) {
     cancelPower();
     sfxPowerActivate('magnet');
     applyMagnet();
-  } else if(type === 'overclock') {
-    usePower('overclock');
-    cancelPower();
-    _drOverclockActive = true;
-    _drRenderLockedPowers();
-    flashPower('#ffd60a');
-    sfxPowerActivate('overclock');
-    haptic([20, 10, 40, 10, 60]);
-    showToast('⏩ OVERCLOCK! Next floor XP doubled!');
   }
 }
 
