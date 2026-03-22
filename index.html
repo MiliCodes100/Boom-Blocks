@@ -1619,18 +1619,6 @@ body.theme-midnight #board {
   box-shadow: 0 0 20px rgba(100,100,255,0.1) !important;
 }
 
-/* LAVA — molten orange chaos */
-body.theme-lava {
-  --bg: #0f0000;
-  --surface: #1a0300;
-  --surface2: #250500;
-}
-body.theme-lava #board {
-  box-shadow: 0 0 40px rgba(255,60,0,0.3), 0 0 80px rgba(255,120,0,0.15) !important;
-}
-body.theme-lava #app {
-  background: linear-gradient(180deg, #0f0000 0%, #1a0200 100%) !important;
-}
 
 /* HOLOGRAM — iridescent white tech */
 body.theme-hologram {
@@ -3683,6 +3671,7 @@ body.theme-onyx #board { animation: onyxPulse 5s ease-in-out infinite; }
 
   <div class="xp-bar-wrap"><div class="xp-bar-label"><span>LEVEL <span id="xp-level">1</span></span><span id="xp-label">0 / 500 XP</span></div><div class="xp-bar-bg"><div class="xp-bar-fill" id="xp-bar" style="width:0%"></div></div></div>
   <button class="menu-btn primary" onclick="startClassic()">▶ PLAY</button>
+  <button id="turbo-toggle-btn" class="menu-btn ghost" onclick="toggleTurboTray()" style="display:none;border-color:#ff9f0a;color:#ff9f0a;box-shadow:0 0 15px rgba(255,159,10,0.15)">⚡ TURBO TRAY: OFF</button>
   <button class="menu-btn daily" onclick="startDaily()">
     ⚔️ ROGUELIKE
     <span class="daily-done-tag" id="daily-badge">TODAY</span>
@@ -3839,6 +3828,23 @@ body.theme-onyx #board { animation: onyxPulse 5s ease-in-out infinite; }
   <div class="blockdex-grid" id="blockdex-grid"></div>
 </div>
 
+<!-- Roguelike: run complete screen -->
+<div id="dr-run-complete" class="screen">
+  <div style="width:100%;display:flex;align-items:center;gap:12px;padding:4px 0 8px">
+    <button class="back-btn" onclick="goMenu()">◀ BACK</button>
+    <div class="missions-title" style="color:var(--c2)">ROGUELIKE</div>
+  </div>
+  <div class="dr-rc-title" id="dr-rc-title">RUN OVER</div>
+  <div class="dr-rc-sub" id="dr-rc-sub"></div>
+  <div class="dr-rc-floors" id="dr-rc-floors"></div>
+  <div style="font-family:'Press Start 2P',monospace;font-size:0.35rem;color:var(--muted);letter-spacing:1px">TOTAL SCORE</div>
+  <div class="dr-rc-score-big" id="dr-rc-score">0</div>
+  <div style="width:100%" id="dr-rc-stats"></div>
+  <button class="menu-btn daily" onclick="startDaily()" style="width:100%;margin-top:8px">⚔️ PLAY AGAIN</button>
+  <button class="menu-btn ghost" onclick="shareScoreImage()" style="width:100%;margin-top:0">📸 SHARE RESULT</button>
+  <button class="menu-btn ghost" onclick="goMenu()" style="width:100%;margin-top:0">◀ BACK TO MENU</button>
+</div>
+
 </div>
 
 <!-- ══ DRAG GHOST ══ -->
@@ -3884,22 +3890,7 @@ body.theme-onyx #board { animation: onyxPulse 5s ease-in-out infinite; }
   </div>
 </div>
 
-<!-- Roguelike: run complete screen -->
-<div id="dr-run-complete" class="screen">
-  <div style="width:100%;display:flex;align-items:center;gap:12px;padding:4px 0 8px">
-    <button class="back-btn" onclick="goMenu()">◀ BACK</button>
-    <div class="missions-title" style="color:var(--c2)">ROGUELIKE</div>
-  </div>
-  <div class="dr-rc-title" id="dr-rc-title">RUN OVER</div>
-  <div class="dr-rc-sub" id="dr-rc-sub"></div>
-  <div class="dr-rc-floors" id="dr-rc-floors"></div>
-  <div style="font-family:'Press Start 2P',monospace;font-size:0.35rem;color:var(--muted);letter-spacing:1px">TOTAL SCORE</div>
-  <div class="dr-rc-score-big" id="dr-rc-score">0</div>
-  <div style="width:100%" id="dr-rc-stats"></div>
-  <button class="menu-btn daily" onclick="startDaily()" style="width:100%;margin-top:8px">⚔️ PLAY AGAIN</button>
-  <button class="menu-btn ghost" onclick="shareScoreImage()" style="width:100%;margin-top:0">📸 SHARE RESULT</button>
-  <button class="menu-btn ghost" onclick="goMenu()" style="width:100%;margin-top:0">◀ BACK TO MENU</button>
-</div>
+
 
 
 
@@ -4005,6 +3996,7 @@ function spawnLineClear(cells, color) {
 
 function animParticles() {
   if(!ctx2) { requestAnimationFrame(animParticles); return; }
+  if(!particles.length) { requestAnimationFrame(animParticles); return; }
   ctx2.clearRect(0, 0, canvas.width, canvas.height);
   particles = particles.filter(p => p.alpha > 0.01);
   particles.forEach(p => {
@@ -4023,6 +4015,8 @@ function animParticles() {
     ctx2.fillRect(p.x - p.size/2, p.y - p.size/2, p.size, p.size);
     ctx2.restore();
   });
+  // Clear canvas once after last particle dies
+  if(!particles.length) ctx2.clearRect(0, 0, canvas.width, canvas.height);
   requestAnimationFrame(animParticles);
 }
 animParticles();
@@ -5654,8 +5648,11 @@ function shareScoreImage() {
   ctx.shadowBlur = 0;
   ctx.fillText('SCORE', W/2, 122);
 
-  // Score value
-  const score = parseInt($id('final-score')?.textContent?.replace(/,/g,'') || '0');
+  // Score value — read from roguelike screen if active, otherwise classic game over
+  const scoreEl = $id('dr-rc-score') && $id('dr-run-complete')?.classList.contains('active')
+    ? $id('dr-rc-score')
+    : $id('final-score');
+  const score = parseInt(scoreEl?.textContent?.replace(/,/g,'') || '0');
   ctx.font = 'bold 52px "Press Start 2P", monospace';
   ctx.fillStyle = '#ffffff';
   ctx.shadowColor = c1;
@@ -5928,11 +5925,13 @@ function scorePieceUsefulness(shape) {
       // Count how many rows/cols this placement would complete
       let linesCompleted = 0;
       for (let r = 0; r < ROWS; r++) {
+        if (board[r].some(c => c === OBSTACLE_COLOR)) continue; // obstacles block clears
         const rowCells = filled.filter(([fr]) => fr === r).length;
         const alreadyFilled = board[r].filter(c => c).length;
         if (alreadyFilled + rowCells === COLS) linesCompleted++;
       }
       for (let c = 0; c < COLS; c++) {
+        if (board.some(r => r[c] === OBSTACLE_COLOR)) continue; // obstacles block clears
         const colCells = filled.filter(([, fc]) => fc === c).length;
         const alreadyFilled = board.filter(row => row[c]).length;
         if (alreadyFilled + colCells === ROWS) linesCompleted++;
@@ -5941,12 +5940,14 @@ function scorePieceUsefulness(shape) {
       // Also reward pieces that get close to completing lines
       let nearMisses = 0;
       for (let r = 0; r < ROWS; r++) {
+        if (board[r].some(c => c === OBSTACLE_COLOR)) continue;
         const rowCells = filled.filter(([fr]) => fr === r).length;
         const alreadyFilled = board[r].filter(c => c).length;
         const remaining = COLS - alreadyFilled - rowCells;
         if (remaining <= 2 && remaining > 0) nearMisses++;
       }
       for (let c = 0; c < COLS; c++) {
+        if (board.some(r => r[c] === OBSTACLE_COLOR)) continue;
         const colCells = filled.filter(([, fc]) => fc === c).length;
         const alreadyFilled = board.filter(row => row[c]).length;
         const remaining = ROWS - alreadyFilled - colCells;
@@ -5978,6 +5979,10 @@ function rngPiece() {
   if (useSmartPick) {
     const scored = pool.map(s => ({ shape: s, weight: scorePieceUsefulness(s) }));
     const maxWeight = Math.max(...scored.map(s => s.weight));
+    if (maxWeight <= 0) {
+      // All pieces score 0 — fall back to pure random
+      shape = pool[Math.floor(rng() * pool.length)];
+    } else {
     // Bias toward best pieces but include all with at least some weight
     const weighted = scored.map(s => ({ shape: s.shape, weight: s.weight / maxWeight }));
     // Weighted random selection
@@ -5987,6 +5992,7 @@ function rngPiece() {
     for (const entry of weighted) {
       pick -= entry.weight;
       if (pick <= 0) { shape = entry.shape; break; }
+    }
     }
   } else {
     shape = pool[Math.floor(rng() * pool.length)];
@@ -6477,7 +6483,7 @@ function clearLines() {
   if(!rowsToClear.length&&!colsToClear.length){
     consecutiveClearCount=0;
     _lastPlacedWasStreakSaver = false; // no lines cleared — reset flag
-    const cb=$id('combo-box'); if(cb) cb.style.display='none';
+    const cb=$id('combo-popup'); if(cb) cb.style.display='none';
     return;
   }
 
@@ -6728,7 +6734,8 @@ function checkGameOver() {
     if(isDaily && _drActive) {
       showWatchAdOverlay(() => _drOnGameOver());
     } else if(isDaily) {
-      finishDaily();
+      // Legacy daily path — roguelike not active, treat as classic
+      finishClassic();
     } else {
       showWatchAdOverlay(finishClassic);
     }
@@ -8059,7 +8066,7 @@ function onLaserHover(e) {
 }
 
 function onLaserUnhover() {
-  const boardEl = $id('boardEl');
+  const boardEl = $id('board');
   if(boardEl) boardEl.querySelectorAll('.cell').forEach(c => c.classList.remove('row-hover'));
 }
 
@@ -9469,10 +9476,12 @@ function initMusic() {
 function toggleMusic() {
   musicEnabled = !musicEnabled;
   localStorage.setItem('bb_music', musicEnabled ? '1' : '0');
-  if(musicEnabled) {
-    bgMusic.play().catch(() => {});
-  } else {
-    bgMusic.pause();
+  if(bgMusic) {
+    if(musicEnabled) {
+      bgMusic.play().catch(() => {});
+    } else {
+      bgMusic.pause();
+    }
   }
   updateMusicBtn();
 }
@@ -9750,10 +9759,12 @@ function grantAdRetry() {
   const go = $id('gameover');
   if(go) go.classList.remove('show');
 
+  // Reset death sequence flag so game over can trigger again
+  _gameOverFiring = false;
+
   // Give new pieces
   const traySize = getTraySize();
   pieces = Array.from({length: traySize}, () => rngPiece());
-  gameOver = false;
   renderTray();
   renderBoard();
 
