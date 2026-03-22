@@ -4989,6 +4989,8 @@ let _drTotalScore = 0;     // cumulative score across floors
 let _drFloorResults = [];  // { floor, score, lines, passed } per floor
 let _drTransitioning = false;
 let _drRescueTimer = null; // timer waiting for player to use a power to rescue themselves
+let _powerAnimating = false; // true while a power-up animation is in progress — blocks checkGameOver
+var _gameOverFiring = false; // true once death sequence starts — prevents duplicate triggers (var avoids re-declaration errors)
 
 function startDaily() {
   initMusic();
@@ -5381,6 +5383,7 @@ function _drOnGameOver() {
 
 function _drFinishRun(cleared) {
   _drActive = false;
+  _powerAnimating = false; // ensure no stale animation lock
   if(_drRescueTimer) { clearInterval(_drRescueTimer); _drRescueTimer = null; _drClearRescueHint(); }
   powerInventory = { laser:0, shatter:0, wildfire:0, bomb:0, sniper:0, gravity:0, shield:0, turbo:0, airstrike:0, beam:0, magnet:0, overclock:0 };
   _drTurboActive = false;
@@ -5636,6 +5639,8 @@ function restartGame() {
 
 function initGame() {
   _missionOnGameStart();
+  _powerAnimating = false;
+  _gameOverFiring = false;
   adRetryUsed = 0;
   // Init banner ad (only once)
   if(!window._bannerAdInited) {
@@ -6533,6 +6538,10 @@ function canPlaceAny(piece) {
 }
 
 function checkGameOver() {
+  // Don't check while a power-up animation is still in progress
+  if(_powerAnimating) return;
+  // Don't trigger again if already in the death sequence
+  if(_gameOverFiring) return;
   const avail = pieces.filter(p => p !== null);
   // Still have a placeable piece — not over
   if(avail.some(p => canPlaceAny(p))) {
@@ -6591,6 +6600,7 @@ function checkGameOver() {
   }
 
   sfxGameOver(); hapticGameOver();
+  _gameOverFiring = true;
   gamesPlayed++;
   localStorage.setItem('bb_games', gamesPlayed);
   if(gamesPlayed === 25 && !localStorage.getItem('bb_music_chill')) {
@@ -7492,6 +7502,7 @@ function triggerBombExplosion(centerRow, centerCol, hex) {
     addScore(pts, affected.length, 1);
     renderBoard();
     clearLines();
+    refillPieces(); renderTray();
     checkGameOver();
   }, 480);
 }
@@ -7943,6 +7954,7 @@ function onLaserClick(e) {
     for(let c = 0; c < COLS; c++) board[row][c] = null;
     renderBoard();
     addScore(COLS * 60, 1, 1);
+    refillPieces(); renderTray();
     checkGameOver();
   }, 380);
 }
@@ -7984,6 +7996,7 @@ function onShatterClick(e) {
     targets.forEach(t => { _trackObstacleBroken(t.r, t.c); board[t.r][t.c] = null; });
     renderBoard();
     addScore(targets.length * 80, targets.length, 1);
+    refillPieces(); renderTray();
     checkGameOver();
   }, 380);
 }
@@ -8007,6 +8020,7 @@ function onWildfireClick(e) {
     haptic([20, 10, 40]);
     renderBoard();
     clearLines();
+    refillPieces(); renderTray();
     checkGameOver();
     return;
   }
@@ -8060,6 +8074,8 @@ function onWildfireClick(e) {
       }
     }
     renderBoard();
+    clearLines();
+    refillPieces(); renderTray();
     checkGameOver();
   }, 420);
 }
@@ -8104,6 +8120,7 @@ function onSniperClick(e) {
     setTimeout(() => {
       renderBoard();
       clearLines();
+      refillPieces(); renderTray();
       checkGameOver();
     }, 350);
   } else {
@@ -8199,6 +8216,7 @@ function applyGravity() {
   flashPower('#bf5af2');
   sfxPowerActivate('gravity');
   haptic([20, 10, 30, 10, 20]);
+  _powerAnimating = true;
 
   _animateBlockShift(moves, 'down', () => {
     // Update board data
@@ -8209,7 +8227,13 @@ function applyGravity() {
     }
     shakeBoard(2);
     renderBoard();
-    setTimeout(() => { clearLines(); checkGameOver(); }, 250);
+    setTimeout(() => {
+      clearLines();
+      refillPieces();
+      renderTray();
+      _powerAnimating = false;
+      setTimeout(() => checkGameOver(), 150);
+    }, 250);
   });
 }
 
@@ -8282,6 +8306,7 @@ function applyAirstrike() {
     shakeBoard(3);
     renderBoard();
     clearLines();
+    refillPieces(); renderTray();
     checkGameOver();
   }, totalTime);
 }
@@ -8368,6 +8393,7 @@ function onBeamClick(e) {
     }
     renderBoard();
     clearLines();
+    refillPieces(); renderTray();
     checkGameOver();
   }, 400);
 }
@@ -8401,6 +8427,7 @@ function applyMagnet() {
   flashPower('#bf5af2');
   sfxPowerActivate('magnet');
   haptic([20, 10, 30, 10, 20]);
+  _powerAnimating = true;
 
   _animateBlockShift(moves, 'up', () => {
     // Update board data
@@ -8411,7 +8438,13 @@ function applyMagnet() {
     }
     shakeBoard(2);
     renderBoard();
-    setTimeout(() => { clearLines(); checkGameOver(); }, 250);
+    setTimeout(() => {
+      clearLines();
+      refillPieces();
+      renderTray();
+      _powerAnimating = false;
+      setTimeout(() => checkGameOver(), 150);
+    }, 250);
   });
 }
 
@@ -8419,6 +8452,7 @@ function applyMagnet() {
 
 function usePower(type) {
   powerInventory[type] = Math.max(0, powerInventory[type] - 1);
+  _powerAnimating = false; // safety reset — power being used means any old animation is done
   cancelPower();
   clearPowerHintTimer();
   _movesSincePowerup = 0;
@@ -9596,6 +9630,9 @@ function showWatchAdOverlay(callback) {
   const timerEl = $id('watch-ad-timer');
   if(timerEl) timerEl.textContent = count;
 
+  // Store callback immediately before anything else can fail
+  overlay._callback = callback;
+
   // Try to show an interstitial ad behind the overlay
   try {
     const isAndroidApp = /; wv\)/.test(navigator.userAgent) || typeof window.Android !== 'undefined';
@@ -9607,25 +9644,32 @@ function showWatchAdOverlay(callback) {
     if(timerEl) timerEl.textContent = count;
     if(count <= 0) {
       clearInterval(interval);
-      closeWatchAdOverlay(callback);
+      overlay._interval = null;
+      const cb = overlay._callback;
+      overlay._callback = null;
+      closeWatchAdOverlay(cb);
     }
   }, 1000);
 
   overlay._interval = interval;
-  overlay._callback = callback;
 }
 
 function skipWatchAd() {
   const overlay = $id('watch-ad-overlay');
   if(!overlay) return;
-  if(overlay._interval) clearInterval(overlay._interval);
-  closeWatchAdOverlay(overlay._callback);
+  if(overlay._interval) { clearInterval(overlay._interval); overlay._interval = null; }
+  const cb = overlay._callback;
+  overlay._callback = null;
+  closeWatchAdOverlay(cb);
 }
 
 function closeWatchAdOverlay(callback) {
   const overlay = $id('watch-ad-overlay');
-  if(overlay) overlay.style.display = 'none';
-  if(callback) callback();
+  if(overlay) {
+    overlay.style.display = 'none';
+    if(overlay._interval) { clearInterval(overlay._interval); overlay._interval = null; }
+  }
+  if(typeof callback === 'function') callback();
 }
 
 
