@@ -3391,9 +3391,12 @@ body.theme-onyx #board { animation: onyxPulse 5s ease-in-out infinite; }
 
 /* Run complete screen */
 #dr-run-complete {
-  display: none;
+  flex-direction: column;
+  align-items: center;
   padding: 24px 20px 40px;
   gap: 14px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 .dr-rc-title {
   font-family: 'Press Start 2P', monospace;
@@ -4973,10 +4976,18 @@ function _drUpdateHeaderFloor() {
   if(_drActive) {
     if(label) { label.textContent = 'FLOOR'; label.className = 'mode-label daily-mode'; }
     const globalFloor = _drStage * DAILY_RUN_FLOORS.length + _drFloor + 1;
-    if(val) val.textContent = `S${_drStage + 1} F${_drFloor + 1}`;
+    if(val) {
+      val.textContent = `S${_drStage + 1} F${_drFloor + 1}`;
+      val.style.fontSize = '0.52rem';
+      val.style.letterSpacing = '1px';
+    }
   } else {
     if(label) { label.textContent = 'BEST'; label.className = 'mode-label'; }
-    if(val)   val.textContent = best.toLocaleString();
+    if(val) {
+      val.textContent = best.toLocaleString();
+      val.style.fontSize = '';
+      val.style.letterSpacing = '';
+    }
   }
 }
 
@@ -5452,9 +5463,15 @@ function _drOnGameOver() {
 
 function _drFinishRun(cleared) {
   _drActive = false;
+  _drTransitioning = false; // clear any pending floor transition
   _powerAnimating = false; // ensure no stale animation lock
+  _gameOverFiring = false; // reset so next game works without initGame
   if(_drRescueTimer) { clearInterval(_drRescueTimer); _drRescueTimer = null; _drClearRescueHint(); }
-  // Clear passive bar
+  // Clean up any lingering roguelike overlays
+  ['dr-floor-complete', 'dr-card-select'].forEach(id => {
+    const el = document.getElementById(id);
+    if(el) el.remove();
+  });
   const passiveBar = $id('dr-passive-bar');
   if(passiveBar) { passiveBar.style.display = 'none'; passiveBar.innerHTML = ''; }
   powerInventory = { laser:0, shatter:0, wildfire:0, bomb:0, sniper:0, gravity:0, shield:0, turbo:0, airstrike:0, beam:0, magnet:0, overclock:0 };
@@ -5492,16 +5509,17 @@ function _drFinishRun(cleared) {
 }
 
 function _drShowRunComplete(result) {
-  sfxDailyComplete();
-  showScreen('dr-run-complete');
+  try {
+    sfxDailyComplete();
+    showScreen('dr-run-complete');
 
-  const title = $id('dr-rc-title');
-  const sub   = $id('dr-rc-sub');
-  const sc    = $id('dr-rc-score');
+    const title = $id('dr-rc-title');
+    const sub   = $id('dr-rc-sub');
+    const sc    = $id('dr-rc-score');
 
-  const stagesCleared = _drStage;
-  const floorsCleared = _drFloorResults.filter(r => r.passed).length;
-  const globalFloor   = stagesCleared * DAILY_RUN_FLOORS.length + (_drFloor + 1);
+    const stagesCleared = _drStage;
+    const floorsCleared = _drFloorResults.filter(r => r.passed).length;
+    const globalFloor   = stagesCleared * DAILY_RUN_FLOORS.length + (_drFloor + 1);
 
   // Title
   if(title) {
@@ -5567,6 +5585,11 @@ function _drShowRunComplete(result) {
     const cx = window.innerWidth / 2, cy = window.innerHeight / 2;
     const theme = THEMES.find(t => t.id === activeTheme) || THEMES[0];
     for(let i = 0; i < 4; i++) setTimeout(() => theme.colors.forEach(c => spawnParticles(cx, cy, c, 4)), i * 200);
+  }
+  } catch(e) {
+    // Fallback — always get to the run complete screen even if rendering throws
+    console.error('[BBB] _drShowRunComplete error:', e);
+    showScreen('dr-run-complete');
   }
 }
 
@@ -7579,6 +7602,7 @@ function triggerBombExplosion(centerRow, centerCol, hex) {
   shakeBoard(3);
   hapticCombo();
   sfxBombExplode();
+  _powerAnimating = true;
 
   // Clear cells after animation
   setTimeout(() => {
@@ -7591,7 +7615,8 @@ function triggerBombExplosion(centerRow, centerCol, hex) {
     renderBoard();
     clearLines();
     refillPieces(); renderTray();
-    checkGameOver();
+    _powerAnimating = false;
+    setTimeout(() => checkGameOver(), 150);
   }, 480);
 }
 
@@ -8060,13 +8085,15 @@ function onLaserClick(e) {
   sfxClear(3);
   hapticCombo();
   shakeBoard(2);
+  _powerAnimating = true;
 
   setTimeout(() => {
     for(let c = 0; c < COLS; c++) board[row][c] = null;
     renderBoard();
     addScore(COLS * 60, 1, 1);
     refillPieces(); renderTray();
-    checkGameOver();
+    _powerAnimating = false;
+    setTimeout(() => checkGameOver(), 150);
   }, 380);
 }
 
@@ -8102,13 +8129,15 @@ function onShatterClick(e) {
   sfxClear(2);
   haptic([20, 10, 40, 10, 40]);
   shakeBoard(2);
+  _powerAnimating = true;
 
   setTimeout(() => {
     targets.forEach(t => { _trackObstacleBroken(t.r, t.c); board[t.r][t.c] = null; });
     renderBoard();
     addScore(targets.length * 80, targets.length, 1);
     refillPieces(); renderTray();
-    checkGameOver();
+    _powerAnimating = false;
+    setTimeout(() => checkGameOver(), 150);
   }, 380);
 }
 
@@ -8132,7 +8161,8 @@ function onWildfireClick(e) {
     renderBoard();
     clearLines();
     refillPieces(); renderTray();
-    checkGameOver();
+    _powerAnimating = false;
+    setTimeout(() => checkGameOver(), 150);
     return;
   }
 
@@ -8161,6 +8191,7 @@ function onWildfireClick(e) {
   sfxCombo(3);
   hapticCombo();
   shakeBoard(3);
+  _powerAnimating = true;
 
   const pts = count * 800;
   addScore(pts, count, 1);
@@ -8187,7 +8218,8 @@ function onWildfireClick(e) {
     renderBoard();
     clearLines();
     refillPieces(); renderTray();
-    checkGameOver();
+    _powerAnimating = false;
+    setTimeout(() => checkGameOver(), 150);
   }, 420);
 }
 
@@ -8216,6 +8248,7 @@ function onSniperClick(e) {
     flashPower('#30d158');
     sfxSniperShot();
     haptic([15, 10, 15, 10, 40]);
+    _powerAnimating = true;
 
     targets.forEach(({r, c}) => {
       const cell = document.querySelectorAll('#board .cell')[r * COLS + c];
@@ -8232,7 +8265,8 @@ function onSniperClick(e) {
       renderBoard();
       clearLines();
       refillPieces(); renderTray();
-      checkGameOver();
+      _powerAnimating = false;
+      setTimeout(() => checkGameOver(), 150);
     }, 350);
   } else {
     showSelectHint('SNIPER — TAP 1 MORE BLOCK');
@@ -8371,6 +8405,7 @@ function applyAirstrike() {
 
   sfxPowerActivate('airstrike');
   haptic([10, 5, 10, 5, 10]);
+  _powerAnimating = true;
 
   // Stagger each strike with a targeting reticle then explosion
   targets.forEach(({ r, c }, strikeIdx) => {
@@ -8418,7 +8453,8 @@ function applyAirstrike() {
     renderBoard();
     clearLines();
     refillPieces(); renderTray();
-    checkGameOver();
+    _powerAnimating = false;
+    setTimeout(() => checkGameOver(), 150);
   }, totalTime);
 }
 
@@ -8494,6 +8530,7 @@ function onBeamClick(e) {
 
   flashPower('#0af5ff');
   haptic([20, 10, 40, 10, 60]);
+  _powerAnimating = true;
   // Beam sound — like laser but rising pitch
   sfxBeam();
 
@@ -8505,7 +8542,8 @@ function onBeamClick(e) {
     renderBoard();
     clearLines();
     refillPieces(); renderTray();
-    checkGameOver();
+    _powerAnimating = false;
+    setTimeout(() => checkGameOver(), 150);
   }, 400);
 }
 
