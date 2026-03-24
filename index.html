@@ -351,7 +351,7 @@ header {
   max-width: calc(100dvh - 300px);
   max-height: calc(100dvh - 300px);
   display:grid;
-  grid-template-columns:repeat(8,1fr);
+  grid-template-columns:repeat(8,1fr); /* default, overridden by JS for expand mode */
   gap:2px;
   background: var(--surface);
   border-radius:6px;
@@ -4660,7 +4660,8 @@ function hapticGameOver() { haptic([80,40,80,40,180]); }
 // ════════════════════════════════════
 //  CONSTANTS & STATE
 // ════════════════════════════════════
-const COLS=8, ROWS=8;
+let COLS=8, ROWS=8;
+const DEFAULT_COLS=8, DEFAULT_ROWS=8;
 const COLORS=['var(--c1)','var(--c2)','var(--c3)','var(--c4)','var(--c5)','var(--c6)','var(--c7)'];
 
 // Pieces split by difficulty tier
@@ -5008,6 +5009,7 @@ function goMenu() {
   if(typeof _ptActive !== 'undefined' && _ptActive) playTutSkip();
   // Clean up roguelike if active
   if(_drActive) { _drActive = false; }
+  if(_drExpandActive) _drShrinkBoard();
   if(_drRescueTimer) { clearInterval(_drRescueTimer); _drRescueTimer = null; _drClearRescueHint(); }
   const hud = $id('daily-run-hud');
   if(hud) hud.style.display = 'none';
@@ -5065,6 +5067,10 @@ function _drUpdateHeaderFloor() {
 function startClassic() {
   initMusic();
   sfxMenu(); isDaily=false;
+  // Ensure board is default size (in case expand boss was active)
+  if(ROWS !== DEFAULT_ROWS || COLS !== DEFAULT_COLS) {
+    ROWS = DEFAULT_ROWS; COLS = DEFAULT_COLS; _drExpandActive = false;
+  }
   $id('mode-label').textContent='BEST';
   $id('mode-label').className='mode-label';
   const dbw1=$id('daily-bar-wrap'); if(dbw1) dbw1.style.display='none';
@@ -5082,7 +5088,7 @@ const DAILY_RUN_FLOORS = [
   { floor: 2, type: 'lines',  target: 5,  label: 'CLEAR 5 LINES', emoji: '⚡', desc: 'BUILDING UP' },
   { floor: 3, type: 'lines',  target: 5,  label: 'CLEAR 5 LINES', emoji: '🔥', desc: 'HEATING UP' },
   { floor: 4, type: 'lines',  target: 5,  label: 'CLEAR 5 LINES', emoji: '💥', desc: 'DANGER ZONE' },
-  { floor: 5, type: 'lines',  target: 5,  label: 'CLEAR 5 LINES', emoji: '👾', desc: 'BOSS FLOOR' },
+  { floor: 5, type: 'lines',  target: 5,  label: 'CLEAR 5 LINES', emoji: '🔳', desc: 'EXPAND BOSS', boss: 'expand' },
 ];
 
 let _drActive = false;
@@ -5094,6 +5100,8 @@ let _drTotalScore = 0;     // cumulative score across floors
 let _drFloorResults = [];  // { floor, score, lines, passed } per floor
 let _drTransitioning = false;
 let _drRescueTimer = null; // timer waiting for player to use a power to rescue themselves
+let _drLuckyStacks = 0;    // each stack = +2% smart piece pick chance
+let _drExpandActive = false; // true during expand boss floors
 let _powerAnimating = false; // true while a power-up animation is in progress — blocks checkGameOver
 var _gameOverFiring = false; // true once death sequence starts — prevents duplicate triggers (var avoids re-declaration errors)
 
@@ -5115,6 +5123,9 @@ function startDaily() {
   _sniperTargets = [];
   _drTurboActive = false;
   _drOverclockActive = false;
+  _drLuckyStacks = 0;
+  if(_drExpandActive) _drShrinkBoard();
+  _drExpandActive = false;
   _drLockAllPowers();
 
   $id('mode-label').textContent = '⚔️ ROGUELIKE';
@@ -5153,6 +5164,15 @@ function _drStartFloor(floorIdx) {
   // Boss floor (last floor of each stage) — spawn stage+1 obstacle blocks
   if(floorIdx === DAILY_RUN_FLOORS.length - 1) {
     _drSpawnBossObstacle(_drStage + 1);
+  }
+
+  // Boss mechanics
+  const floorDef = DAILY_RUN_FLOORS[floorIdx];
+  if(floorDef && floorDef.boss === 'expand') {
+    setTimeout(() => _drExpandBoard(), 500);
+  } else if(_drExpandActive) {
+    // Leaving an expand floor — shrink back
+    _drShrinkBoard();
   }
 
   // Re-render power slots (carry unlocked powers from previous floors)
@@ -5199,6 +5219,82 @@ function _drSpawnBossObstacle(count) {
     haptic([10, 5, 20, 5, 30]);
     showToast(`👾 BOSS FLOOR! ${spawned} OBSTACLE${spawned > 1 ? 'S' : ''} INCOMING!`);
   }, 300);
+}
+
+function _drExpandBoard() {
+  const newRows = 12, newCols = 12;
+  const oldBoard = board;
+  const oldRows = ROWS, oldCols = COLS;
+
+  // Expand dimensions
+  ROWS = newRows;
+  COLS = newCols;
+
+  // Create new bigger board, place old board content in the center
+  const offsetR = Math.floor((newRows - oldRows) / 2);
+  const offsetC = Math.floor((newCols - oldCols) / 2);
+  board = Array.from({length: newRows}, () => Array(newCols).fill(null));
+  for(let r = 0; r < oldRows; r++) {
+    for(let c = 0; c < oldCols; c++) {
+      if(oldBoard[r][c]) board[r + offsetR][c + offsetC] = oldBoard[r][c];
+    }
+  }
+
+  // Rebuild board DOM
+  _boardInitialized = false;
+  renderBoard();
+  _drExpandActive = true;
+  _drUpdatePassiveBar();
+
+  // Animate cells appearing
+  setTimeout(() => {
+    const cells = _cellCache;
+    cells.forEach((cell, i) => {
+      const r = Math.floor(i / COLS), c = i % COLS;
+      const isNew = r < offsetR || r >= offsetR + oldRows || c < offsetC || c >= offsetC + oldCols;
+      if(isNew && !board[r][c]) {
+        cell.style.transition = 'transform 0.3s ease, opacity 0.3s ease';
+        cell.style.transform = 'scale(0)';
+        cell.style.opacity = '0';
+        setTimeout(() => {
+          cell.style.transform = 'scale(1)';
+          cell.style.opacity = '1';
+        }, 50 + (r + c) * 15);
+      }
+    });
+  }, 50);
+
+  showToast('🔳 BOARD EXPANDED! 12×12!');
+  sfxObstacle();
+  haptic([30, 15, 50, 15, 80]);
+  shakeBoard(2);
+}
+
+function _drShrinkBoard() {
+  if(!_drExpandActive) return;
+  const oldRows = ROWS, oldCols = COLS;
+
+  // Shrink back to default
+  ROWS = DEFAULT_ROWS;
+  COLS = DEFAULT_COLS;
+
+  const offsetR = Math.floor((oldRows - ROWS) / 2);
+  const offsetC = Math.floor((oldCols - COLS) / 2);
+
+  // Extract center of expanded board
+  const newBoard = Array.from({length: ROWS}, () => Array(COLS).fill(null));
+  for(let r = 0; r < ROWS; r++) {
+    for(let c = 0; c < COLS; c++) {
+      newBoard[r][c] = board[r + offsetR][c + offsetC];
+    }
+  }
+  board = newBoard;
+
+  // Rebuild board DOM
+  _boardInitialized = false;
+  renderBoard();
+  _drExpandActive = false;
+  _drUpdatePassiveBar();
 }
 
 function _drUpdateHUD() {
@@ -5345,6 +5441,7 @@ const POWER_DESCS = {
   beam:      'Clears an entire\ncolumn of blocks',
   magnet:    'Pulls all blocks\nup to the top',
   overclock: 'Next floor score\ncounts as double XP\n★ RARE ★',
+  lucky:     '+2% better pieces\nfor the whole run\n(STACKS!)',
 };
 
 function _drShowCardPicker(onChosen) {
@@ -5357,6 +5454,7 @@ function _drShowCardPicker(onChosen) {
     if(t === 'shield')    return !_drShieldActive && Math.random() < 0.12;
     if(t === 'turbo')     return !_drTurboActive && Math.random() < 0.15;
     if(t === 'overclock') return !alreadyUnlocked.includes('overclock') && !_drOverclockActive && Math.random() < 0.18;
+    if(t === 'lucky')     return Math.random() < Math.max(0.15, 0.5 - _drLuckyStacks * 0.06); // less common the more you stack
     return true;
   });
 
@@ -5390,13 +5488,14 @@ function _drShowCardPicker(onChosen) {
     const isShield = type === 'shield';
     const isOverclock = type === 'overclock';
     const isTurbo = type === 'turbo';
-    const isInstant = isShield || isOverclock || isTurbo;
+    const isLucky = type === 'lucky';
+    const isInstant = isShield || isOverclock || isTurbo || isLucky;
     const card = document.createElement('div');
     card.className = 'dr-power-card';
     card.style.setProperty('--pu-color', p.color);
     card.style.setProperty('--pu-glow', p.glow);
-    const chargeColor = isShield ? 'color:#fff' : isOverclock ? 'color:#ffd60a' : isTurbo ? 'color:#ff9f0a' : '';
-    const chargeLabel = isInstant ? '⚡ ACTIVATES INSTANTLY' : isOwned ? '+1 CHARGE' : 'NEW UNLOCK';
+    const chargeColor = isShield ? 'color:#fff' : isOverclock ? 'color:#ffd60a' : isTurbo ? 'color:#ff9f0a' : isLucky ? 'color:#30d158' : '';
+    const chargeLabel = isLucky ? (_drLuckyStacks > 0 ? `🍀 STACK ${_drLuckyStacks + 1} (+${(_drLuckyStacks + 1) * 2}%)` : '🍀 +2% BETTER PIECES') : isInstant ? '⚡ ACTIVATES INSTANTLY' : isOwned ? '+1 CHARGE' : 'NEW UNLOCK';
     card.innerHTML = `
       <div class="dr-pc-icon">${p.icon}</div>
       <div class="dr-pc-name" style="color:${p.color}">${p.name}</div>
@@ -5436,6 +5535,15 @@ function _drShowCardPicker(onChosen) {
           haptic([20, 10, 40, 10, 60]);
           showToast('⚡ TURBO TRAY! 4th piece slot unlocked!');
           refillPieces(); renderTray();
+        } else if(type === 'lucky') {
+          // Lucky is passive and stackable — +2% smart pick per stack
+          _drLuckyStacks++;
+          _drUpdatePassiveBar();
+          flashPower('#30d158');
+          sfxPowerActivate('shield');
+          haptic([20, 10, 40, 10, 60]);
+          const totalBonus = _drLuckyStacks * 2;
+          showToast(`🍀 LUCKY +${totalBonus}%! Better pieces!`);
         } else {
           _drApplyPowerChoice(type);
         }
@@ -5551,9 +5659,11 @@ function _drFinishRun(cleared) {
   });
   const passiveBar = $id('dr-passive-bar');
   if(passiveBar) { passiveBar.style.display = 'none'; passiveBar.innerHTML = ''; }
-  powerInventory = { laser:0, shatter:0, wildfire:0, bomb:0, sniper:0, gravity:0, shield:0, turbo:0, airstrike:0, beam:0, magnet:0, overclock:0 };
+  powerInventory = { laser:0, shatter:0, wildfire:0, bomb:0, sniper:0, gravity:0, shield:0, turbo:0, airstrike:0, beam:0, magnet:0, overclock:0, lucky:0 };
   _drTurboActive = false;
   _drOverclockActive = false;
+  // Shrink board back if expanded
+  if(_drExpandActive) _drShrinkBoard();
   updatePowerUI();
   _drUpdateHeaderFloor(); // restores BEST label
 
@@ -6055,8 +6165,9 @@ function rngPiece() {
   const pool = playable.length > 0 ? playable : activePieces;
 
   // Score each piece and build a weighted pool
-  // 75% chance to pick from high-scoring pieces, 25% pure random
-  const useSmartPick = rng() < 0.75;
+  // 75% base chance to pick from high-scoring pieces, +2% per lucky stack
+  const luckyBonus = (isDaily && _drActive) ? _drLuckyStacks * 0.02 : 0;
+  const useSmartPick = rng() < Math.min(0.98, 0.75 + luckyBonus);
   let shape;
 
   if (useSmartPick) {
@@ -6096,6 +6207,8 @@ function _initBoardCells() {
   const el = $id('board');
   el.innerHTML = '';
   _cellCache = [];
+  // Set grid columns based on current board size
+  el.style.gridTemplateColumns = `repeat(${COLS},1fr)`;
   // Build scanline overlay once
   const overlay = document.createElement('div');
   overlay.id = 'board-scanline';
@@ -6465,6 +6578,7 @@ function placePiece(piece,startRow,startCol) {
   piece.shape.forEach((row,r)=>row.forEach((val,c)=>{
     if(val) { board[startRow+r][startCol+c]=piece.color; cellCount++; }
   }));
+
   if(cellCount > 0) addScore(cellCount * 5, 0, 0, piece.color);
   renderBoard();
   _lastPlacedWasStreakSaver = !!piece.isStreakSaver;
@@ -7817,9 +7931,10 @@ const POWERS = {
   beam:      { color:'#0af5ff', glow:'rgba(10,245,255,0.5)',  icon:'⛈️', name:'BEAM',         rogueLikeOnly:true },
   magnet:    { color:'#bf5af2', glow:'rgba(191,90,242,0.4)',  icon:'🧲', name:'MAGNET',        rogueLikeOnly:true },
   overclock: { color:'#ffd60a', glow:'rgba(255,214,10,0.5)',  icon:'⏩', name:'OVERCLOCK',     rogueLikeOnly:true, rare:true },
+  lucky:     { color:'#30d158', glow:'rgba(48,209,88,0.5)',  icon:'🍀', name:'LUCKY',         rogueLikeOnly:true },
 };
 
-let powerInventory = { laser:0, shatter:0, wildfire:0, bomb:0, sniper:0, gravity:0, shield:0, turbo:0, airstrike:0, beam:0, magnet:0, overclock:0 };
+let powerInventory = { laser:0, shatter:0, wildfire:0, bomb:0, sniper:0, gravity:0, shield:0, turbo:0, airstrike:0, beam:0, magnet:0, overclock:0, lucky:0 };
 let _movesSincePowerup = 0;   // moves placed since player first got a powerup
 let _powerRemindShown = false; // only show once per game
 let activePower = null; // currently selected power waiting for board tap
@@ -7835,11 +7950,12 @@ let _drSlotAgeCounter = 0; // increments each time a slot is filled
 const _drPowerSlots = ['laser', 'shatter', 'wildfire', 'bomb']; // 4 slots — any power type can go in any slot
 
 function _drLockAllPowers() {
-  powerInventory = { laser:0, shatter:0, wildfire:0, bomb:0, sniper:0, gravity:0, shield:0, turbo:0, airstrike:0, beam:0, magnet:0, overclock:0 };
+  powerInventory = { laser:0, shatter:0, wildfire:0, bomb:0, sniper:0, gravity:0, shield:0, turbo:0, airstrike:0, beam:0, magnet:0, overclock:0, lucky:0 };
   activePower = null;
   _drUnlockedPowers = [null, null, null, null];
   _drSlotAge = [0, 0, 0, 0];
   _drSlotAgeCounter = 0;
+  _drLuckyStacks = 0;
   _drRenderLockedPowers();
 }
 
@@ -7853,6 +7969,12 @@ function _drUpdatePassiveBar() {
   }
   if(_drTurboActive) {
     passives.push({ icon: '⚡', label: 'TURBO', color: '#ff9f0a', glow: 'rgba(255,159,10,0.6)' });
+  }
+  if(_drLuckyStacks > 0) {
+    passives.push({ icon: '🍀', label: 'LUCKY +' + (_drLuckyStacks * 2) + '%', color: '#30d158', glow: 'rgba(48,209,88,0.6)' });
+  }
+  if(_drExpandActive) {
+    passives.push({ icon: '🔳', label: '12×12', color: '#ff9f0a', glow: 'rgba(255,159,10,0.6)' });
   }
   if(passives.length) {
     bar.style.display = 'flex';
@@ -8114,6 +8236,10 @@ function activatePower(type) {
     cancelPower();
     sfxPowerActivate('magnet');
     applyMagnet();
+  } else if(type === 'lucky') {
+    // Lucky is passive — tapping just shows info
+    cancelPower();
+    showToast(`🍀 LUCKY +${_drLuckyStacks * 2}% — better pieces all run!`);
   }
 }
 
@@ -8859,7 +8985,7 @@ function flashPower(color) {
 }
 
 function resetPowers() {
-  powerInventory = { laser:0, shatter:0, wildfire:0, bomb:0, sniper:0, gravity:0, shield:0, turbo:0, airstrike:0, beam:0, magnet:0, overclock:0 };
+  powerInventory = { laser:0, shatter:0, wildfire:0, bomb:0, sniper:0, gravity:0, shield:0, turbo:0, airstrike:0, beam:0, magnet:0, overclock:0, lucky:0 };
   activePower = null;
   _movesSincePowerup = 0;
   _powerRemindShown = false;
