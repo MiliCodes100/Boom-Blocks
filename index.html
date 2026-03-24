@@ -3945,6 +3945,8 @@ body.theme-onyx #board { animation: onyxPulse 5s ease-in-out infinite; }
   </div>
   <div class="unlock-section-label">🧩 <span id="blockdex-count">0</span> / <span id="blockdex-total">0</span> BLOCKS DISCOVERED</div>
   <div class="blockdex-grid" id="blockdex-grid"></div>
+  <div class="unlock-section-label" style="margin-top:12px">⚡ <span id="powerdex-count">0</span> / <span id="powerdex-total">0</span> POWER-UPS USED</div>
+  <div class="blockdex-grid" id="powerdex-grid"></div>
 </div>
 
 <!-- Roguelike: run complete screen -->
@@ -5564,6 +5566,7 @@ function _drUpdateHUD() {
 
 function _drCheckFloorComplete() {
   if(!_drActive || _drTransitioning) return;
+  if(typeof _ptActive !== 'undefined' && _ptActive) return; // suppress during tutorial
   const floor = DAILY_RUN_FLOORS[_drFloor];
   if(!floor) return;
 
@@ -5741,14 +5744,14 @@ function _drShowCardPicker(onChosen) {
       setTimeout(() => {
         overlay.remove();
         if(type === 'overclock') {
-          // Overclock activates immediately — no slot needed
+          _markPowerUsed('overclock');
           _drOverclockActive = true;
           flashPower('#ffd60a');
           sfxPowerActivate('overclock');
           haptic([20, 10, 40, 10, 60]);
           showToast('⏩ OVERCLOCK ACTIVE! Next floor XP doubled!');
         } else if(type === 'shield') {
-          // Shield is passive — no slot, shows as indicator
+          _markPowerUsed('shield');
           powerInventory['shield'] = 1;
           _drShieldActive = true;
           _drUpdatePassiveBar();
@@ -5757,7 +5760,7 @@ function _drShowCardPicker(onChosen) {
           haptic([20, 10, 40, 10, 60]);
           showToast('🛡️ SHIELD ACTIVE! Survive one game over!');
         } else if(type === 'turbo') {
-          // Turbo is passive — no slot, shows as indicator
+          _markPowerUsed('turbo');
           _drTurboActive = true;
           _drUpdatePassiveBar();
           flashPower('#ff9f0a');
@@ -5766,7 +5769,7 @@ function _drShowCardPicker(onChosen) {
           showToast('⚡ TURBO TRAY! 4th piece slot unlocked!');
           refillPieces(); renderTray();
         } else if(type === 'lucky') {
-          // Lucky is passive and stackable — +2% smart pick per stack
+          _markPowerUsed('lucky');
           _drLuckyStacks++;
           _drUpdatePassiveBar();
           flashPower('#30d158');
@@ -9236,6 +9239,7 @@ function applyMagnet() {
 
 
 function usePower(type) {
+  _markPowerUsed(type);
   powerInventory[type] = Math.max(0, powerInventory[type] - 1);
   _powerAnimating = false; // safety reset — power being used means any old animation is done
   cancelPower();
@@ -10097,6 +10101,95 @@ function showBlockDex() {
   sfxMenu();
   showScreen('blockdex-screen');
   renderBlockDex();
+  renderPowerDex();
+}
+
+// ── POWER DEX ──
+function _getUsedPowers() {
+  try { return JSON.parse(localStorage.getItem('bb_used_powers') || '[]'); } catch { return []; }
+}
+
+function _markPowerUsed(type) {
+  const used = _getUsedPowers();
+  if(!used.includes(type)) {
+    used.push(type);
+    localStorage.setItem('bb_used_powers', JSON.stringify(used));
+  }
+}
+
+// Power dex entries — all powers that can appear in roguelike
+const POWER_DEX = [
+  { id:'laser',     cat:'active',  catLabel:'ACTIVE',   catColor:'#0af5ff' },
+  { id:'shatter',   cat:'active',  catLabel:'ACTIVE',   catColor:'#0af5ff' },
+  { id:'wildfire',  cat:'active',  catLabel:'ACTIVE',   catColor:'#0af5ff' },
+  { id:'bomb',      cat:'active',  catLabel:'ACTIVE',   catColor:'#0af5ff' },
+  { id:'sniper',    cat:'active',  catLabel:'ACTIVE',   catColor:'#0af5ff' },
+  { id:'gravity',   cat:'active',  catLabel:'ACTIVE',   catColor:'#0af5ff' },
+  { id:'airstrike', cat:'active',  catLabel:'ACTIVE',   catColor:'#0af5ff' },
+  { id:'beam',      cat:'active',  catLabel:'ACTIVE',   catColor:'#0af5ff' },
+  { id:'magnet',    cat:'active',  catLabel:'ACTIVE',   catColor:'#0af5ff' },
+  { id:'shield',    cat:'passive', catLabel:'PASSIVE',  catColor:'#ffd60a' },
+  { id:'turbo',     cat:'passive', catLabel:'PASSIVE',  catColor:'#ffd60a' },
+  { id:'overclock', cat:'passive', catLabel:'PASSIVE',  catColor:'#ffd60a' },
+  { id:'lucky',     cat:'passive', catLabel:'PASSIVE',  catColor:'#ffd60a' },
+];
+
+function renderPowerDex() {
+  const grid = $id('powerdex-grid');
+  if(!grid) return;
+  grid.innerHTML = '';
+  const used = new Set(_getUsedPowers());
+  let usedCount = 0;
+
+  // Group by category
+  const cats = {};
+  POWER_DEX.forEach(p => {
+    if(!cats[p.cat]) cats[p.cat] = { label:p.catLabel, color:p.catColor, items:[] };
+    cats[p.cat].items.push(p);
+  });
+
+  Object.values(cats).forEach(cat => {
+    // Section header
+    const header = document.createElement('div');
+    header.style.cssText = `
+      width:100%; grid-column:1/-1;
+      font-family:'Press Start 2P',monospace;
+      font-size:0.42rem; color:${cat.color};
+      letter-spacing:2px; padding:10px 4px 4px;
+      border-bottom:1px solid ${cat.color}44;
+      text-shadow:0 0 8px ${cat.color};
+      margin-top:4px;
+    `;
+    header.textContent = cat.label;
+    grid.appendChild(header);
+
+    cat.items.forEach(entry => {
+      const p = POWERS[entry.id];
+      if(!p) return;
+      const isSeen = used.has(entry.id);
+      if(isSeen) usedCount++;
+
+      const card = document.createElement('div');
+      card.className = 'blockdex-card ' + (isSeen ? 'seen' : 'unseen');
+      card.style.padding = '8px 4px';
+
+      if(isSeen) {
+        card.innerHTML = `
+          <div style="font-size:1.6rem;line-height:1;margin-bottom:4px">${p.icon}</div>
+          <div style="font-family:'Press Start 2P',monospace;font-size:0.28rem;color:${p.color};letter-spacing:0.5px;text-align:center">${p.name}</div>
+        `;
+      } else {
+        card.innerHTML = '<div style="font-family:\'Press Start 2P\',monospace;font-size:0.6rem;color:rgba(255,255,255,0.2)">?</div>';
+      }
+
+      grid.appendChild(card);
+    });
+  });
+
+  const countEl = $id('powerdex-count');
+  const totalEl = $id('powerdex-total');
+  if(countEl) countEl.textContent = usedCount;
+  if(totalEl) totalEl.textContent = POWER_DEX.length;
 }
 
 
@@ -10751,22 +10844,22 @@ let _ptOrigClearLines = null;
 const PT_STEPS = [
   {
     title: 'WELCOME!',
-    body: 'Let\'s learn to play\n<b>BOOM BOOM BLOCKS</b>\nin 60 seconds!\n\nThis is your <em>game board.</em>\nPieces go here.',
+    body: 'Let\'s learn to play\n<b>BOOM BOOM BLOCKS</b>!\n\nThis is your <em>game board.</em>\nPieces go here.',
     target: 'board',
     hand: false,
     btn: 'LET\'S GO ▶',
   },
   {
     title: 'YOUR PIECES',
-    body: 'These are your <b>3 pieces.</b>\n\nHold and <em>drag</em> a piece\nonto the board\nto place it.',
+    body: 'These are your <b>3 pieces.</b>\n\nHold and <em>drag</em> a piece\nonto the board.',
     target: 'tray',
     hand: true,
-    btn: null, // wait for a placement
+    btn: null,
     waitPlace: 1,
   },
   {
-    title: 'NICE WORK!',
-    body: 'You placed a piece!\n\nTry placing the\n<em>other 2 pieces</em>\nto refill your tray.',
+    title: 'NICE!',
+    body: 'Place the <em>other 2</em>\nto refill your tray.',
     target: 'tray',
     hand: true,
     btn: null,
@@ -10774,32 +10867,39 @@ const PT_STEPS = [
   },
   {
     title: 'CLEARING LINES',
-    body: 'Fill a <b>complete row</b>\nor <b>column</b> and\nit clears for points!\n\nTry to clear one now.\n<em>(or tap skip below)</em>',
+    body: 'Fill a <b>complete row</b>\nor <b>column</b> to clear it!\n\nTry to clear one now.\n<em>(or tap skip below)</em>',
     target: 'board',
     hand: false,
     btn: null,
     waitClear: true,
   },
   {
-    title: 'COMBOS!',
-    body: 'Clear multiple lines\nat once for a\n<em>COMBO BONUS!</em>\n\nThe bigger the combo,\nthe more points you earn.',
-    target: 'score',
+    title: 'FLOORS',
+    body: 'See the bar at the top?\nThat\'s your <b>floor progress.</b>\n\nClear <em>5 lines</em> to\ncomplete each floor.\n\nEach stage has\n<b>5 floors + a boss!</b>',
+    target: 'daily-run-hud',
+    hand: false,
+    btn: 'GOT IT ▶',
+  },
+  {
+    title: 'POWER-UPS',
+    body: 'Between floors you\npick a <b>power-up!</b>\n\n⚡ <b>LASER</b> — wipes a row\n💣 <b>BOMB</b> — 3×3 explosion\n🧲 <b>MAGNET</b> — pull blocks up\n🛡️ <b>SHIELD</b> — survive once\n\n<em>...and many more!</em>',
+    target: 'powerup-bar',
     hand: false,
     btn: 'COOL! ▶',
   },
   {
-    title: 'ROGUELIKE MODE',
-    body: 'The main mode is\n<b>Roguelike!</b>\n\nClear <em>5 lines per floor</em>\nto advance.\n\nEach stage has\n<b>5 floors + a boss.</b>',
-    target: 'board',
-    hand: false,
-    btn: 'TELL ME MORE ▶',
-  },
-  {
-    title: 'POWER-UPS',
-    body: 'Between floors you\npick a <b>power-up!</b>\n\n⚡ <b>LASER</b> — wipes a row\n💣 <b>BOMB</b> — 3×3 explosion\n🍀 <b>LUCKY</b> — better pieces\n🛡️ <b>SHIELD</b> — survive once\n\n<em>...and many more!</em>',
-    target: 'board',
+    title: 'USE THEM!',
+    body: 'Power-ups appear here.\n\nTap one to <em>activate</em>\nthen tap the board\nto use it.\n\nYou\'ll earn them\nbetween floors!',
+    target: 'powerup-bar',
     hand: false,
     btn: 'AWESOME! ▶',
+  },
+  {
+    title: 'BOSS FLOORS',
+    body: 'Every 5th floor is a\n<b>BOSS FLOOR!</b>\n\n🔒 <b>JAIL</b> — locks a row\n🔳 <b>EXPAND</b> — 12×12 board\n💀 <b>OBSTACLES</b> — blocks spawn\n\nBosses are tough but\npower-ups help!',
+    target: 'board',
+    hand: false,
+    btn: 'BRING IT ON ▶',
   },
   {
     title: 'GAME OVER',
@@ -10810,7 +10910,7 @@ const PT_STEPS = [
   },
   {
     title: 'YOU\'RE READY!',
-    body: 'That\'s everything!\n\n<b>★</b> Fill rows & columns\n<b>★</b> Chain combos\n<b>★</b> Pick power-ups\n<b>★</b> Beat the bosses!\n\n<em>Good luck!</em>',
+    body: 'That\'s everything!\n\n<b>★</b> Fill rows & columns\n<b>★</b> Pick power-ups\n<b>★</b> Beat the bosses\n<b>★</b> Climb the stages!\n\n<em>Good luck!</em>',
     target: null,
     hand: false,
     btn: '▶ PLAY NOW!',
@@ -10820,18 +10920,42 @@ const PT_STEPS = [
 
 function startPlayTutorial() {
   sfxMenu();
-  // Start a fresh classic game silently
-  isDaily = false;
-  $id('mode-label').textContent = 'TUTORIAL';
-  $id('mode-label').className = 'mode-label';
-  updateHeaderBest();
-  const dbw = $id('daily-bar-wrap'); if(dbw) dbw.style.display = 'none';
-  const puBar = $id('powerup-bar'); if(puBar) puBar.style.display = 'none';
-  // Ensure default board size for tutorial
+  // Start as a roguelike run so the player sees the real HUD and powerup bar
+  isDaily = true;
+  _drActive = true;
+  _drFloor = 0;
+  _drStage = 0;
+  _drBossOffset = 0;
+  _drTotalScore = 0;
+  _drFloorResults = [];
+  _drTransitioning = false;
+
+  _drShieldActive = false;
+  _sniperTargets = [];
+  _drTurboActive = false;
+  _drOverclockActive = false;
+  _drLuckyStacks = 0;
+  if(_drExpandActive) _drShrinkBoard();
+  _drExpandActive = false;
+  _drClearJailCells();
+  _drLockAllPowers();
+
   ROWS = DEFAULT_ROWS; COLS = DEFAULT_COLS;
+
+  $id('mode-label').textContent = 'TUTORIAL';
+  $id('mode-label').className = 'mode-label daily-mode';
+  const puBar = $id('powerup-bar'); if(puBar) puBar.style.display = '';
+  updateHeaderBest();
+  _drUpdateHeaderFloor();
+
   rng = Math.random;
   initGame();
   showScreen('game-screen');
+
+  // Show roguelike HUD
+  const hud = $id('daily-run-hud');
+  if(hud) hud.style.display = 'block';
+  _drUpdateHUD();
 
   // Small delay to let board render
   setTimeout(() => {
@@ -10845,9 +10969,7 @@ function startPlayTutorial() {
     const overlay = $id('play-tutorial-overlay');
     overlay.style.display = 'block';
 
-    // Hook into placePiece and clearLines
     _ptHookGame();
-
     _ptShowStep(0);
   }, 300);
 }
