@@ -418,6 +418,22 @@ header {
 }
 .cell.invalid { background:rgba(255,45,85,0.4) !important; transform:scale(0.88); }
 
+/* Darkness boss — cells fade to invisible */
+.cell.darkness-hidden {
+  background: var(--surface2) !important;
+  box-shadow: none !important;
+  transition: background 0.8s ease, box-shadow 0.8s ease;
+}
+.cell.darkness-hidden::before,
+.cell.darkness-hidden::after {
+  display: none !important;
+}
+.cell.darkness-peek {
+  transition: background 0.15s ease, box-shadow 0.15s ease !important;
+  filter: brightness(1.5);
+  box-shadow: 0 0 12px currentColor !important;
+}
+
 .cell.clearing {
   animation: blockPop 0.4s ease forwards;
 }
@@ -5010,6 +5026,7 @@ function goMenu() {
   // Clean up roguelike if active
   if(_drActive) { _drActive = false; }
   if(_drExpandActive) _drShrinkBoard();
+  if(_drDarknessActive) _drDeactivateDarkness();
   if(_drRescueTimer) { clearInterval(_drRescueTimer); _drRescueTimer = null; _drClearRescueHint(); }
   const hud = $id('daily-run-hud');
   if(hud) hud.style.display = 'none';
@@ -5071,6 +5088,7 @@ function startClassic() {
   if(ROWS !== DEFAULT_ROWS || COLS !== DEFAULT_COLS) {
     ROWS = DEFAULT_ROWS; COLS = DEFAULT_COLS; _drExpandActive = false;
   }
+  if(_drDarknessActive) _drDeactivateDarkness();
   $id('mode-label').textContent='BEST';
   $id('mode-label').className='mode-label';
   const dbw1=$id('daily-bar-wrap'); if(dbw1) dbw1.style.display='none';
@@ -5088,8 +5106,14 @@ const DAILY_RUN_FLOORS = [
   { floor: 2, type: 'lines',  target: 5,  label: 'CLEAR 5 LINES', emoji: '⚡', desc: 'BUILDING UP' },
   { floor: 3, type: 'lines',  target: 5,  label: 'CLEAR 5 LINES', emoji: '🔥', desc: 'HEATING UP' },
   { floor: 4, type: 'lines',  target: 5,  label: 'CLEAR 5 LINES', emoji: '💥', desc: 'DANGER ZONE' },
-  { floor: 5, type: 'lines',  target: 5,  label: 'CLEAR 5 LINES', emoji: '🔳', desc: 'EXPAND BOSS', boss: 'expand' },
+  { floor: 5, type: 'lines',  target: 5,  label: 'CLEAR 5 LINES', emoji: '👾', desc: 'BOSS FLOOR', boss: true },
 ];
+
+// Boss type rotates by stage
+const BOSS_TYPES = ['darkness', 'expand', 'darkness', 'expand']; // cycles
+function _getBossType() {
+  return BOSS_TYPES[_drStage % BOSS_TYPES.length];
+}
 
 let _drActive = false;
 let _drFloor = 0;          // current floor index within stage (0-based)
@@ -5102,6 +5126,7 @@ let _drTransitioning = false;
 let _drRescueTimer = null; // timer waiting for player to use a power to rescue themselves
 let _drLuckyStacks = 0;    // each stack = +2% smart piece pick chance
 let _drExpandActive = false; // true during expand boss floors
+let _drDarknessActive = false; // true during darkness boss floors
 let _powerAnimating = false; // true while a power-up animation is in progress — blocks checkGameOver
 var _gameOverFiring = false; // true once death sequence starts — prevents duplicate triggers (var avoids re-declaration errors)
 
@@ -5126,6 +5151,8 @@ function startDaily() {
   _drLuckyStacks = 0;
   if(_drExpandActive) _drShrinkBoard();
   _drExpandActive = false;
+  if(_drDarknessActive) _drDeactivateDarkness();
+  _drDarknessActive = false;
   _drLockAllPowers();
 
   $id('mode-label').textContent = '⚔️ ROGUELIKE';
@@ -5168,11 +5195,17 @@ function _drStartFloor(floorIdx) {
 
   // Boss mechanics
   const floorDef = DAILY_RUN_FLOORS[floorIdx];
-  if(floorDef && floorDef.boss === 'expand') {
-    setTimeout(() => _drExpandBoard(), 500);
-  } else if(_drExpandActive) {
-    // Leaving an expand floor — shrink back
-    _drShrinkBoard();
+  if(floorDef && floorDef.boss) {
+    const bossType = _getBossType();
+    if(bossType === 'expand') {
+      setTimeout(() => _drExpandBoard(), 500);
+    } else if(bossType === 'darkness') {
+      setTimeout(() => _drActivateDarkness(), 500);
+    }
+  } else {
+    // Leaving a boss floor — clean up
+    if(_drExpandActive) _drShrinkBoard();
+    if(_drDarknessActive) _drDeactivateDarkness();
   }
 
   // Re-render power slots (carry unlocked powers from previous floors)
@@ -5295,6 +5328,107 @@ function _drShrinkBoard() {
   renderBoard();
   _drExpandActive = false;
   _drUpdatePassiveBar();
+}
+
+// ── DARKNESS BOSS ──
+let _darknessTimer = null;
+
+function _drActivateDarkness() {
+  _drDarknessActive = true;
+  _drUpdatePassiveBar();
+
+  // Fade out all currently filled cells
+  _darknessHideAll();
+
+  showToast('🌑 DARKNESS! Blocks fade away...');
+  sfxObstacle();
+  haptic([30, 15, 50, 15, 80]);
+  shakeBoard(2);
+
+  // Start periodic "pulse" — briefly reveal near-complete rows/cols
+  _darknessTimer = setInterval(_darknessPulse, 2000);
+}
+
+function _drDeactivateDarkness() {
+  if(!_drDarknessActive) return;
+  _drDarknessActive = false;
+  if(_darknessTimer) { clearInterval(_darknessTimer); _darknessTimer = null; }
+  // Reveal all cells
+  const cells = _cellCache.length ? _cellCache : [];
+  cells.forEach(cell => {
+    cell.style.removeProperty('--dark-opacity');
+    cell.classList.remove('darkness-hidden', 'darkness-peek');
+  });
+  _drUpdatePassiveBar();
+}
+
+function _darknessHideAll() {
+  // Hide all currently filled cells after a short delay
+  const cells = _cellCache.length ? _cellCache : [];
+  for(let r = 0; r < ROWS; r++) {
+    for(let c = 0; c < COLS; c++) {
+      if(board[r][c]) {
+        const cell = cells[r * COLS + c];
+        if(cell) {
+          setTimeout(() => cell.classList.add('darkness-hidden'), 800 + (r + c) * 30);
+        }
+      }
+    }
+  }
+}
+
+// Called after placing a piece in darkness mode — hide the new cells after a delay
+function _darknessHideNewCells(startRow, startCol, shape) {
+  if(!_drDarknessActive) return;
+  const cells = _cellCache.length ? _cellCache : [];
+  shape.forEach((row, r) => row.forEach((val, c) => {
+    if(!val) return;
+    const br = startRow + r, bc = startCol + c;
+    if(br >= 0 && br < ROWS && bc >= 0 && bc < COLS) {
+      const cell = cells[br * COLS + bc];
+      if(cell) {
+        // Show briefly on placement, then fade out
+        cell.classList.remove('darkness-hidden');
+        setTimeout(() => cell.classList.add('darkness-hidden'), 1500);
+      }
+    }
+  }));
+}
+
+function _darknessPulse() {
+  if(!_drDarknessActive) return;
+  const cells = _cellCache.length ? _cellCache : [];
+
+  // Find rows/cols that are almost complete (within 2 of full)
+  const peekCells = new Set();
+  for(let r = 0; r < ROWS; r++) {
+    const filled = board[r].filter(c => c).length;
+    if(filled >= COLS - 2 && filled < COLS) {
+      for(let c = 0; c < COLS; c++) if(board[r][c]) peekCells.add(r * COLS + c);
+    }
+  }
+  for(let c = 0; c < COLS; c++) {
+    let filled = 0;
+    for(let r = 0; r < ROWS; r++) if(board[r][c]) filled++;
+    if(filled >= ROWS - 2 && filled < ROWS) {
+      for(let r = 0; r < ROWS; r++) if(board[r][c]) peekCells.add(r * COLS + c);
+    }
+  }
+
+  if(!peekCells.size) return;
+
+  // Briefly reveal those cells
+  peekCells.forEach(idx => {
+    const cell = cells[idx];
+    if(cell) {
+      cell.classList.add('darkness-peek');
+      cell.classList.remove('darkness-hidden');
+      setTimeout(() => {
+        cell.classList.remove('darkness-peek');
+        cell.classList.add('darkness-hidden');
+      }, 600);
+    }
+  });
 }
 
 function _drUpdateHUD() {
@@ -5664,6 +5798,8 @@ function _drFinishRun(cleared) {
   _drOverclockActive = false;
   // Shrink board back if expanded
   if(_drExpandActive) _drShrinkBoard();
+  // Clear darkness if active
+  if(_drDarknessActive) _drDeactivateDarkness();
   updatePowerUI();
   _drUpdateHeaderFloor(); // restores BEST label
 
@@ -6581,6 +6717,8 @@ function placePiece(piece,startRow,startCol) {
 
   if(cellCount > 0) addScore(cellCount * 5, 0, 0, piece.color);
   renderBoard();
+  // Darkness boss — fade newly placed cells after a brief reveal
+  if(_drDarknessActive) _darknessHideNewCells(startRow, startCol, piece.shape);
   _lastPlacedWasStreakSaver = !!piece.isStreakSaver;
   clearLines();
 
@@ -7975,6 +8113,9 @@ function _drUpdatePassiveBar() {
   }
   if(_drExpandActive) {
     passives.push({ icon: '🔳', label: '12×12', color: '#ff9f0a', glow: 'rgba(255,159,10,0.6)' });
+  }
+  if(_drDarknessActive) {
+    passives.push({ icon: '🌑', label: 'DARKNESS', color: '#6060ff', glow: 'rgba(96,96,255,0.6)' });
   }
   if(passives.length) {
     bar.style.display = 'flex';
