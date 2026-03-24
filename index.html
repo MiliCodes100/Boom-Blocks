@@ -5041,6 +5041,7 @@ function goMenu() {
   // Clean up roguelike if active
   if(_drActive) { _drActive = false; }
   if(_drExpandActive) _drShrinkBoard();
+  _drClearJailCells();
   if(_drRescueTimer) { clearInterval(_drRescueTimer); _drRescueTimer = null; _drClearRescueHint(); }
   const hud = $id('daily-run-hud');
   if(hud) hud.style.display = 'none';
@@ -5201,10 +5202,11 @@ const DAILY_RUN_FLOORS = [
   { floor: 5, type: 'lines',  target: 5,  label: 'CLEAR 5 LINES', emoji: '👾', desc: 'BOSS FLOOR', boss: true },
 ];
 
-// Boss type rotates by stage
-const BOSS_TYPES = ['jail', 'expand', 'obstacles']; // cycles
+// Boss type rotates by stage — first boss is randomized per run, then cycles
+const BOSS_TYPES = ['jail', 'expand', 'obstacles'];
+let _drBossOffset = 0; // random starting offset, set at run start
 function _getBossType() {
-  return BOSS_TYPES[_drStage % BOSS_TYPES.length];
+  return BOSS_TYPES[(_drStage + _drBossOffset) % BOSS_TYPES.length];
 }
 
 let _drActive = false;
@@ -5229,6 +5231,7 @@ function startDaily() {
   _drActive = true;
   _drFloor = 0;
   _drStage = 0;
+  _drBossOffset = Math.floor(Math.random() * BOSS_TYPES.length);
   _drTotalScore = 0;
   _drFloorResults = [];
   _drTransitioning = false;
@@ -5242,6 +5245,7 @@ function startDaily() {
   _drLuckyStacks = 0;
   if(_drExpandActive) _drShrinkBoard();
   _drExpandActive = false;
+  _drClearJailCells();
   _drLockAllPowers();
 
   $id('mode-label').textContent = '⚔️ ROGUELIKE';
@@ -5298,6 +5302,8 @@ function _drStartFloor(floorIdx) {
   } else {
     // Leaving a boss floor — clean up
     if(_drExpandActive) _drShrinkBoard();
+    // Remove any jail cells from the board
+    _drClearJailCells();
   }
 
   // Re-render power slots (carry unlocked powers from previous floors)
@@ -5391,6 +5397,19 @@ function _drSpawnJailLine() {
     const side = pick === 'top' ? 'TOP' : pick === 'bottom' ? 'BOTTOM' : pick === 'left' ? 'LEFT' : 'RIGHT';
     showToast(`🔒 ${side} ROW JAILED!`);
   }, 100);
+}
+
+function _drClearJailCells() {
+  let cleared = false;
+  for(let r = 0; r < ROWS; r++) {
+    for(let c = 0; c < COLS; c++) {
+      if(board[r][c] === JAIL_COLOR) {
+        board[r][c] = null;
+        cleared = true;
+      }
+    }
+  }
+  if(cleared) renderBoard();
 }
 
 function _drShowBossIntro(emoji, name, desc, onComplete) {
@@ -5875,6 +5894,7 @@ function _drFinishRun(cleared) {
   _drOverclockActive = false;
   // Shrink board back if expanded
   if(_drExpandActive) _drShrinkBoard();
+  _drClearJailCells();
   updatePowerUI();
   _drUpdateHeaderFloor(); // restores BEST label
 
