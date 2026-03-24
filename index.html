@@ -266,10 +266,11 @@ body.in-game::after {
 header {
   width:100%;
   padding:10px 12px 6px;
-  display:flex; align-items:center; gap:8px;
+  display:flex; align-items:center; gap:6px;
   flex-shrink: 0;
-  min-height: 52px;
+  min-height: 44px;
   box-sizing: border-box;
+  flex-wrap: wrap;
 }
 
 .back-btn {
@@ -278,7 +279,7 @@ header {
   color: var(--c4);
   font-family:'Press Start 2P', monospace;
   font-size:0.6rem;
-  padding:8px 10px;
+  padding:6px 8px;
   border-radius:4px;
   cursor:pointer;
   flex-shrink:0;
@@ -292,19 +293,20 @@ header {
   letter-spacing:2px;
   flex:1;
   text-align:center;
+  min-width:0;
 }
 .mode-label.daily-mode { color: var(--c2); text-shadow: 0 0 8px var(--glow2); }
 
-.header-scores { display:flex; gap:6px; align-items:center; }
+.header-scores { display:flex; gap:4px; align-items:center; }
 
 .score-box {
   text-align:center;
   background: var(--surface);
   border:1px solid rgba(10,245,255,0.15);
   border-radius:4px;
-  padding:5px 10px;
+  padding:4px 6px;
   box-shadow: 0 0 10px rgba(10,245,255,0.05);
-  min-width: 70px;
+  min-width: 50px;
 }
 
 .score-label {
@@ -328,8 +330,8 @@ header {
   background: var(--surface);
   border: 1px solid rgba(255,255,255,0.08);
   color: var(--text);
-  font-size:1rem;
-  width:34px; height:34px;
+  font-size:0.9rem;
+  width:30px; height:30px;
   border-radius:4px;
   cursor:pointer;
   display:flex; align-items:center; justify-content:center;
@@ -359,12 +361,9 @@ header {
   border:2px solid rgba(10,245,255,0.15);
   box-shadow:
     0 0 30px rgba(10,245,255,0.08),
-    0 0 60px rgba(0,0,0,0.8),
-    inset 0 0 40px rgba(0,0,0,0.6);
+    0 0 60px rgba(0,0,0,0.8);
   position:relative;
-  transition: transform 0.05s;
-  will-change: box-shadow, transform;
-  contain: layout style;
+  contain: layout style paint;
 }
 
 #board.shake {
@@ -388,10 +387,10 @@ header {
   background: var(--surface2);
   position:relative;
   overflow:hidden;
-  transition: transform 0.08s;
+  contain: layout style paint;
 }
 
-/* pixel shine on filled cells */
+/* pixel shine on filled cells — disabled in expand mode */
 .cell.filled::before {
   content:'';
   position:absolute;
@@ -408,6 +407,12 @@ header {
   width:30%; height:30%;
   background: rgba(0,0,0,0.25);
   border-radius:0 0 3px 0;
+}
+
+/* In expanded mode, skip pseudo-elements for perf */
+body.expand-active .cell.filled::before,
+body.expand-active .cell.filled::after {
+  display:none;
 }
 
 .cell.highlight {
@@ -4091,6 +4096,8 @@ function spawnParticles(x, y, color, count=12) {
       gravity: 0.15
     });
   }
+  // Restart animation loop if it was idle
+  if(!_particleAnimRunning) { _particleAnimRunning = true; requestAnimationFrame(animParticles); }
 }
 
 function spawnLineClear(cells, color) {
@@ -4102,9 +4109,14 @@ function spawnLineClear(cells, color) {
   });
 }
 
+let _particleAnimRunning = false;
 function animParticles() {
-  if(!ctx2) { requestAnimationFrame(animParticles); return; }
-  if(!particles.length) { requestAnimationFrame(animParticles); return; }
+  if(!ctx2 || !particles.length) {
+    // Stop loop when no particles — saves battery
+    if(ctx2) ctx2.clearRect(0, 0, canvas.width, canvas.height);
+    _particleAnimRunning = false;
+    return;
+  }
   ctx2.clearRect(0, 0, canvas.width, canvas.height);
   particles = particles.filter(p => p.alpha > 0.01);
   particles.forEach(p => {
@@ -4115,19 +4127,15 @@ function animParticles() {
     p.alpha -= p.decay;
     p.size *= 0.97;
 
-    ctx2.save();
     ctx2.globalAlpha = Math.max(0, p.alpha);
     ctx2.fillStyle = p.color;
-    ctx2.shadowBlur = 10;
-    ctx2.shadowColor = p.color;
+    // No shadowBlur — major perf win, barely visible difference
     ctx2.fillRect(p.x - p.size/2, p.y - p.size/2, p.size, p.size);
-    ctx2.restore();
   });
-  // Clear canvas once after last particle dies
-  if(!particles.length) ctx2.clearRect(0, 0, canvas.width, canvas.height);
+  ctx2.globalAlpha = 1;
   requestAnimationFrame(animParticles);
 }
-animParticles();
+// Don't auto-start — starts on first spawnParticles call
 
 // ════════════════════════════════════
 //  SCREEN SHAKE
@@ -4175,12 +4183,12 @@ function getAudioCtx() {
 // Until loaded, sfxFile() is a silent no-op — synth sounds still work as fallback.
 
 const SFX_FILES = {
-  'airstrike':   '/AirStrike.mp3',
-  'machinegun':  '/machinegun.mp3',
-  'laser':       '/laser.mp3',
-  'beam':        '/beam.mp3',
-  'nuke':        '/nuke.mp3',
-  'wildfire':    '/wildfire.mp3',
+  'airstrike':   'AirStrike.mp3',
+  'machinegun':  'machinegun.mp3',
+  'laser':       'laser.mp3',
+  'beam':        'beam.mp3',
+  'nuke':        'nuke.mp3',
+  'wildfire':    'wildfire.mp3',
 };
 
 const _sfxBuffers = {}; // name → AudioBuffer (loaded)
@@ -4912,9 +4920,9 @@ function getActivePieces() {
   if (sessionLinesCleared >= 70 && getLevel() >= 8)  pool = [...pool, ...PIECES_T5, ...PIECES_T5];
   if (getLevel() >= 12) pool = [...pool, ...PIECES_FRAME];
 
-  // Roguelike: add nightmare (T5) pieces from stage 2 onwards, more each stage
+  // Roguelike: add nightmare (T5) pieces from stage 2 onwards, capped at 3x weight
   if (isDaily && _drActive && _drStage >= 1) {
-    const weight = _drStage; // stage 2 = 1x, stage 3 = 2x, etc.
+    const weight = Math.min(_drStage, 3); // cap at 3x to prevent T5 flood
     for (let i = 0; i < weight; i++) pool = [...pool, ...PIECES_T5];
   }
 
@@ -5617,6 +5625,7 @@ function _drExpandBoard() {
   _boardInitialized = false;
   renderBoard();
   _drExpandActive = true;
+  document.body.classList.add('expand-active');
   _drUpdatePassiveBar();
 
   // Animate cells appearing
@@ -5667,6 +5676,7 @@ function _drShrinkBoard() {
   _boardInitialized = false;
   renderBoard();
   _drExpandActive = false;
+  document.body.classList.remove('expand-active');
   _drUpdatePassiveBar();
 }
 
@@ -6637,49 +6647,20 @@ function renderBoard() {
     if(!cell) continue;
 
     if(color === OBSTACLE_COLOR) {
-      // Obstacle block — yellow hazard stripes
       cell.className = 'cell filled obstacle';
-      cell.style.background = 'repeating-linear-gradient(-45deg,#ffd60a 0px,#ffd60a 4px,#1a1200 4px,#1a1200 8px)';
-      cell.style.boxShadow = '0 0 8px rgba(255,214,10,0.5), inset 0 0 4px rgba(0,0,0,0.4)';
-      cell.style.border = '1.5px solid #ffd60a';
-      cell.style.backdropFilter = '';
-      cell.style.webkitBackdropFilter = '';
-      cell.style.borderRadius = '3px';
-      cell.style.display = '';
-      cell.style.alignItems = '';
-      cell.style.justifyContent = '';
-      cell.style.fontSize = '';
-      cell.style.lineHeight = '';
+      cell.style.cssText = 'background:repeating-linear-gradient(-45deg,#ffd60a 0px,#ffd60a 4px,#1a1200 4px,#1a1200 8px);box-shadow:0 0 8px rgba(255,214,10,0.5);border:1.5px solid #ffd60a;border-radius:3px';
+      cell.textContent = '';
     } else if(color === JAIL_COLOR) {
-      // Jail block — black and gray stripes
       cell.className = 'cell filled jail';
-      cell.style.background = 'repeating-linear-gradient(-45deg,#333 0px,#333 4px,#111 4px,#111 8px)';
-      cell.style.boxShadow = '0 0 4px rgba(100,100,100,0.4), inset 0 0 4px rgba(0,0,0,0.6)';
-      cell.style.border = '1.5px solid #555';
-      cell.style.backdropFilter = '';
-      cell.style.webkitBackdropFilter = '';
-      cell.style.borderRadius = '3px';
-      cell.style.display = '';
-      cell.style.alignItems = '';
-      cell.style.justifyContent = '';
-      cell.style.fontSize = '';
-      cell.style.lineHeight = '';
+      cell.style.cssText = 'background:repeating-linear-gradient(-45deg,#333 0px,#333 4px,#111 4px,#111 8px);box-shadow:0 0 4px rgba(100,100,100,0.4);border:1.5px solid #555;border-radius:3px';
       cell.textContent = '';
     } else if(color) {
       cell.className = 'cell filled';
-      cell.style.background = color;
+      const glow = _drExpandActive ? '' : `0 0 6px ${color},`; // skip glow in expand mode for perf
       if(isGlass) {
-        cell.style.backdropFilter = 'blur(12px)';
-        cell.style.webkitBackdropFilter = 'blur(12px)';
-        cell.style.border = '1px solid rgba(255,255,255,0.7)';
-        cell.style.boxShadow = `0 4px 16px ${color}, inset 0 1px 0 rgba(255,255,255,0.8), inset 0 -1px 0 rgba(0,0,0,0.05)`;
-        cell.style.borderRadius = '6px';
+        cell.style.cssText = `background:${color};backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,0.7);box-shadow:0 4px 16px ${color};border-radius:6px`;
       } else {
-        cell.style.backdropFilter = '';
-        cell.style.webkitBackdropFilter = '';
-        cell.style.border = '';
-        cell.style.boxShadow = `0 0 6px ${color}, inset 0 0 3px rgba(255,255,255,0.1)`;
-        cell.style.borderRadius = '';
+        cell.style.cssText = `background:${color};box-shadow:${glow}inset 0 0 3px rgba(255,255,255,0.1)`;
       }
       const em = getEmojiForColor(color);
       if(em) {
@@ -6690,27 +6671,12 @@ function renderBoard() {
         cell.style.lineHeight = '1';
         cell.textContent = em;
       } else {
-        cell.style.display = '';
-        cell.style.alignItems = '';
-        cell.style.justifyContent = '';
-        cell.style.fontSize = '';
-        cell.style.lineHeight = '';
         cell.textContent = '';
       }
     } else {
       // Cell was cleared
       cell.className = 'cell';
-      cell.style.background = '';
-      cell.style.boxShadow = '';
-      cell.style.border = '';
-      cell.style.backdropFilter = '';
-      cell.style.webkitBackdropFilter = '';
-      cell.style.borderRadius = '';
-      cell.style.display = '';
-      cell.style.alignItems = '';
-      cell.style.justifyContent = '';
-      cell.style.fontSize = '';
-      cell.style.lineHeight = '';
+      cell.style.cssText = '';
       cell.textContent = '';
     }
     if(_prevBoard && _prevBoard[r]) _prevBoard[r][c] = color;
@@ -7017,15 +6983,15 @@ function refillPieces() {
         if(p && PIECES_T5.includes(p.shape)) acc.push(i);
         return acc;
       }, []);
-      // If more than 1 T5, replace extras with regular rngPiece (non-T5)
+      // If more than 1 T5, replace extras with non-T5 pieces
       while(t5Indices.length > 1) {
-        const idx = t5Indices.pop(); // keep first, replace rest
-        let replacement, tries = 0;
-        do {
-          replacement = rngPiece();
-          tries++;
-        } while(PIECES_T5.includes(replacement.shape) && tries < 15);
-        pieces[idx] = replacement;
+        const idx = t5Indices.pop();
+        // Generate from T1-T3 pool only to guarantee no T5
+        const safePool = [...PIECES_T1, ...PIECES_T2, ...PIECES_T3];
+        const safeShape = safePool[Math.floor(Math.random() * safePool.length)];
+        const theme = THEMES.find(t => t.id === activeTheme) || THEMES[0];
+        const color = theme.colors[Math.floor(Math.random() * theme.colors.length)];
+        pieces[idx] = { shape: safeShape, color, hex: colorHex[color] || color || '#0af5ff' };
       }
     }
     if(consecutiveClearCount >= 3) {
@@ -9062,10 +9028,11 @@ function applyGravity() {
     // Pack movable cells toward the bottom, skipping jail-occupied rows
     const openRows = [];
     for(let r = ROWS - 1; r >= 0; r--) if(!jailRows.has(r)) openRows.push(r);
-    // Fill from the bottom of open rows
-    const startIdx = openRows.length - movable.length;
+    // Assign blocks to bottom-most open rows (openRows[0] is the lowest)
+    // Reverse movable so bottom blocks get bottom slots
+    movable.reverse();
     movable.forEach((block, i) => {
-      const toR = openRows[startIdx + i];
+      const toR = openRows[i];
       if(block.r !== toR) moves.push({ fromR: block.r, toR, c, color: block.color });
     });
   }
