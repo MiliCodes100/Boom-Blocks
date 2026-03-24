@@ -9263,59 +9263,120 @@ function applyMagnet() {
 function applyNuke() {
   _powerAnimating = true;
 
-  // Screen flash — bright white
-  flashScreen('rgba(255,255,255,0.6)');
-  flashPower('#ff0000');
-  sfxBombExplode();
-  haptic([80, 30, 80, 30, 150]);
-  shakeBoard(5);
-
-  // Massive particle burst from center
-  const cx = window.innerWidth / 2, cy = window.innerHeight / 2;
-  spawnParticles(cx, cy, '#ff0000', 20);
-  spawnParticles(cx, cy, '#ff6600', 16);
-  spawnParticles(cx, cy, '#ffd60a', 14);
-  spawnParticles(cx, cy, '#ffffff', 10);
-
-  // Animate every filled cell exploding
+  const boardEl = $id('board');
+  if(!boardEl) { _powerAnimating = false; return; }
+  const boardRect = boardEl.getBoundingClientRect();
   const cells = _cellCache.length ? _cellCache : [];
-  for(let r = 0; r < ROWS; r++) {
-    for(let c = 0; c < COLS; c++) {
-      if(board[r][c]) {
-        const cell = cells[r * COLS + c];
-        const color = board[r][c] === OBSTACLE_COLOR ? '#888' : board[r][c] === JAIL_COLOR ? '#555' : board[r][c];
-        if(cell) {
-          const delay = (r + c) * 25;
-          setTimeout(() => {
-            cell.classList.add('clearing');
-            const rect = cell.getBoundingClientRect();
-            spawnParticles(rect.left + rect.width/2, rect.top + rect.height/2, color, 4);
-          }, delay);
-        }
-      }
-    }
-  }
 
-  // Second flash after stagger completes
-  setTimeout(() => {
-    flashScreen('rgba(255,0,0,0.3)');
-    haptic([40, 20, 60]);
-  }, ROWS * COLS * 25 / 2);
+  // Board center
+  const centerR = (ROWS - 1) / 2;
+  const centerC = (COLS - 1) / 2;
+  const maxDist = Math.sqrt(centerR * centerR + centerC * centerC);
+  const boardCx = boardRect.left + boardRect.width / 2;
+  const boardCy = boardRect.top + boardRect.height / 2;
 
-  // Clear EVERYTHING — obstacles, jail, all blocks
-  const totalDelay = (ROWS + COLS) * 25 + 200;
+  // Phase 1: Flare — bright orb grows at center of board
+  const flare = document.createElement('div');
+  flare.style.cssText = `
+    position:fixed;
+    left:${boardCx}px; top:${boardCy}px;
+    width:0; height:0;
+    border-radius:50%;
+    background:radial-gradient(circle, #fff 0%, #ffd60a 25%, #ff6600 50%, #ff0000 75%, transparent 100%);
+    transform:translate(-50%,-50%);
+    pointer-events:none;
+    z-index:9999;
+    transition:width 0.5s cubic-bezier(0.22,1,0.36,1), height 0.5s cubic-bezier(0.22,1,0.36,1), opacity 0.3s ease;
+    box-shadow:0 0 60px #ff6600, 0 0 120px #ff0000;
+  `;
+  document.body.appendChild(flare);
+
+  // Grow the flare orb
+  requestAnimationFrame(() => {
+    flare.style.width = '80px';
+    flare.style.height = '80px';
+  });
+
+  sfxPowerActivate('airstrike');
+  haptic([30, 15, 30]);
+
+  // Phase 2: Orb expands into shockwave after 500ms
   setTimeout(() => {
+    // Expand orb to cover the whole board
+    const maxSize = Math.max(boardRect.width, boardRect.height) * 2.5;
+    flare.style.transition = 'width 0.6s ease-out, height 0.6s ease-out, opacity 0.4s ease 0.3s';
+    flare.style.width = maxSize + 'px';
+    flare.style.height = maxSize + 'px';
+    flare.style.opacity = '0';
+
+    // Screen flash
+    flashScreen('rgba(255,255,255,0.8)');
+    sfxBombExplode();
+    haptic([100, 30, 100, 30, 200]);
+    shakeBoard(5);
+
+    // Massive center particle burst
+    spawnParticles(boardCx, boardCy, '#ffffff', 15);
+    spawnParticles(boardCx, boardCy, '#ffd60a', 12);
+    spawnParticles(boardCx, boardCy, '#ff6600', 10);
+    spawnParticles(boardCx, boardCy, '#ff0000', 8);
+
+    // Phase 3: Cells explode outward from center — distance-based delay
     for(let r = 0; r < ROWS; r++) {
       for(let c = 0; c < COLS; c++) {
-        board[r][c] = null;
+        const cell = cells[r * COLS + c];
+        if(!cell) continue;
+        const dist = Math.sqrt((r - centerR) ** 2 + (c - centerC) ** 2);
+        const delay = Math.floor((dist / maxDist) * 400);
+        const color = board[r][c] ? (board[r][c] === OBSTACLE_COLOR ? '#888' : board[r][c] === JAIL_COLOR ? '#555' : board[r][c]) : null;
+
+        setTimeout(() => {
+          // Every cell gets the shockwave hit — even empty ones get a flash
+          cell.style.transition = 'transform 0.15s ease-out, filter 0.15s ease-out';
+          cell.style.transform = 'scale(1.3)';
+          cell.style.filter = 'brightness(3)';
+
+          setTimeout(() => {
+            cell.style.transform = 'scale(1)';
+            cell.style.filter = '';
+          }, 150);
+
+          // Filled cells explode with particles
+          if(color) {
+            cell.classList.add('clearing');
+            const rect = cell.getBoundingClientRect();
+            spawnParticles(rect.left + rect.width/2, rect.top + rect.height/2, color, 5);
+          }
+        }, delay);
       }
     }
-    renderBoard();
-    showToast('☢️ TACTICAL NUKE — TOTAL WIPEOUT!');
-    refillPieces(); renderTray();
-    _powerAnimating = false;
-    setTimeout(() => checkGameOver(), 150);
-  }, totalDelay);
+
+    // Second shake as wave reaches edges
+    setTimeout(() => {
+      shakeBoard(3);
+      haptic([50, 20, 80]);
+      flashScreen('rgba(255,0,0,0.2)');
+    }, 350);
+
+    // Clean up flare element
+    setTimeout(() => flare.remove(), 1000);
+
+    // Phase 4: Clear everything after wave finishes
+    setTimeout(() => {
+      for(let r = 0; r < ROWS; r++) {
+        if(!board[r]) continue;
+        for(let c = 0; c < COLS; c++) {
+          board[r][c] = null;
+        }
+      }
+      renderBoard();
+      showToast('☢️ TACTICAL NUKE — TOTAL WIPEOUT!');
+      refillPieces(); renderTray();
+      _powerAnimating = false;
+      setTimeout(() => checkGameOver(), 150);
+    }, 550);
+
+  }, 500);
 }
 
 
