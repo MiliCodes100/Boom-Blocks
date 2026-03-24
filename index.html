@@ -5222,6 +5222,7 @@ let _drTransitioning = false;
 let _drRescueTimer = null; // timer waiting for player to use a power to rescue themselves
 let _drLuckyStacks = 0;    // each stack = +2% smart piece pick chance
 let _drExpandActive = false; // true during expand boss floors
+let _drNukeObtained = false; // true once nuke is picked this run — can only get it once
 let _powerAnimating = false; // true while a power-up animation is in progress — blocks checkGameOver
 var _gameOverFiring = false; // true once death sequence starts — prevents duplicate triggers (var avoids re-declaration errors)
 
@@ -5245,6 +5246,7 @@ function startDaily() {
   _drTurboActive = false;
   _drOverclockActive = false;
   _drLuckyStacks = 0;
+  _drNukeObtained = false;
   if(_drExpandActive) _drShrinkBoard();
   _drExpandActive = false;
   _drClearJailCells();
@@ -5402,8 +5404,10 @@ function _drSpawnJailLine() {
 }
 
 function _drClearJailCells() {
+  if(!board || !board.length) return;
   let cleared = false;
   for(let r = 0; r < ROWS; r++) {
+    if(!board[r]) continue;
     for(let c = 0; c < COLS; c++) {
       if(board[r][c] === JAIL_COLOR) {
         board[r][c] = null;
@@ -5675,6 +5679,7 @@ const POWER_DESCS = {
   magnet:    'Pulls all blocks\nup to the top',
   overclock: 'Next floor score\ncounts as double XP\n★ RARE ★',
   lucky:     '+2% better pieces\nfor the whole run\n(STACKS!)',
+  nuke:      'Clears EVERY block\nfrom the board\n★★ ULTRA RARE ★★',
 };
 
 function _drShowCardPicker(onChosen) {
@@ -5687,7 +5692,8 @@ function _drShowCardPicker(onChosen) {
     if(t === 'shield')    return !_drShieldActive && Math.random() < 0.12;
     if(t === 'turbo')     return !_drTurboActive && Math.random() < 0.15;
     if(t === 'overclock') return !alreadyUnlocked.includes('overclock') && !_drOverclockActive && Math.random() < 0.18;
-    if(t === 'lucky')     return Math.random() < Math.max(0.4, 0.85 - _drLuckyStacks * 0.05); // common early, tapers with stacks
+    if(t === 'lucky')     return Math.random() < Math.max(0.4, 0.85 - _drLuckyStacks * 0.05);
+    if(t === 'nuke')      return !_drNukeObtained; // TEST MODE: always show nuke
     return true;
   });
 
@@ -5698,6 +5704,11 @@ function _drShowCardPicker(onChosen) {
   // Pick 2 distinct options
   const shuffled = [...candidates].sort(() => Math.random() - 0.5);
   const options = shuffled.slice(0, 2);
+
+  // TEST MODE: force nuke as first option
+  if(!_drNukeObtained && !options.includes('nuke')) {
+    options[0] = 'nuke';
+  }
 
   // Ensure we always have 2 options
   while(options.length < 2) {
@@ -5722,13 +5733,14 @@ function _drShowCardPicker(onChosen) {
     const isOverclock = type === 'overclock';
     const isTurbo = type === 'turbo';
     const isLucky = type === 'lucky';
+    const isNuke = type === 'nuke';
     const isInstant = isShield || isOverclock || isTurbo || isLucky;
     const card = document.createElement('div');
     card.className = 'dr-power-card';
     card.style.setProperty('--pu-color', p.color);
     card.style.setProperty('--pu-glow', p.glow);
-    const chargeColor = isShield ? 'color:#fff' : isOverclock ? 'color:#ffd60a' : isTurbo ? 'color:#ff9f0a' : isLucky ? 'color:#30d158' : '';
-    const chargeLabel = isLucky ? (_drLuckyStacks > 0 ? `🍀 STACK ${_drLuckyStacks + 1} (+${(_drLuckyStacks + 1) * 2}%)` : '🍀 +2% BETTER PIECES') : isInstant ? '⚡ ACTIVATES INSTANTLY' : isOwned ? '+1 CHARGE' : 'NEW UNLOCK';
+    const chargeColor = isShield ? 'color:#fff' : isOverclock ? 'color:#ffd60a' : isTurbo ? 'color:#ff9f0a' : isLucky ? 'color:#30d158' : isNuke ? 'color:#ff0000' : '';
+    const chargeLabel = isNuke ? '☢️ ULTRA RARE — 1 PER RUN' : isLucky ? (_drLuckyStacks > 0 ? `🍀 STACK ${_drLuckyStacks + 1} (+${(_drLuckyStacks + 1) * 2}%)` : '🍀 +2% BETTER PIECES') : isInstant ? '⚡ ACTIVATES INSTANTLY' : isOwned ? '+1 CHARGE' : 'NEW UNLOCK';
     card.innerHTML = `
       <div class="dr-pc-icon">${p.icon}</div>
       <div class="dr-pc-name" style="color:${p.color}">${p.name}</div>
@@ -5778,6 +5790,7 @@ function _drShowCardPicker(onChosen) {
           const totalBonus = _drLuckyStacks * 2;
           showToast(`🍀 LUCKY +${totalBonus}%! Better pieces!`);
         } else {
+          if(type === 'nuke') _drNukeObtained = true;
           _drApplyPowerChoice(type);
         }
         onChosen();
@@ -5791,11 +5804,13 @@ function _drApplyPowerChoice(type) {
   let targetSlot = _drUnlockedPowers.indexOf(null); // first empty slot
 
   if(targetSlot === -1) {
-    // All slots full — replace the one that's been there the longest
-    let oldestAge = Infinity, oldestSlot = 0;
+    // All slots full — replace the one that's been there the longest (skip nuke — protected)
+    let oldestAge = Infinity, oldestSlot = -1;
     _drSlotAge.forEach((age, i) => {
+      if(_drUnlockedPowers[i] === 'nuke') return; // nuke is protected
       if(age < oldestAge) { oldestAge = age; oldestSlot = i; }
     });
+    if(oldestSlot === -1) oldestSlot = 0; // fallback if all slots are nuke somehow
     targetSlot = oldestSlot;
     // Remove the old power's inventory
     const evicted = _drUnlockedPowers[targetSlot];
@@ -5892,7 +5907,7 @@ function _drFinishRun(cleared) {
   });
   const passiveBar = $id('dr-passive-bar');
   if(passiveBar) { passiveBar.style.display = 'none'; passiveBar.innerHTML = ''; }
-  powerInventory = { laser:0, shatter:0, wildfire:0, bomb:0, sniper:0, gravity:0, shield:0, turbo:0, airstrike:0, beam:0, magnet:0, overclock:0, lucky:0 };
+  powerInventory = { laser:0, shatter:0, wildfire:0, bomb:0, sniper:0, gravity:0, shield:0, turbo:0, airstrike:0, beam:0, magnet:0, overclock:0, lucky:0, nuke:0 };
   _drTurboActive = false;
   _drOverclockActive = false;
   // Shrink board back if expanded
@@ -6345,6 +6360,7 @@ function _updateFillCache() {
   _rowBlocked = new Array(ROWS).fill(false);
   _colBlocked = new Array(COLS).fill(false);
   for(let r = 0; r < ROWS; r++) {
+    if(!board[r]) { _rowFills[r] = 0; continue; }
     let count = 0;
     for(let c = 0; c < COLS; c++) {
       if(board[r][c]) { count++; if(board[r][c] === OBSTACLE_COLOR || board[r][c] === JAIL_COLOR) _rowBlocked[r] = true; }
@@ -6479,8 +6495,9 @@ function renderBoard() {
   const cells = (_cellCache.length ? _cellCache : el.querySelectorAll('.cell'));
 
   for(let r = 0; r < ROWS; r++) for(let c = 0; c < COLS; c++) {
+    if(!board[r]) continue;
     const color = board[r][c];
-    const prev  = _prevBoard[r][c];
+    const prev  = _prevBoard && _prevBoard[r] ? _prevBoard[r][c] : null;
     if(color === prev) continue; // nothing changed — skip entirely
 
     const cell = cells[r * COLS + c];
@@ -6563,7 +6580,7 @@ function renderBoard() {
       cell.style.lineHeight = '';
       cell.textContent = '';
     }
-    _prevBoard[r][c] = color;
+    if(_prevBoard && _prevBoard[r]) _prevBoard[r][c] = color;
   }
 
   if(!cellSize) {
@@ -6937,8 +6954,8 @@ function showStreakSaverHint() {
 // ════════════════════════════════════
 function clearLines() {
   const rowsToClear=[], colsToClear=[];
-  for(let r=0;r<ROWS;r++) if(board[r].every(c=>c) && !board[r].some(c=>c===OBSTACLE_COLOR||c===JAIL_COLOR)) rowsToClear.push(r);
-  for(let c=0;c<COLS;c++) if(board.every(r=>r[c]) && !board.some(r=>r[c]===OBSTACLE_COLOR||r[c]===JAIL_COLOR)) colsToClear.push(c);
+  for(let r=0;r<ROWS;r++) if(board[r] && board[r].every(c=>c) && !board[r].some(c=>c===OBSTACLE_COLOR||c===JAIL_COLOR)) rowsToClear.push(r);
+  for(let c=0;c<COLS;c++) if(board.every(r=>r && r[c]) && !board.some(r=>r && (r[c]===OBSTACLE_COLOR||r[c]===JAIL_COLOR))) colsToClear.push(c);
   if(!rowsToClear.length&&!colsToClear.length){
     consecutiveClearCount=0;
     _lastPlacedWasStreakSaver = false; // no lines cleared — reset flag
@@ -8184,9 +8201,10 @@ const POWERS = {
   magnet:    { color:'#bf5af2', glow:'rgba(191,90,242,0.4)',  icon:'🧲', name:'MAGNET',        rogueLikeOnly:true },
   overclock: { color:'#ffd60a', glow:'rgba(255,214,10,0.5)',  icon:'⏩', name:'OVERCLOCK',     rogueLikeOnly:true, rare:true },
   lucky:     { color:'#30d158', glow:'rgba(48,209,88,0.5)',  icon:'🍀', name:'LUCKY',         rogueLikeOnly:true },
+  nuke:      { color:'#ff0000', glow:'rgba(255,0,0,0.6)',    icon:'☢️', name:'TACTICAL NUKE', rogueLikeOnly:true, rare:true },
 };
 
-let powerInventory = { laser:0, shatter:0, wildfire:0, bomb:0, sniper:0, gravity:0, shield:0, turbo:0, airstrike:0, beam:0, magnet:0, overclock:0, lucky:0 };
+let powerInventory = { laser:0, shatter:0, wildfire:0, bomb:0, sniper:0, gravity:0, shield:0, turbo:0, airstrike:0, beam:0, magnet:0, overclock:0, lucky:0, nuke:0 };
 let _movesSincePowerup = 0;   // moves placed since player first got a powerup
 let _powerRemindShown = false; // only show once per game
 let activePower = null; // currently selected power waiting for board tap
@@ -8202,7 +8220,7 @@ let _drSlotAgeCounter = 0; // increments each time a slot is filled
 const _drPowerSlots = ['laser', 'shatter', 'wildfire', 'bomb']; // 4 slots — any power type can go in any slot
 
 function _drLockAllPowers() {
-  powerInventory = { laser:0, shatter:0, wildfire:0, bomb:0, sniper:0, gravity:0, shield:0, turbo:0, airstrike:0, beam:0, magnet:0, overclock:0, lucky:0 };
+  powerInventory = { laser:0, shatter:0, wildfire:0, bomb:0, sniper:0, gravity:0, shield:0, turbo:0, airstrike:0, beam:0, magnet:0, overclock:0, lucky:0, nuke:0 };
   activePower = null;
   _drUnlockedPowers = [null, null, null, null];
   _drSlotAge = [0, 0, 0, 0];
@@ -8492,6 +8510,10 @@ function activatePower(type) {
     // Lucky is passive — tapping just shows info
     cancelPower();
     showToast(`🍀 LUCKY +${_drLuckyStacks * 2}% — better pieces all run!`);
+  } else if(type === 'nuke') {
+    usePower('nuke');
+    cancelPower();
+    applyNuke();
   }
 }
 
@@ -9237,6 +9259,65 @@ function applyMagnet() {
 }
 
 
+// ── TACTICAL NUKE ──
+function applyNuke() {
+  _powerAnimating = true;
+
+  // Screen flash — bright white
+  flashScreen('rgba(255,255,255,0.6)');
+  flashPower('#ff0000');
+  sfxBombExplode();
+  haptic([80, 30, 80, 30, 150]);
+  shakeBoard(5);
+
+  // Massive particle burst from center
+  const cx = window.innerWidth / 2, cy = window.innerHeight / 2;
+  spawnParticles(cx, cy, '#ff0000', 20);
+  spawnParticles(cx, cy, '#ff6600', 16);
+  spawnParticles(cx, cy, '#ffd60a', 14);
+  spawnParticles(cx, cy, '#ffffff', 10);
+
+  // Animate every filled cell exploding
+  const cells = _cellCache.length ? _cellCache : [];
+  for(let r = 0; r < ROWS; r++) {
+    for(let c = 0; c < COLS; c++) {
+      if(board[r][c]) {
+        const cell = cells[r * COLS + c];
+        const color = board[r][c] === OBSTACLE_COLOR ? '#888' : board[r][c] === JAIL_COLOR ? '#555' : board[r][c];
+        if(cell) {
+          const delay = (r + c) * 25;
+          setTimeout(() => {
+            cell.classList.add('clearing');
+            const rect = cell.getBoundingClientRect();
+            spawnParticles(rect.left + rect.width/2, rect.top + rect.height/2, color, 4);
+          }, delay);
+        }
+      }
+    }
+  }
+
+  // Second flash after stagger completes
+  setTimeout(() => {
+    flashScreen('rgba(255,0,0,0.3)');
+    haptic([40, 20, 60]);
+  }, ROWS * COLS * 25 / 2);
+
+  // Clear EVERYTHING — obstacles, jail, all blocks
+  const totalDelay = (ROWS + COLS) * 25 + 200;
+  setTimeout(() => {
+    for(let r = 0; r < ROWS; r++) {
+      for(let c = 0; c < COLS; c++) {
+        board[r][c] = null;
+      }
+    }
+    renderBoard();
+    showToast('☢️ TACTICAL NUKE — TOTAL WIPEOUT!');
+    refillPieces(); renderTray();
+    _powerAnimating = false;
+    setTimeout(() => checkGameOver(), 150);
+  }, totalDelay);
+}
+
 
 function usePower(type) {
   _markPowerUsed(type);
@@ -9270,7 +9351,7 @@ function flashPower(color) {
 }
 
 function resetPowers() {
-  powerInventory = { laser:0, shatter:0, wildfire:0, bomb:0, sniper:0, gravity:0, shield:0, turbo:0, airstrike:0, beam:0, magnet:0, overclock:0, lucky:0 };
+  powerInventory = { laser:0, shatter:0, wildfire:0, bomb:0, sniper:0, gravity:0, shield:0, turbo:0, airstrike:0, beam:0, magnet:0, overclock:0, lucky:0, nuke:0 };
   activePower = null;
   _movesSincePowerup = 0;
   _powerRemindShown = false;
@@ -10128,6 +10209,7 @@ const POWER_DEX = [
   { id:'airstrike', cat:'active',  catLabel:'ACTIVE',   catColor:'#0af5ff' },
   { id:'beam',      cat:'active',  catLabel:'ACTIVE',   catColor:'#0af5ff' },
   { id:'magnet',    cat:'active',  catLabel:'ACTIVE',   catColor:'#0af5ff' },
+  { id:'nuke',      cat:'active',  catLabel:'ACTIVE',   catColor:'#0af5ff' },
   { id:'shield',    cat:'passive', catLabel:'PASSIVE',  catColor:'#ffd60a' },
   { id:'turbo',     cat:'passive', catLabel:'PASSIVE',  catColor:'#ffd60a' },
   { id:'overclock', cat:'passive', catLabel:'PASSIVE',  catColor:'#ffd60a' },
