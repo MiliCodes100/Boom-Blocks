@@ -3261,22 +3261,19 @@ body.theme-onyx #board { animation: onyxPulse 5s ease-in-out infinite; }
 
 /* ══ DAILY RUN / ROGUELIKE ══ */
 #daily-run-hud {
-  position: fixed;
-  top: 0; left: 50%;
-  transform: translateX(-50%);
   width: 100%; max-width: 440px;
-  z-index: 500;
-  pointer-events: none;
-  padding: 4px 12px 0;
+  padding: 0 12px;
+  flex-shrink: 0;
 }
 .dr-floor-bar {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 4px 8px;
-  background: rgba(10,10,24,0.85);
-  border-bottom: 1px solid rgba(255,255,255,0.06);
-  backdrop-filter: blur(8px);
+  padding: 5px 10px;
+  background: var(--surface);
+  border: 1px solid rgba(255,214,10,0.15);
+  border-radius: 6px;
+  margin-bottom: 2px;
 }
 .dr-floor-label {
   font-family: 'Press Start 2P', monospace;
@@ -3541,16 +3538,54 @@ body.theme-onyx #board { animation: onyxPulse 5s ease-in-out infinite; }
 
 /* Airstrike targeting reticle */
 .airstrike-reticle {
-  position: absolute;
+  position: fixed;
   border-radius: 50%;
   pointer-events: none;
-  z-index: 100;
+  z-index: 9990;
   border: 2px solid #ff2d55;
-  animation: airstrikeTarget 0.4s ease-in-out infinite alternate;
+  box-shadow: 0 0 15px rgba(255,45,85,0.6), inset 0 0 15px rgba(255,45,85,0.15);
+  animation: airstrikeTarget 0.3s ease-in-out infinite alternate;
+  overflow: visible;
+}
+.airstrike-reticle::before {
+  content:'';
+  position:absolute;
+  inset:-4px;
+  border:1px solid rgba(255,45,85,0.4);
+  border-radius:50%;
+  animation: airstrikeRingSpin 1.5s linear infinite;
+  border-top-color:transparent;
+  border-left-color:transparent;
+}
+.airstrike-reticle::after {
+  content:'';
+  position:absolute;
+  inset:20%;
+  border:1px dashed rgba(255,45,85,0.5);
+  border-radius:50%;
+  animation: airstrikeRingSpin 1s linear infinite reverse;
 }
 @keyframes airstrikeTarget {
-  from { transform: scale(1);    opacity: 0.9; box-shadow: 0 0 8px rgba(255,45,85,0.8); }
-  to   { transform: scale(1.08); opacity: 1;   box-shadow: 0 0 20px rgba(255,45,85,1); }
+  from { transform: scale(1);    opacity: 0.8; box-shadow: 0 0 10px rgba(255,45,85,0.6), inset 0 0 10px rgba(255,45,85,0.1); }
+  to   { transform: scale(1.05); opacity: 1;   box-shadow: 0 0 25px rgba(255,45,85,1), inset 0 0 20px rgba(255,45,85,0.2); }
+}
+@keyframes airstrikeRingSpin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+/* Warning flash that pulses on board cells before impact */
+.airstrike-warn {
+  position: absolute;
+  inset: 0;
+  background: rgba(255,45,85,0.15);
+  border-radius: 3px;
+  animation: airstrikeWarnPulse 0.2s ease-in-out infinite alternate;
+  pointer-events: none;
+}
+@keyframes airstrikeWarnPulse {
+  from { background: rgba(255,45,85,0.08); }
+  to   { background: rgba(255,45,85,0.25); }
 }
 
 /* Airstrike incoming crosshair */
@@ -3571,13 +3606,45 @@ body.theme-onyx #board { animation: onyxPulse 5s ease-in-out infinite; }
   border-radius: 50%;
   pointer-events: none;
   z-index: 9998;
-  background: radial-gradient(circle, #fff 0%, #ffd60a 30%, #ff6b35 60%, transparent 100%);
-  animation: airstrikeExplode 0.5s ease-out forwards;
+  background: radial-gradient(circle, #fff 0%, #ffd60a 20%, #ff6b35 45%, #ff2d55 70%, transparent 100%);
+  animation: airstrikeExplode 0.6s ease-out forwards;
 }
 @keyframes airstrikeExplode {
-  0%   { transform: scale(0);   opacity: 1; }
-  40%  { transform: scale(1.5); opacity: 0.9; }
-  100% { transform: scale(3);   opacity: 0; }
+  0%   { transform: scale(0);   opacity: 1; filter: brightness(3); }
+  25%  { transform: scale(1.2); opacity: 1; filter: brightness(2); }
+  50%  { transform: scale(2);   opacity: 0.8; filter: brightness(1.5); }
+  100% { transform: scale(3.5); opacity: 0; filter: brightness(1); }
+}
+
+/* Shockwave ring that expands from impact */
+.airstrike-shockwave {
+  position: fixed;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 9997;
+  border: 2px solid rgba(255,214,10,0.8);
+  background: transparent;
+  animation: airstrikeShockwave 0.5s ease-out forwards;
+}
+@keyframes airstrikeShockwave {
+  0%   { transform: scale(0.3); opacity: 1; border-width: 3px; }
+  100% { transform: scale(4);   opacity: 0; border-width: 1px; }
+}
+
+/* Smoke trail from above */
+.airstrike-trail {
+  position: fixed;
+  width: 3px;
+  pointer-events: none;
+  z-index: 9996;
+  background: linear-gradient(to bottom, transparent 0%, rgba(255,100,50,0.6) 40%, #ff2d55 100%);
+  border-radius: 2px;
+  animation: airstrikeTrailDrop 0.25s ease-in forwards;
+}
+@keyframes airstrikeTrailDrop {
+  0%   { opacity: 0; transform: scaleY(0); transform-origin: top; }
+  50%  { opacity: 1; transform: scaleY(1); transform-origin: top; }
+  100% { opacity: 0; transform: scaleY(1); transform-origin: top; }
 }
 
 .powerup-btn.dr-locked {
@@ -3710,6 +3777,18 @@ body.theme-onyx #board { animation: onyxPulse 5s ease-in-out infinite; }
     <div class="daily-bar-bg"><div class="daily-bar-fill" id="daily-bar"></div></div>
   </div>
   <div id="yesterday-banner" style="display:none;text-align:center;font-family:'Press Start 2P',monospace;font-size:0.38rem;color:var(--muted);padding:4px 0;letter-spacing:1px"></div>
+
+  <!-- Roguelike HUD (shown during roguelike run) -->
+  <div id="daily-run-hud" style="display:none">
+    <div class="dr-floor-bar">
+      <div class="dr-pip-row" id="dr-pips"></div>
+      <div class="dr-floor-label" id="dr-floor-label">FLOOR 1</div>
+      <div class="dr-progress-wrap">
+        <div class="dr-progress-fill" id="dr-progress-fill" style="width:0%"></div>
+      </div>
+      <div class="dr-goal-label" id="dr-goal-label"></div>
+    </div>
+  </div>
 
   <div class="board-wrap">
     
@@ -3876,19 +3955,6 @@ body.theme-onyx #board { animation: onyxPulse 5s ease-in-out infinite; }
 
 <div id="daily-complete">
 </div>
-
-<!-- Roguelike HUD (shown during roguelike run) -->
-<div id="daily-run-hud" style="display:none">
-  <div class="dr-floor-bar">
-    <div class="dr-pip-row" id="dr-pips"></div>
-    <div class="dr-floor-label" id="dr-floor-label">FLOOR 1</div>
-    <div class="dr-progress-wrap">
-      <div class="dr-progress-fill" id="dr-progress-fill" style="width:0%"></div>
-    </div>
-    <div class="dr-goal-label" id="dr-goal-label"></div>
-  </div>
-</div>
-
 
 
 
@@ -8316,8 +8382,8 @@ function _animateBlockShift(moves, direction, onComplete) {
   }
 
   const clones = [];
-  const COL_STAGGER = 35;  // ms between columns — visible wave effect
-  const BASE_DURATION = 380; // ms base travel time
+  const COL_STAGGER = 20;  // ms between columns — subtle wave effect
+  const BASE_DURATION = 250; // ms base travel time
 
   // Hide ALL filled cells on the board (not just moving ones) so clones fully replace the board view
   const allFilledClones = [];
@@ -8354,7 +8420,7 @@ function _animateBlockShift(moves, direction, onComplete) {
 
     // Distance-based duration — farther = slightly longer, feels more physical
     const distance = Math.abs(toR - fromR);
-    const duration = BASE_DURATION + distance * 30;
+    const duration = BASE_DURATION + distance * 20;
 
     const delay = c * COL_STAGGER;
     const dy = dstRect.top - srcRect.top;
@@ -8367,12 +8433,12 @@ function _animateBlockShift(moves, direction, onComplete) {
         clone.style.transform = `translateY(${dy}px)`;
         // Bounce settle
         setTimeout(() => {
-          clone.style.transition = `transform 120ms cubic-bezier(0.34, 1.56, 0.64, 1)`;
-          clone.style.transform = `translateY(${dy - 3}px) scaleY(1.06)`;
+          clone.style.transition = `transform 80ms cubic-bezier(0.34, 1.56, 0.64, 1)`;
+          clone.style.transform = `translateY(${dy - 2}px) scaleY(1.04)`;
           setTimeout(() => {
-            clone.style.transition = `transform 100ms ease-out`;
+            clone.style.transition = `transform 60ms ease-out`;
             clone.style.transform = `translateY(${dy}px) scaleY(1)`;
-          }, 120);
+          }, 80);
         }, duration);
       } else {
         // Magnet: ease-out with slight overshoot
@@ -8382,8 +8448,8 @@ function _animateBlockShift(moves, direction, onComplete) {
     }, delay);
   });
 
-  const maxDuration = BASE_DURATION + ROWS * 30;
-  const totalWait = COLS * COL_STAGGER + maxDuration + 250;
+  const maxDuration = BASE_DURATION + ROWS * 20;
+  const totalWait = COLS * COL_STAGGER + maxDuration + 160;
   setTimeout(() => {
     // Restore source cells (renderBoard will repaint everything cleanly)
     const boardCells = boardEl.querySelectorAll('.cell');
@@ -8460,7 +8526,7 @@ function applyGravity() {
       renderTray();
       _powerAnimating = false;
       setTimeout(() => checkGameOver(), 150);
-    }, 250);
+    }, 100);
   });
 }
 
@@ -8469,7 +8535,6 @@ function applyGravity() {
 // ── AIRSTRIKE ──
 function applyAirstrike() {
   const STRIKES = 3;
-  const MISS_CHANCE = 0.25; // 25% chance each strike misses (empty area)
   const boardEl = $id('board');
   if(!boardEl) return;
 
@@ -8480,8 +8545,8 @@ function applyAirstrike() {
   // Pick 3 random 2x2 target positions (top-left corner)
   const targets = [];
   for(let i = 0; i < STRIKES; i++) {
-    const r = Math.floor(Math.random() * (ROWS - 1)); // 0 to ROWS-2
-    const c = Math.floor(Math.random() * (COLS - 1)); // 0 to COLS-2
+    const r = Math.floor(Math.random() * (ROWS - 1));
+    const c = Math.floor(Math.random() * (COLS - 1));
     targets.push({ r, c });
   }
 
@@ -8489,14 +8554,16 @@ function applyAirstrike() {
   haptic([10, 5, 10, 5, 10]);
   _powerAnimating = true;
 
-  // Stagger each strike with a targeting reticle then explosion
+  // Stagger each strike: lock-on → warning cells → trail → impact
   targets.forEach(({ r, c }, strikeIdx) => {
-    const cx = boardRect.left + (c + 1) * cw; // center of 2x2
+    const cx = boardRect.left + (c + 1) * cw;
     const cy = boardRect.top  + (r + 1) * ch;
-    const LOCK_DELAY    = strikeIdx * 500;       // lock on one-by-one
-    const IMPACT_DELAY  = LOCK_DELAY + 600;      // impact after lock-on
+    const LOCK_DELAY   = strikeIdx * 450;
+    const WARN_DELAY   = LOCK_DELAY + 250;
+    const TRAIL_DELAY  = LOCK_DELAY + 450;
+    const IMPACT_DELAY = LOCK_DELAY + 550;
 
-    // 1. Show targeting reticle
+    // 1. Show targeting reticle with spinning rings and crosshairs
     setTimeout(() => {
       const reticle = document.createElement('div');
       reticle.className = 'airstrike-reticle';
@@ -8505,31 +8572,75 @@ function applyAirstrike() {
         width:${cw * 2}px; height:${ch * 2}px;
         position:fixed;
       `;
-      document.body.appendChild(reticle);
 
-      // Crosshair lines
+      // Crosshair lines — thicker, with glow
       ['h','v'].forEach(dir => {
         const line = document.createElement('div');
         line.style.cssText = `
-          position:absolute; background:#ff2d55; opacity:0.7;
+          position:absolute; background:#ff2d55; opacity:0.8;
+          box-shadow: 0 0 6px rgba(255,45,85,0.8);
           ${dir==='h'
-            ? `top:50%; left:0; width:100%; height:1px; transform:translateY(-50%)`
-            : `left:50%; top:0; height:100%; width:1px; transform:translateX(-50%)`
+            ? 'top:50%; left:-15%; width:130%; height:2px; transform:translateY(-50%)'
+            : 'left:50%; top:-15%; height:130%; width:2px; transform:translateX(-50%)'
           }
         `;
         reticle.appendChild(line);
       });
 
-      // 2. Remove reticle and fire explosion
-      setTimeout(() => {
-        reticle.remove();
-        _airstrikeImpact(r, c, cx, cy, cw, ch, boardEl);
-      }, 580);
+      // Center dot
+      const dot = document.createElement('div');
+      dot.style.cssText = `
+        position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+        width:6px; height:6px; background:#ff2d55; border-radius:50%;
+        box-shadow: 0 0 10px #ff2d55, 0 0 20px rgba(255,45,85,0.5);
+      `;
+      reticle.appendChild(dot);
+
+      document.body.appendChild(reticle);
+
+      // Store ref for cleanup
+      reticle._cleanup = () => reticle.remove();
+      setTimeout(reticle._cleanup, 600);
     }, LOCK_DELAY);
+
+    // 2. Warning flash on target cells
+    setTimeout(() => {
+      const cells = boardEl.querySelectorAll('.cell');
+      [[r,c],[r,c+1],[r+1,c],[r+1,c+1]].forEach(([br, bc]) => {
+        if(br < 0 || br >= ROWS || bc < 0 || bc >= COLS) return;
+        const cell = cells[br * COLS + bc];
+        if(!cell) return;
+        const warn = document.createElement('div');
+        warn.className = 'airstrike-warn';
+        cell.appendChild(warn);
+        setTimeout(() => warn.remove(), 350);
+      });
+      // Quick warning haptic
+      haptic([8, 5, 8]);
+    }, WARN_DELAY);
+
+    // 3. Missile trail dropping from above
+    setTimeout(() => {
+      const trail = document.createElement('div');
+      trail.className = 'airstrike-trail';
+      const trailHeight = cy - boardRect.top + 40;
+      trail.style.cssText += `
+        left:${cx - 1.5}px;
+        top:${boardRect.top - 40}px;
+        height:${trailHeight}px;
+      `;
+      document.body.appendChild(trail);
+      setTimeout(() => trail.remove(), 300);
+    }, TRAIL_DELAY);
+
+    // 4. Impact — explosion + shockwave + destroy cells
+    setTimeout(() => {
+      _airstrikeImpact(r, c, cx, cy, cw, ch, boardEl);
+    }, IMPACT_DELAY);
   });
 
   // After all strikes land — check for cleared lines
-  const totalTime = (STRIKES - 1) * 500 + 600 + 400;
+  const totalTime = (STRIKES - 1) * 450 + 550 + 400;
   setTimeout(() => {
     shakeBoard(3);
     renderBoard();
@@ -8541,25 +8652,40 @@ function applyAirstrike() {
 }
 
 function _airstrikeImpact(r, c, cx, cy, cw, ch, boardEl) {
-  // Explosion flash
+  // Explosion flash — bigger and brighter
   const flash = document.createElement('div');
   flash.className = 'airstrike-flash';
-  const size = Math.max(cw, ch) * 3;
-  flash.style.cssText = `
+  const size = Math.max(cw, ch) * 3.5;
+  flash.style.cssText += `
     left:${cx - size/2}px; top:${cy - size/2}px;
     width:${size}px; height:${size}px;
   `;
   document.body.appendChild(flash);
-  setTimeout(() => flash.remove(), 500);
+  setTimeout(() => flash.remove(), 650);
 
-  // Sound + haptic
+  // Shockwave ring
+  const wave = document.createElement('div');
+  wave.className = 'airstrike-shockwave';
+  const waveSize = Math.max(cw, ch) * 2;
+  wave.style.cssText += `
+    left:${cx - waveSize/2}px; top:${cy - waveSize/2}px;
+    width:${waveSize}px; height:${waveSize}px;
+  `;
+  document.body.appendChild(wave);
+  setTimeout(() => wave.remove(), 550);
+
+  // Sound + heavy haptic
   sfxAirstrike();
-  haptic([30, 10, 50]);
+  haptic([50, 15, 80]);
 
-  // Particles burst
-  spawnParticles(cx, cy, '#ff2d55', 10);
-  spawnParticles(cx, cy, '#ffd60a', 8);
-  spawnParticles(cx, cy, '#ff6b35', 6);
+  // Big particle burst — more colors, more volume
+  spawnParticles(cx, cy, '#ffffff', 6);
+  spawnParticles(cx, cy, '#ff2d55', 14);
+  spawnParticles(cx, cy, '#ffd60a', 10);
+  spawnParticles(cx, cy, '#ff6b35', 8);
+
+  // Screen flash on each impact
+  flashScreen('rgba(255,45,85,0.15)');
 
   // Cell clearing animations
   const cells = boardEl.querySelectorAll('.cell');
@@ -8570,7 +8696,7 @@ function _airstrikeImpact(r, c, cx, cy, cw, ch, boardEl) {
     if(board[br][bc]) {
       cell.classList.add('clearing');
       const rect = cell.getBoundingClientRect();
-      spawnParticles(rect.left + rect.width/2, rect.top + rect.height/2, board[br][bc], 8);
+      spawnParticles(rect.left + rect.width/2, rect.top + rect.height/2, board[br][bc], 10);
       _trackObstacleBroken(br, bc);
       board[br][bc] = null;
     }
@@ -8675,7 +8801,7 @@ function applyMagnet() {
       renderTray();
       _powerAnimating = false;
       setTimeout(() => checkGameOver(), 150);
-    }, 250);
+    }, 100);
   });
 }
 
