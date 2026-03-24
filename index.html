@@ -4183,12 +4183,12 @@ function getAudioCtx() {
 // Until loaded, sfxFile() is a silent no-op — synth sounds still work as fallback.
 
 const SFX_FILES = {
-  'airstrike':   'AirStrike.mp3',
-  'machinegun':  'machinegun.mp3',
-  'laser':       'laser.mp3',
-  'beam':        'beam.mp3',
-  'nuke':        'nuke.mp3',
-  'wildfire':    'wildfire.mp3',
+  'airstrike':   './AirStrike.mp3',
+  'machinegun':  './machinegun.mp3',
+  'laser':       './laser.mp3',
+  'beam':        './beam.mp3',
+  'nuke':        './nuke.mp3',
+  'wildfire':    './wildfire.mp3',
 };
 
 const _sfxBuffers = {}; // name → AudioBuffer (loaded)
