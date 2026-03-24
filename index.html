@@ -3775,10 +3775,9 @@ body.theme-onyx #board { animation: onyxPulse 5s ease-in-out infinite; }
   </div>
 
   <div class="xp-bar-wrap"><div class="xp-bar-label"><span>LEVEL <span id="xp-level">1</span></span><span id="xp-label">0 / 500 XP</span></div><div class="xp-bar-bg"><div class="xp-bar-fill" id="xp-bar" style="width:0%"></div></div></div>
-  <button class="menu-btn primary" onclick="startClassic()">▶ PLAY</button>
-  <button class="menu-btn daily" onclick="startDaily()">
-    ⚔️ ROGUELIKE
-    <span class="daily-done-tag" id="daily-badge">TODAY</span>
+  <button class="menu-btn primary" onclick="startDaily()">▶ PLAY</button>
+  <button class="menu-btn daily" onclick="startClassic()">
+    🎮 CLASSIC MODE
   </button>
   <button class="menu-btn ghost" onclick="startPlayTutorial()" style="border-color:var(--c5);color:var(--c5);box-shadow:0 0 15px rgba(191,90,242,0.15)">🎮 PLAY TUTORIAL</button>
   <button class="menu-btn ghost" onclick="showMissions()" style="border-color:var(--c1);color:var(--c1);box-shadow:0 0 15px rgba(255,45,85,0.15)" id="missions-menu-btn">📋 DAILY MISSIONS</button>
@@ -3918,6 +3917,10 @@ body.theme-onyx #board { animation: onyxPulse 5s ease-in-out infinite; }
   <div class="unlock-section-label" style="margin-top:12px">🎮 GAMEPLAY — SPECIAL MODES</div>
   <div style="width:100%;height:1px;background:rgba(255,255,255,0.08);margin-bottom:4px"></div>
   <div id="gameplay-unlock-section" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;width:100%"></div>
+
+  <div class="unlock-section-label" style="margin-top:12px">📐 CLASSIC BOARD SIZE</div>
+  <div style="width:100%;height:1px;background:rgba(255,255,255,0.08);margin-bottom:4px"></div>
+  <div id="board-size-section" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;width:100%"></div>
 
 </div>
 
@@ -5060,7 +5063,6 @@ function updateMenuStats() {
   $id('menu-best').textContent=best.toLocaleString();
   $id('menu-streak').textContent=streak;
   $id('menu-games').textContent=gamesPlayed;
-  $id('daily-badge').textContent='▶ PLAY';
 }
 
 // ════════════════════════════════════
@@ -5095,16 +5097,96 @@ function _drUpdateHeaderFloor() {
 function startClassic() {
   initMusic();
   sfxMenu(); isDaily=false;
-  // Ensure board is default size (in case expand boss was active)
-  if(ROWS !== DEFAULT_ROWS || COLS !== DEFAULT_COLS) {
-    ROWS = DEFAULT_ROWS; COLS = DEFAULT_COLS; _drExpandActive = false;
+
+  // Check if player has a saved board size preference
+  const savedSize = localStorage.getItem('bb_classic_board') || null;
+  if(!savedSize) {
+    // First time — show choice modal
+    _showClassicBoardPicker();
+    return;
   }
-  $id('mode-label').textContent='BEST';
+
+  _launchClassic(savedSize);
+}
+
+function _launchClassic(boardSize) {
+  // Set board dimensions based on choice
+  if(boardSize === '12x12') {
+    ROWS = 12; COLS = 12;
+  } else {
+    ROWS = DEFAULT_ROWS; COLS = DEFAULT_COLS;
+  }
+  _drExpandActive = false;
+
+  $id('mode-label').textContent = boardSize === '12x12' ? 'CLASSIC 12×12' : 'CLASSIC';
   $id('mode-label').className='mode-label';
   const dbw1=$id('daily-bar-wrap'); if(dbw1) dbw1.style.display='none';
+  // Hide powerup bar in classic mode
+  const puBar = $id('powerup-bar'); if(puBar) puBar.style.display='none';
   rng=Math.random;
   updateHeaderBest();
   initGame(); showScreen('game-screen');
+}
+
+function _showClassicBoardPicker() {
+  const overlay = document.createElement('div');
+  overlay.id = 'classic-board-picker';
+  overlay.style.cssText = `
+    position:fixed; inset:0; z-index:9500;
+    display:flex; align-items:center; justify-content:center;
+    background:rgba(0,0,0,0.9); backdrop-filter:blur(6px);
+    animation: bossIntroFadeIn 0.3s ease forwards;
+  `;
+  overlay.innerHTML = `
+    <div style="display:flex;flex-direction:column;align-items:center;gap:16px;padding:24px 20px;max-width:360px;width:90%">
+      <div style="font-family:'Press Start 2P',monospace;font-size:clamp(0.6rem,3vw,0.8rem);color:var(--c4);letter-spacing:2px;text-align:center">CHOOSE BOARD SIZE</div>
+      <div style="font-family:'Press Start 2P',monospace;font-size:0.28rem;color:var(--muted);text-align:center;line-height:2;letter-spacing:0.5px">You can change this later in Unlocks</div>
+      <div style="display:flex;gap:12px;width:100%;justify-content:center" id="board-size-cards"></div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  const cards = overlay.querySelector('#board-size-cards');
+  const options = [
+    { id:'8x8',   emoji:'⬛', label:'NORMAL', desc:'8 × 8', color:'var(--c4)', glow:'rgba(10,245,255,0.4)' },
+    { id:'12x12', emoji:'🔳', label:'EXPANDED', desc:'12 × 12', color:'var(--c6)', glow:'rgba(255,159,10,0.4)' },
+  ];
+
+  options.forEach(opt => {
+    const card = document.createElement('div');
+    card.style.cssText = `
+      flex:1; padding:20px 12px; border-radius:12px;
+      background:var(--surface); border:2px solid ${opt.color}44;
+      display:flex; flex-direction:column; align-items:center; gap:10px;
+      cursor:pointer; transition:border-color 0.2s, box-shadow 0.2s, transform 0.2s;
+    `;
+    card.innerHTML = `
+      <div style="font-size:2.5rem;line-height:1">${opt.emoji}</div>
+      <div style="font-family:'Press Start 2P',monospace;font-size:0.45rem;color:${opt.color};letter-spacing:1px">${opt.label}</div>
+      <div style="font-family:'Press Start 2P',monospace;font-size:0.3rem;color:var(--muted);letter-spacing:0.5px">${opt.desc}</div>
+    `;
+    card.addEventListener('pointerenter', () => {
+      card.style.borderColor = opt.color;
+      card.style.boxShadow = '0 0 20px ' + opt.glow;
+      card.style.transform = 'scale(1.03)';
+    });
+    card.addEventListener('pointerleave', () => {
+      card.style.borderColor = opt.color + '44';
+      card.style.boxShadow = 'none';
+      card.style.transform = 'scale(1)';
+    });
+    card.addEventListener('click', () => {
+      sfxMenu();
+      haptic([20, 10, 40]);
+      localStorage.setItem('bb_classic_board', opt.id);
+      overlay.style.animation = 'bossIntroFadeOut 0.25s ease forwards';
+      setTimeout(() => {
+        overlay.remove();
+        _launchClassic(opt.id);
+      }, 250);
+    });
+    cards.appendChild(card);
+  });
 }
 
 // ════════════════════════════════════
@@ -5120,7 +5202,7 @@ const DAILY_RUN_FLOORS = [
 ];
 
 // Boss type rotates by stage
-const BOSS_TYPES = ['expand', 'obstacles']; // cycles
+const BOSS_TYPES = ['jail', 'expand', 'obstacles']; // cycles
 function _getBossType() {
   return BOSS_TYPES[_drStage % BOSS_TYPES.length];
 }
@@ -5164,6 +5246,8 @@ function startDaily() {
 
   $id('mode-label').textContent = '⚔️ ROGUELIKE';
   $id('mode-label').className = 'mode-label daily-mode';
+  // Show powerup bar in roguelike mode
+  const puBar = $id('powerup-bar'); if(puBar) puBar.style.display='';
   updateHeaderBest();
   _drUpdateHeaderFloor();
 
@@ -5203,11 +5287,13 @@ function _drStartFloor(floorIdx) {
     const bossInfo = {
       expand:    { emoji:'🔳', name:'EXPAND',    desc:'BOARD GROWS TO 12×12' },
       obstacles: { emoji:'💀', name:'OBSTACLES',  desc:`${obstacleCount} OBSTACLE${obstacleCount > 1 ? 'S' : ''} INCOMING` },
+      jail:      { emoji:'🔒', name:'JAIL LINE',  desc:'AN ENTIRE ROW IS LOCKED' },
     };
     const info = bossInfo[bossType] || { emoji:'👾', name:'BOSS', desc:'SURVIVE THIS!' };
     _drShowBossIntro(info.emoji, info.name, info.desc, () => {
       if(bossType === 'expand') _drExpandBoard();
       else if(bossType === 'obstacles') _drSpawnBossObstacle(obstacleCount);
+      else if(bossType === 'jail') _drSpawnJailLine();
     });
   } else {
     // Leaving a boss floor — clean up
@@ -5258,6 +5344,53 @@ function _drSpawnBossObstacle(count) {
     haptic([10, 5, 20, 5, 30]);
     showToast(`👾 BOSS FLOOR! ${spawned} OBSTACLE${spawned > 1 ? 'S' : ''} INCOMING!`);
   }, 300);
+}
+
+function _drSpawnJailLine() {
+  // Pick a random edge: top row, bottom row, left col, or right col
+  const edges = ['top', 'bottom', 'left', 'right'];
+  const pick = edges[Math.floor(Math.random() * edges.length)];
+
+  if(pick === 'top' || pick === 'bottom') {
+    const r = pick === 'top' ? 0 : ROWS - 1;
+    for(let c = 0; c < COLS; c++) board[r][c] = JAIL_COLOR;
+  } else {
+    const c = pick === 'left' ? 0 : COLS - 1;
+    for(let r = 0; r < ROWS; r++) board[r][c] = JAIL_COLOR;
+  }
+
+  renderBoard();
+
+  // Animate jail cells spawning in with stagger
+  setTimeout(() => {
+    const cells = _cellCache.length ? _cellCache : [];
+    let delay = 0;
+    if(pick === 'top' || pick === 'bottom') {
+      const r = pick === 'top' ? 0 : ROWS - 1;
+      for(let c = 0; c < COLS; c++) {
+        const cell = cells[r * COLS + c];
+        if(cell) {
+          cell.classList.add('spawning');
+          setTimeout(() => cell.classList.remove('spawning'), 450 + delay);
+          delay += 40;
+        }
+      }
+    } else {
+      const c = pick === 'left' ? 0 : COLS - 1;
+      for(let r = 0; r < ROWS; r++) {
+        const cell = cells[r * COLS + c];
+        if(cell) {
+          cell.classList.add('spawning');
+          setTimeout(() => cell.classList.remove('spawning'), 450 + delay);
+          delay += 40;
+        }
+      }
+    }
+    sfxObstacle();
+    haptic([20, 10, 40, 10, 60]);
+    const side = pick === 'top' ? 'TOP' : pick === 'bottom' ? 'BOTTOM' : pick === 'left' ? 'LEFT' : 'RIGHT';
+    showToast(`🔒 ${side} ROW JAILED!`);
+  }, 100);
 }
 
 function _drShowBossIntro(emoji, name, desc, onComplete) {
@@ -6086,6 +6219,11 @@ function addStartingObstacles() {
 }
 
 const OBSTACLE_COLOR = 'OBSTACLE';
+const JAIL_COLOR = 'JAIL';
+
+function _isJail(r, c) {
+  return board[r] && board[r][c] === JAIL_COLOR;
+}
 
 function _trackObstacleBroken(r, c) {
   if(board[r] && board[r][c] === OBSTACLE_COLOR) {
@@ -6186,8 +6324,8 @@ function _updateFillCache() {
   for(let r = 0; r < ROWS; r++) {
     let count = 0;
     for(let c = 0; c < COLS; c++) {
-      if(board[r][c]) { count++; if(board[r][c] === OBSTACLE_COLOR) _rowBlocked[r] = true; }
-      if(board[r][c]) { _colFills[c]++; if(board[r][c] === OBSTACLE_COLOR) _colBlocked[c] = true; }
+      if(board[r][c]) { count++; if(board[r][c] === OBSTACLE_COLOR || board[r][c] === JAIL_COLOR) _rowBlocked[r] = true; }
+      if(board[r][c]) { _colFills[c]++; if(board[r][c] === OBSTACLE_COLOR || board[r][c] === JAIL_COLOR) _colBlocked[c] = true; }
     }
     _rowFills[r] = count;
   }
@@ -6331,6 +6469,20 @@ function renderBoard() {
       cell.style.background = 'repeating-linear-gradient(-45deg,#ffd60a 0px,#ffd60a 4px,#1a1200 4px,#1a1200 8px)';
       cell.style.boxShadow = '0 0 8px rgba(255,214,10,0.5), inset 0 0 4px rgba(0,0,0,0.4)';
       cell.style.border = '1.5px solid #ffd60a';
+      cell.style.backdropFilter = '';
+      cell.style.webkitBackdropFilter = '';
+      cell.style.borderRadius = '3px';
+      cell.style.display = '';
+      cell.style.alignItems = '';
+      cell.style.justifyContent = '';
+      cell.style.fontSize = '';
+      cell.style.lineHeight = '';
+    } else if(color === JAIL_COLOR) {
+      // Jail block — black and gray stripes
+      cell.className = 'cell filled jail';
+      cell.style.background = 'repeating-linear-gradient(-45deg,#333 0px,#333 4px,#111 4px,#111 8px)';
+      cell.style.boxShadow = '0 0 4px rgba(100,100,100,0.4), inset 0 0 4px rgba(0,0,0,0.6)';
+      cell.style.border = '1.5px solid #555';
       cell.style.backdropFilter = '';
       cell.style.webkitBackdropFilter = '';
       cell.style.borderRadius = '3px';
@@ -6762,8 +6914,8 @@ function showStreakSaverHint() {
 // ════════════════════════════════════
 function clearLines() {
   const rowsToClear=[], colsToClear=[];
-  for(let r=0;r<ROWS;r++) if(board[r].every(c=>c) && !board[r].some(c=>c===OBSTACLE_COLOR)) rowsToClear.push(r);
-  for(let c=0;c<COLS;c++) if(board.every(r=>r[c]) && !board.some(r=>r[c]===OBSTACLE_COLOR)) colsToClear.push(c);
+  for(let r=0;r<ROWS;r++) if(board[r].every(c=>c) && !board[r].some(c=>c===OBSTACLE_COLOR||c===JAIL_COLOR)) rowsToClear.push(r);
+  for(let c=0;c<COLS;c++) if(board.every(r=>r[c]) && !board.some(r=>r[c]===OBSTACLE_COLOR||r[c]===JAIL_COLOR)) colsToClear.push(c);
   if(!rowsToClear.length&&!colsToClear.length){
     consecutiveClearCount=0;
     _lastPlacedWasStreakSaver = false; // no lines cleared — reset flag
@@ -6997,10 +7149,10 @@ function checkGameOver() {
     spawnParticles(window.innerWidth/2, window.innerHeight/2, '#ffffff', 20);
     // Clear some space by removing a random row to give the player a chance
     const rows = [];
-    for(let r = 0; r < ROWS; r++) if(board[r].some(c => c)) rows.push(r);
+    for(let r = 0; r < ROWS; r++) if(board[r].some(c => c && c !== JAIL_COLOR)) rows.push(r);
     if(rows.length) {
       const row = rows[Math.floor(Math.random() * rows.length)];
-      for(let c = 0; c < COLS; c++) board[row][c] = null;
+      for(let c = 0; c < COLS; c++) if(!_isJail(row, c)) board[row][c] = null;
       renderBoard();
     }
     return;
@@ -7910,8 +8062,7 @@ function triggerBombExplosion(centerRow, centerCol, hex) {
   // Clear cells after animation
   setTimeout(() => {
     affected.forEach(({r, c}) => {
-      _trackObstacleBroken(r, c);
-      board[r][c] = null;
+      if(!_isJail(r, c)) { _trackObstacleBroken(r, c); board[r][c] = null; }
     });
     const pts = affected.length * 500;
     addScore(pts, affected.length, 1);
@@ -8145,7 +8296,7 @@ function _drUnlockRandomPower(floorIdx) {
 }
 
 function awardPower(lines, combo) {
-  if(isDaily) return; // powers earned through floor completion in roguelike
+  if(!isDaily || !_drActive) return; // powers only earned in roguelike mode
   // Combos are more rewarding than multi-line clears
   if(combo >= 4 || lines >= 4) {
     const chance = combo >= 4 ? 0.68 : 0.42; // combo 68%, lines-only 42%
@@ -8403,7 +8554,7 @@ function onLaserClick(e) {
   _powerAnimating = true;
 
   setTimeout(() => {
-    for(let c = 0; c < COLS; c++) board[row][c] = null;
+    for(let c = 0; c < COLS; c++) if(!_isJail(row, c)) board[row][c] = null;
     renderBoard();
     addScore(COLS * 60, 1, 1);
     refillPieces(); renderTray();
@@ -8447,7 +8598,7 @@ function onShatterClick(e) {
   _powerAnimating = true;
 
   setTimeout(() => {
-    targets.forEach(t => { _trackObstacleBroken(t.r, t.c); board[t.r][t.c] = null; });
+    targets.forEach(t => { if(!_isJail(t.r, t.c)) { _trackObstacleBroken(t.r, t.c); board[t.r][t.c] = null; } });
     renderBoard();
     addScore(targets.length * 80, targets.length, 1);
     refillPieces(); renderTray();
@@ -8463,7 +8614,7 @@ function onWildfireClick(e) {
   const r = parseInt(e.currentTarget.dataset.r);
   const c = parseInt(e.currentTarget.dataset.c);
   const targetColor = board[r][c];
-  if(!targetColor) return;
+  if(!targetColor || targetColor === JAIL_COLOR) return;
   usePower('wildfire');
 
   // Obstacle block — remove it directly, no color matching needed
@@ -8545,7 +8696,7 @@ function onSniperClick(e) {
   e.stopPropagation();
   const r = parseInt(e.currentTarget.dataset.r);
   const c = parseInt(e.currentTarget.dataset.c);
-  if(!board[r][c]) return;
+  if(!board[r][c] || _isJail(r, c)) return;
 
   // Check not already selected
   if(_sniperTargets.some(t => t.r === r && t.c === c)) return;
@@ -8572,8 +8723,7 @@ function onSniperClick(e) {
         const rect = cell.getBoundingClientRect();
         spawnParticles(rect.left + rect.width/2, rect.top + rect.height/2, '#30d158', 8);
       }
-      _trackObstacleBroken(r, c);
-      board[r][c] = null;
+      if(!_isJail(r, c)) { _trackObstacleBroken(r, c); board[r][c] = null; }
     });
 
     setTimeout(() => {
@@ -8716,15 +8866,23 @@ function _createBlockClone(rect, color) {
 }
 
 function applyGravity() {
-  // Calculate destination for each filled cell
+  // Calculate destination for each filled cell (jail cells stay pinned)
   const moves = [];
   for(let c = 0; c < COLS; c++) {
-    const filled = [];
-    for(let r = 0; r < ROWS; r++) if(board[r][c]) filled.push({ r, color: board[r][c] });
-    if(!filled.length) continue;
-    const startRow = ROWS - filled.length;
-    filled.forEach((block, i) => {
-      const toR = startRow + i;
+    const jailRows = new Set();
+    const movable = [];
+    for(let r = 0; r < ROWS; r++) {
+      if(board[r][c] === JAIL_COLOR) jailRows.add(r);
+      else if(board[r][c]) movable.push({ r, color: board[r][c] });
+    }
+    if(!movable.length) continue;
+    // Pack movable cells toward the bottom, skipping jail-occupied rows
+    const openRows = [];
+    for(let r = ROWS - 1; r >= 0; r--) if(!jailRows.has(r)) openRows.push(r);
+    // Fill from the bottom of open rows
+    const startIdx = openRows.length - movable.length;
+    movable.forEach((block, i) => {
+      const toR = openRows[startIdx + i];
       if(block.r !== toR) moves.push({ fromR: block.r, toR, c, color: block.color });
     });
   }
@@ -8737,11 +8895,20 @@ function applyGravity() {
   _powerAnimating = true;
 
   _animateBlockShift(moves, 'down', () => {
-    // Update board data
+    // Update board data (preserve jail cells)
     for(let c = 0; c < COLS; c++) {
-      const col = [];
-      for(let r = 0; r < ROWS; r++) if(board[r][c]) col.push(board[r][c]);
-      for(let r = 0; r < ROWS; r++) board[r][c] = r >= ROWS - col.length ? col[r - (ROWS - col.length)] : null;
+      const jailPositions = {};
+      for(let r = 0; r < ROWS; r++) if(board[r][c] === JAIL_COLOR) jailPositions[r] = true;
+      const movable = [];
+      for(let r = 0; r < ROWS; r++) if(board[r][c] && board[r][c] !== JAIL_COLOR) movable.push(board[r][c]);
+      // Clear non-jail cells
+      for(let r = 0; r < ROWS; r++) if(!jailPositions[r]) board[r][c] = null;
+      // Pack movable toward bottom, skipping jail rows
+      let writeIdx = ROWS - 1;
+      for(let i = movable.length - 1; i >= 0; i--) {
+        while(writeIdx >= 0 && jailPositions[writeIdx]) writeIdx--;
+        if(writeIdx >= 0) board[writeIdx--][c] = movable[i];
+      }
     }
     shakeBoard(1);
     renderBoard();
@@ -8918,7 +9085,7 @@ function _airstrikeImpact(r, c, cx, cy, cw, ch, boardEl) {
     if(br < 0 || br >= ROWS || bc < 0 || bc >= COLS) return;
     const cell = cells[br * COLS + bc];
     if(!cell) return;
-    if(board[br][bc]) {
+    if(board[br][bc] && !_isJail(br, bc)) {
       cell.classList.add('clearing');
       const rect = cell.getBoundingClientRect();
       spawnParticles(rect.left + rect.width/2, rect.top + rect.height/2, board[br][bc], 10);
@@ -8969,8 +9136,7 @@ function onBeamClick(e) {
 
   setTimeout(() => {
     for(let r = 0; r < ROWS; r++) {
-      _trackObstacleBroken(r, c);
-      board[r][c] = null;
+      if(!_isJail(r, c)) { _trackObstacleBroken(r, c); board[r][c] = null; }
     }
     renderBoard();
     clearLines();
@@ -8993,14 +9159,22 @@ function onBeamUnhover() {
 }
 
 function applyMagnet() {
-  // Calculate destination for each filled cell (pack to top)
+  // Calculate destination for each filled cell (pack to top, jail cells stay pinned)
   const moves = [];
   for(let c = 0; c < COLS; c++) {
-    const filled = [];
-    for(let r = 0; r < ROWS; r++) if(board[r][c]) filled.push({ r, color: board[r][c] });
-    if(!filled.length) continue;
-    filled.forEach((block, i) => {
-      if(block.r !== i) moves.push({ fromR: block.r, toR: i, c, color: block.color });
+    const jailRows = new Set();
+    const movable = [];
+    for(let r = 0; r < ROWS; r++) {
+      if(board[r][c] === JAIL_COLOR) jailRows.add(r);
+      else if(board[r][c]) movable.push({ r, color: board[r][c] });
+    }
+    if(!movable.length) continue;
+    // Pack movable cells toward the top, skipping jail-occupied rows
+    const openRows = [];
+    for(let r = 0; r < ROWS; r++) if(!jailRows.has(r)) openRows.push(r);
+    movable.forEach((block, i) => {
+      const toR = openRows[i];
+      if(block.r !== toR) moves.push({ fromR: block.r, toR, c, color: block.color });
     });
   }
 
@@ -9012,11 +9186,20 @@ function applyMagnet() {
   _powerAnimating = true;
 
   _animateBlockShift(moves, 'up', () => {
-    // Update board data
+    // Update board data (preserve jail cells)
     for(let c = 0; c < COLS; c++) {
-      const col = [];
-      for(let r = 0; r < ROWS; r++) if(board[r][c]) col.push(board[r][c]);
-      for(let r = 0; r < ROWS; r++) board[r][c] = r < col.length ? col[r] : null;
+      const jailPositions = {};
+      for(let r = 0; r < ROWS; r++) if(board[r][c] === JAIL_COLOR) jailPositions[r] = true;
+      const movable = [];
+      for(let r = 0; r < ROWS; r++) if(board[r][c] && board[r][c] !== JAIL_COLOR) movable.push(board[r][c]);
+      // Clear non-jail cells
+      for(let r = 0; r < ROWS; r++) if(!jailPositions[r]) board[r][c] = null;
+      // Pack movable toward top, skipping jail rows
+      let writeIdx = 0;
+      for(let i = 0; i < movable.length; i++) {
+        while(writeIdx < ROWS && jailPositions[writeIdx]) writeIdx++;
+        if(writeIdx < ROWS) board[writeIdx++][c] = movable[i];
+      }
     }
     shakeBoard(1);
     renderBoard();
@@ -10190,6 +10373,35 @@ function renderGameplaySection() {
   container.appendChild(card);
 }
 
+function renderBoardSizeSection() {
+  const container = document.getElementById('board-size-section');
+  if(!container) return;
+  container.innerHTML = '';
+  const current = localStorage.getItem('bb_classic_board') || '8x8';
+
+  const sizes = [
+    { id:'8x8',   emoji:'⬛', label:'NORMAL',   desc:'8 × 8' },
+    { id:'12x12', emoji:'🔳', label:'EXPANDED', desc:'12 × 12' },
+  ];
+
+  sizes.forEach(opt => {
+    const isActive = current === opt.id;
+    const card = document.createElement('div');
+    card.className = 'unlock-card unlocked' + (isActive ? ' active-theme' : '');
+    card.innerHTML = `
+      <div style="font-size:1.8rem;margin-bottom:6px">${opt.emoji}</div>
+      <div style="font-family:'Press Start 2P',monospace;font-size:0.4rem;color:${isActive ? 'var(--c4)' : 'var(--muted)'};letter-spacing:1px;text-align:center;margin-bottom:4px">${opt.label}</div>
+      <div style="font-family:'Press Start 2P',monospace;font-size:0.3rem;color:var(--muted);text-align:center">${isActive ? '✓ ACTIVE' : 'TAP TO USE'}</div>
+    `;
+    card.onclick = () => {
+      sfxMenu();
+      localStorage.setItem('bb_classic_board', opt.id);
+      renderBoardSizeSection();
+    };
+    container.appendChild(card);
+  });
+}
+
 function renderMusicSection() {
   const container = document.getElementById('music-unlock-section');
   if(!container) return;
@@ -10361,6 +10573,7 @@ function showGloryPopup() {
 function showUnlocks() {
   renderMusicSection();
   renderGameplaySection();
+  renderBoardSizeSection();
   sfxMenu();
   renderUnlockScreen();
   showScreen('unlocks-screen');
@@ -10555,11 +10768,18 @@ const PT_STEPS = [
     btn: 'COOL! ▶',
   },
   {
-    title: 'POWER-UPS',
-    body: 'Clear lines to earn\n<b>power-ups!</b>\n\n⚡ <b>LASER</b> — wipes an\nentire row clean\n\n🔥 <b>WILDFIRE</b> — burns\nevery block of one color\n\n💣 <b>BOMB</b> — explodes a\n3×3 area of blocks\n\n🔨 <b>SHATTER</b> — smashes\na + cross of blocks',
-    target: 'powerup-bar',
+    title: 'ROGUELIKE MODE',
+    body: 'The main mode is\n<b>Roguelike!</b>\n\nClear <em>5 lines per floor</em>\nto advance.\n\nEach stage has\n<b>5 floors + a boss.</b>',
+    target: 'board',
     hand: false,
-    btn: 'GOT IT ▶',
+    btn: 'TELL ME MORE ▶',
+  },
+  {
+    title: 'POWER-UPS',
+    body: 'Between floors you\npick a <b>power-up!</b>\n\n⚡ <b>LASER</b> — wipes a row\n💣 <b>BOMB</b> — 3×3 explosion\n🍀 <b>LUCKY</b> — better pieces\n🛡️ <b>SHIELD</b> — survive once\n\n<em>...and many more!</em>',
+    target: 'board',
+    hand: false,
+    btn: 'AWESOME! ▶',
   },
   {
     title: 'GAME OVER',
@@ -10570,7 +10790,7 @@ const PT_STEPS = [
   },
   {
     title: 'YOU\'RE READY!',
-    body: 'That\'s everything!\n\n<b>★</b> Fill rows & columns\n<b>★</b> Chain combos\n<b>★</b> Use power-ups\n<b>★</b> Beat your best!\n\n<em>Good luck!</em>',
+    body: 'That\'s everything!\n\n<b>★</b> Fill rows & columns\n<b>★</b> Chain combos\n<b>★</b> Pick power-ups\n<b>★</b> Beat the bosses!\n\n<em>Good luck!</em>',
     target: null,
     hand: false,
     btn: '▶ PLAY NOW!',
@@ -10586,6 +10806,9 @@ function startPlayTutorial() {
   $id('mode-label').className = 'mode-label';
   updateHeaderBest();
   const dbw = $id('daily-bar-wrap'); if(dbw) dbw.style.display = 'none';
+  const puBar = $id('powerup-bar'); if(puBar) puBar.style.display = 'none';
+  // Ensure default board size for tutorial
+  ROWS = DEFAULT_ROWS; COLS = DEFAULT_COLS;
   rng = Math.random;
   initGame();
   showScreen('game-screen');
@@ -10668,6 +10891,10 @@ function _ptShowStep(idx) {
         coachTop  = Math.max(8, rect.top - coachH - 16);
         coachLeft = Math.max(8, Math.min(vw - coachW - 8, rect.left + rect.width / 2 - coachW / 2));
       }
+    } else if(step.target === 'board' && (step.waitClear || step.waitPlace)) {
+      // Interactive board steps: pin coach to top so board + tray stay visible
+      coachTop = 8;
+      coachLeft = Math.max(8, Math.min(vw - coachW - 8, vw / 2 - coachW / 2));
     } else {
       // Board and others: prefer above, then below, then sides
       if(spaceAbove > coachH + 16) {
@@ -10773,7 +11000,8 @@ function playTutSkip() {
   $id('tut-coach').style.display = 'none';
   localStorage.setItem('bb_tut_done', '1');
   sfxMenu();
-  // Game keeps running — player is now in a real game
+  // Return to menu so player can start roguelike
+  goMenu();
 }
 </script>
 
