@@ -4162,6 +4162,103 @@ function getAudioCtx() {
   return audioCtx;
 }
 
+// ── File-based SFX system ──
+// Preloads MP3/OGG files into AudioBuffers for instant playback.
+// Falls back to synth sounds if files aren't loaded.
+//
+// USAGE:
+// 1. Add your sound files to the SFX_FILES map below (name → URL)
+// 2. Call sfxFile('name') to play a loaded file
+// 3. Call sfxFile('name', { volume, rate, delay }) for options
+//
+// Files are preloaded on first user interaction (tap/click).
+// Until loaded, sfxFile() is a silent no-op — synth sounds still work as fallback.
+
+const SFX_FILES = {
+  // Add your MP3 files here. Example:
+  // 'place':       '/sfx/place.mp3',
+  // 'clear':       '/sfx/clear.mp3',
+  // 'combo':       '/sfx/combo.mp3',
+  // 'bomb':        '/sfx/bomb.mp3',
+  // 'laser':       '/sfx/laser.mp3',
+  // 'gameover':    '/sfx/gameover.mp3',
+  // 'machinegun':  '/sfx/machinegun-shot.mp3',
+  // 'nuke-charge': '/sfx/nuke-charge.mp3',
+  // 'nuke-boom':   '/sfx/nuke-boom.mp3',
+  // 'airstrike':   '/sfx/airstrike.mp3',
+  // 'levelup':     '/sfx/levelup.mp3',
+  // 'powerup':     '/sfx/powerup.mp3',
+};
+
+const _sfxBuffers = {}; // name → AudioBuffer (loaded)
+let _sfxLoaded = false;
+let _sfxLoading = false;
+
+// Preload all SFX files into AudioBuffers
+function preloadSFX() {
+  if(_sfxLoaded || _sfxLoading) return;
+  const keys = Object.keys(SFX_FILES);
+  if(!keys.length) { _sfxLoaded = true; return; }
+  _sfxLoading = true;
+
+  const ctx = getAudioCtx();
+  let loaded = 0;
+
+  keys.forEach(name => {
+    fetch(SFX_FILES[name])
+      .then(res => {
+        if(!res.ok) throw new Error(`SFX ${name}: HTTP ${res.status}`);
+        return res.arrayBuffer();
+      })
+      .then(buf => ctx.decodeAudioData(buf))
+      .then(decoded => {
+        _sfxBuffers[name] = decoded;
+        loaded++;
+        if(loaded >= keys.length) { _sfxLoaded = true; _sfxLoading = false; }
+      })
+      .catch(err => {
+        console.warn('SFX load failed:', name, err);
+        loaded++;
+        if(loaded >= keys.length) { _sfxLoaded = true; _sfxLoading = false; }
+      });
+  });
+}
+
+// Play a preloaded SFX file
+// Options: { volume: 0-1, rate: playback speed, delay: seconds }
+function sfxFile(name, opts = {}) {
+  if(!soundOn) return;
+  const buffer = _sfxBuffers[name];
+  if(!buffer) return; // not loaded yet — silent fallback
+
+  try {
+    const ctx = getAudioCtx();
+    const src = ctx.createBufferSource();
+    src.buffer = buffer;
+    src.playbackRate.value = opts.rate || 1;
+
+    const gain = ctx.createGain();
+    gain.gain.value = (opts.volume ?? 1) * SFX_VOLUME;
+
+    src.connect(gain);
+    gain.connect(ctx.destination);
+
+    const startTime = ctx.currentTime + (opts.delay || 0);
+    src.start(startTime);
+  } catch(e) {
+    console.warn('sfxFile play error:', name, e);
+  }
+}
+
+// Check if a specific SFX file is loaded and available
+function hasSFXFile(name) {
+  return !!_sfxBuffers[name];
+}
+
+// Trigger preload on first user interaction
+document.addEventListener('touchstart', preloadSFX, { once: true, passive: true });
+document.addEventListener('click', preloadSFX, { once: true, passive: true });
+
 // ── Core synth primitives ──
 
 
@@ -4638,6 +4735,48 @@ function sfxBeam() {
   note(400, 'square',   0.004, 0.08, 0.04, 0.2, 0.03, 2400);
   note(1600,'sine',     0.006, 0.06, 0.08, 0.15, 0.08);
   noise(0.06, 0.12, 0.05);
+}
+
+// ── TACTICAL NUKE SOUNDS ──
+function sfxNukeCharge() {
+  // Rising warning siren — builds tension
+  const steps = 8;
+  for(let i = 0; i < steps; i++) {
+    const freq = 300 + i * 120; // 300 → 1260 Hz rising
+    note(freq, 'sawtooth', 0.01, 0.04, 0.02, 0.12 + i * 0.01, i * 0.05, freq * 0.1);
+  }
+  // Sub rumble underneath
+  note(50, 'sine', 0.02, 0.3, 0.15, 0.25);
+  note(75, 'sine', 0.02, 0.25, 0.12, 0.2, 0.05);
+}
+
+function sfxNukeDetonate() {
+  // Massive sub bass — the detonation
+  note(30, 'sine', 0.005, 0.4, 0.8, 0.6);
+  note(60, 'sine', 0.005, 0.35, 0.6, 0.5, 0.02);
+  note(45, 'sine', 0.008, 0.3, 0.7, 0.4, 0.04);
+  // Mid crunch
+  note(150, 'sawtooth', 0.003, 0.15, 0.3, 0.4, 0, 40);
+  note(250, 'sawtooth', 0.003, 0.1, 0.2, 0.3, 0.03, 60);
+  // High shatter spray
+  [400, 600, 900, 1200, 1800].forEach((f, i) =>
+    note(f, 'square', 0.002, 0.05, 0.08, 0.12 - i * 0.015, i * 0.01, f * 0.4)
+  );
+  // Heavy noise burst
+  noise(0.5, 0.45);
+  noise(0.3, 0.3, 0.1, 'brown');
+}
+
+function sfxNukeAftermath() {
+  // Low rumbling aftermath — echoing decay
+  note(40, 'sine', 0.01, 0.3, 1.0, 0.2);
+  note(80, 'sine', 0.01, 0.2, 0.8, 0.15, 0.1);
+  // Distant crackle
+  noise(0.8, 0.08, 0.2);
+  noise(0.4, 0.05, 0.5);
+  // Eerie high tone — ringing in ears effect
+  note(3200, 'sine', 0.1, 0.6, 1.0, 0.04, 0.15);
+  note(4000, 'sine', 0.1, 0.5, 0.8, 0.03, 0.2);
 }
 function sfxDailyComplete() {
   const melody = [523, 659, 784, 659, 784, 1047];
@@ -5680,6 +5819,7 @@ const POWER_DESCS = {
   overclock: 'Next floor score\ncounts as double XP\n★ RARE ★',
   lucky:     '+2% better pieces\nfor the whole run\n(STACKS!)',
   nuke:      'Clears EVERY block\nfrom the board\n★★ ULTRA RARE ★★',
+  machinegun:'Sprays 8 random\nblocks off the board',
 };
 
 function _drShowCardPicker(onChosen) {
@@ -5693,7 +5833,7 @@ function _drShowCardPicker(onChosen) {
     if(t === 'turbo')     return !_drTurboActive && Math.random() < 0.15;
     if(t === 'overclock') return !alreadyUnlocked.includes('overclock') && !_drOverclockActive && Math.random() < 0.18;
     if(t === 'lucky')     return Math.random() < Math.max(0.4, 0.85 - _drLuckyStacks * 0.05);
-    if(t === 'nuke')      return !_drNukeObtained; // TEST MODE: always show nuke
+    if(t === 'nuke')      return !_drNukeObtained && Math.random() < 0.05; // ultra rare, once per run
     return true;
   });
 
@@ -5704,11 +5844,6 @@ function _drShowCardPicker(onChosen) {
   // Pick 2 distinct options
   const shuffled = [...candidates].sort(() => Math.random() - 0.5);
   const options = shuffled.slice(0, 2);
-
-  // TEST MODE: force nuke as first option
-  if(!_drNukeObtained && !options.includes('nuke')) {
-    options[0] = 'nuke';
-  }
 
   // Ensure we always have 2 options
   while(options.length < 2) {
@@ -5907,7 +6042,7 @@ function _drFinishRun(cleared) {
   });
   const passiveBar = $id('dr-passive-bar');
   if(passiveBar) { passiveBar.style.display = 'none'; passiveBar.innerHTML = ''; }
-  powerInventory = { laser:0, shatter:0, wildfire:0, bomb:0, sniper:0, gravity:0, shield:0, turbo:0, airstrike:0, beam:0, magnet:0, overclock:0, lucky:0, nuke:0 };
+  powerInventory = { laser:0, shatter:0, wildfire:0, bomb:0, sniper:0, gravity:0, shield:0, turbo:0, airstrike:0, beam:0, magnet:0, overclock:0, lucky:0, nuke:0, machinegun:0 };
   _drTurboActive = false;
   _drOverclockActive = false;
   // Shrink board back if expanded
@@ -8202,9 +8337,10 @@ const POWERS = {
   overclock: { color:'#ffd60a', glow:'rgba(255,214,10,0.5)',  icon:'⏩', name:'OVERCLOCK',     rogueLikeOnly:true, rare:true },
   lucky:     { color:'#30d158', glow:'rgba(48,209,88,0.5)',  icon:'🍀', name:'LUCKY',         rogueLikeOnly:true },
   nuke:      { color:'#ff0000', glow:'rgba(255,0,0,0.6)',    icon:'☢️', name:'TACTICAL NUKE', rogueLikeOnly:true, rare:true },
+  machinegun:{ color:'#ff9f0a', glow:'rgba(255,159,10,0.5)', icon:'🔫', name:'MACHINE GUN',  rogueLikeOnly:true },
 };
 
-let powerInventory = { laser:0, shatter:0, wildfire:0, bomb:0, sniper:0, gravity:0, shield:0, turbo:0, airstrike:0, beam:0, magnet:0, overclock:0, lucky:0, nuke:0 };
+let powerInventory = { laser:0, shatter:0, wildfire:0, bomb:0, sniper:0, gravity:0, shield:0, turbo:0, airstrike:0, beam:0, magnet:0, overclock:0, lucky:0, nuke:0, machinegun:0 };
 let _movesSincePowerup = 0;   // moves placed since player first got a powerup
 let _powerRemindShown = false; // only show once per game
 let activePower = null; // currently selected power waiting for board tap
@@ -8220,7 +8356,7 @@ let _drSlotAgeCounter = 0; // increments each time a slot is filled
 const _drPowerSlots = ['laser', 'shatter', 'wildfire', 'bomb']; // 4 slots — any power type can go in any slot
 
 function _drLockAllPowers() {
-  powerInventory = { laser:0, shatter:0, wildfire:0, bomb:0, sniper:0, gravity:0, shield:0, turbo:0, airstrike:0, beam:0, magnet:0, overclock:0, lucky:0, nuke:0 };
+  powerInventory = { laser:0, shatter:0, wildfire:0, bomb:0, sniper:0, gravity:0, shield:0, turbo:0, airstrike:0, beam:0, magnet:0, overclock:0, lucky:0, nuke:0, machinegun:0 };
   activePower = null;
   _drUnlockedPowers = [null, null, null, null];
   _drSlotAge = [0, 0, 0, 0];
@@ -8514,6 +8650,10 @@ function activatePower(type) {
     usePower('nuke');
     cancelPower();
     applyNuke();
+  } else if(type === 'machinegun') {
+    usePower('machinegun');
+    cancelPower();
+    applyMachineGun();
   }
 }
 
@@ -9259,6 +9399,90 @@ function applyMagnet() {
 }
 
 
+// ── MACHINE GUN ──
+function sfxMachineGunShot() {
+  // Quick sharp pop — like a single gunshot
+  note(1800, 'square', 0.001, 0.01, 0.02, 0.1);
+  note(400, 'sawtooth', 0.001, 0.02, 0.03, 0.08, 0.005, 100);
+  noise(0.03, 0.12);
+}
+
+function applyMachineGun() {
+  const SHOTS = 8;
+  const boardEl = $id('board');
+  if(!boardEl) return;
+
+  _powerAnimating = true;
+  flashPower('#ff9f0a');
+
+  // Collect all filled non-jail cells as targets
+  const filledCells = [];
+  for(let r = 0; r < ROWS; r++) {
+    if(!board[r]) continue;
+    for(let c = 0; c < COLS; c++) {
+      if(board[r][c] && board[r][c] !== JAIL_COLOR) filledCells.push({r, c});
+    }
+  }
+
+  // Shuffle and pick up to SHOTS targets
+  const shuffled = filledCells.sort(() => Math.random() - 0.5);
+  const targets = shuffled.slice(0, Math.min(SHOTS, shuffled.length));
+
+  if(!targets.length) {
+    showToast('🔫 NOTHING TO SHOOT!');
+    _powerAnimating = false;
+    return;
+  }
+
+  const cells = _cellCache.length ? _cellCache : [];
+  const SHOT_INTERVAL = 80; // ms between shots — rapid fire feel
+
+  targets.forEach((t, i) => {
+    setTimeout(() => {
+      const cell = cells[t.r * COLS + t.c];
+      if(!cell) return;
+
+      // Muzzle flash on the cell
+      cell.style.transition = 'transform 0.08s ease-out, filter 0.08s ease-out';
+      cell.style.transform = 'scale(1.4)';
+      cell.style.filter = 'brightness(3)';
+
+      setTimeout(() => {
+        cell.style.transform = 'scale(1)';
+        cell.style.filter = '';
+        cell.classList.add('clearing');
+      }, 80);
+
+      // Particles from the hit
+      const color = board[t.r][t.c] === OBSTACLE_COLOR ? '#888' : board[t.r][t.c];
+      const rect = cell.getBoundingClientRect();
+      spawnParticles(rect.left + rect.width/2, rect.top + rect.height/2, color || '#ff9f0a', 6);
+
+      // Sound + haptic per shot
+      sfxMachineGunShot();
+      haptic([12, 8]);
+
+      // Clear the cell
+      _trackObstacleBroken(t.r, t.c);
+      board[t.r][t.c] = null;
+
+      // Small shake every few shots
+      if(i % 3 === 0) shakeBoard(1);
+
+    }, i * SHOT_INTERVAL);
+  });
+
+  // After all shots land
+  const totalTime = targets.length * SHOT_INTERVAL + 200;
+  setTimeout(() => {
+    renderBoard();
+    clearLines();
+    refillPieces(); renderTray();
+    _powerAnimating = false;
+    setTimeout(() => checkGameOver(), 150);
+  }, totalTime);
+}
+
 // ── TACTICAL NUKE ──
 function applyNuke() {
   _powerAnimating = true;
@@ -9297,7 +9521,7 @@ function applyNuke() {
     flare.style.height = '80px';
   });
 
-  sfxPowerActivate('airstrike');
+  sfxNukeCharge();
   haptic([30, 15, 30]);
 
   // Phase 2: Orb expands into shockwave after 500ms
@@ -9311,7 +9535,7 @@ function applyNuke() {
 
     // Screen flash
     flashScreen('rgba(255,255,255,0.8)');
-    sfxBombExplode();
+    sfxNukeDetonate();
     haptic([100, 30, 100, 30, 200]);
     shakeBoard(5);
 
@@ -9356,6 +9580,7 @@ function applyNuke() {
       shakeBoard(3);
       haptic([50, 20, 80]);
       flashScreen('rgba(255,0,0,0.2)');
+      sfxNukeAftermath();
     }, 350);
 
     // Clean up flare element
@@ -9412,7 +9637,7 @@ function flashPower(color) {
 }
 
 function resetPowers() {
-  powerInventory = { laser:0, shatter:0, wildfire:0, bomb:0, sniper:0, gravity:0, shield:0, turbo:0, airstrike:0, beam:0, magnet:0, overclock:0, lucky:0, nuke:0 };
+  powerInventory = { laser:0, shatter:0, wildfire:0, bomb:0, sniper:0, gravity:0, shield:0, turbo:0, airstrike:0, beam:0, magnet:0, overclock:0, lucky:0, nuke:0, machinegun:0 };
   activePower = null;
   _movesSincePowerup = 0;
   _powerRemindShown = false;
@@ -10271,6 +10496,7 @@ const POWER_DEX = [
   { id:'beam',      cat:'active',  catLabel:'ACTIVE',   catColor:'#0af5ff' },
   { id:'magnet',    cat:'active',  catLabel:'ACTIVE',   catColor:'#0af5ff' },
   { id:'nuke',      cat:'active',  catLabel:'ACTIVE',   catColor:'#0af5ff' },
+  { id:'machinegun',cat:'active',  catLabel:'ACTIVE',   catColor:'#0af5ff' },
   { id:'shield',    cat:'passive', catLabel:'PASSIVE',  catColor:'#ffd60a' },
   { id:'turbo',     cat:'passive', catLabel:'PASSIVE',  catColor:'#ffd60a' },
   { id:'overclock', cat:'passive', catLabel:'PASSIVE',  catColor:'#ffd60a' },
