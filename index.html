@@ -5,7 +5,7 @@
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>BOOM BOOM BLOCKS</title>
-<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Orbitron:wght@400;700;900&family=Courgette&family=Audiowide&family=Almendra:wght@700&family=Cormorant+Garamond:wght@300;400;600&family=UnifrakturMaguntia&family=Pacifico&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Courgette&family=Audiowide&family=Almendra:wght@700&family=Cormorant+Garamond:wght@300;400;600&family=Pacifico&display=swap" rel="stylesheet">
 <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -50,7 +50,7 @@ html, body {
   user-select: none;
 }
 
-/* ── CRT OVERLAY ── */
+/* ── CRT OVERLAY — only active during gameplay ── */
 body::before {
   content:'';
   position:fixed; inset:0;
@@ -63,6 +63,11 @@ body::before {
   );
   pointer-events:none;
   z-index:9999;
+  display:none;
+}
+
+body.in-game::before {
+  display:block;
 }
 
 body::after {
@@ -71,6 +76,11 @@ body::after {
   background: radial-gradient(ellipse at center, transparent 60%, rgba(0,0,0,0.7) 100%);
   pointer-events:none;
   z-index:9998;
+  display:none;
+}
+
+body.in-game::after {
+  display:block;
 }
 
 /* ── CANVAS (particles) ── */
@@ -336,10 +346,10 @@ header {
 
 #board {
   width:100%; aspect-ratio:1;
-  max-width: calc(100vh - 270px);
-  max-height: calc(100vh - 270px);
-  max-width: calc(100dvh - 270px);
-  max-height: calc(100dvh - 270px);
+  max-width: calc(100vh - 300px);
+  max-height: calc(100vh - 300px);
+  max-width: calc(100dvh - 300px);
+  max-height: calc(100dvh - 300px);
   display:grid;
   grid-template-columns:repeat(8,1fr);
   gap:2px;
@@ -4986,6 +4996,8 @@ function showScreen(id) {
   if(el) el.classList.add('active');
   const app = $id('app');
   if(app) app.scrollTo(0,0);
+  // Toggle CRT overlay — only during gameplay
+  document.body.classList.toggle('in-game', id === 'game-screen');
 }
 
 function goMenu() {
@@ -5176,7 +5188,7 @@ function _drSpawnBossObstacle(count) {
 
   // Animate and sound each spawned obstacle
   setTimeout(() => {
-    const cells = document.querySelectorAll('#board .cell');
+    const cells = (_cellCache.length ? _cellCache : document.querySelectorAll('#board .cell'));
     for(let r = 0; r < ROWS; r++)
       for(let c = 0; c < COLS; c++)
         if(board[r][c] === OBSTACLE_COLOR) {
@@ -5917,7 +5929,7 @@ function spawnObstacleBlock(rowsCleared, colsCleared) {
 
   // Add spawn animation to the cell
   setTimeout(() => {
-    const cells = document.querySelectorAll('#board .cell');
+    const cells = (_cellCache.length ? _cellCache : document.querySelectorAll('#board .cell'));
     const cell = cells[r * COLS + c];
     if(cell) {
       cell.classList.add('spawning');
@@ -5976,60 +5988,60 @@ function rngPieceEasy() {
   return { shape, color, hex: colorHex[color] || color || '#0af5ff' };
 }
 
-// Score how useful a piece shape is given the current board state.
-// Returns a weight: higher = more useful to give the player.
-function scorePieceUsefulness(shape) {
+// Precompute row/col fill counts for fast piece scoring
+let _rowFills = null, _colFills = null, _rowBlocked = null, _colBlocked = null;
+function _updateFillCache() {
+  _rowFills = new Array(ROWS);
+  _colFills = new Array(COLS).fill(0);
+  _rowBlocked = new Array(ROWS).fill(false);
+  _colBlocked = new Array(COLS).fill(false);
+  for(let r = 0; r < ROWS; r++) {
+    let count = 0;
+    for(let c = 0; c < COLS; c++) {
+      if(board[r][c]) { count++; if(board[r][c] === OBSTACLE_COLOR) _rowBlocked[r] = true; }
+      if(board[r][c]) { _colFills[c]++; if(board[r][c] === OBSTACLE_COLOR) _colBlocked[c] = true; }
+    }
+    _rowFills[r] = count;
+  }
+}
+
+function scorePieceUsefulnessFast(shape) {
   let bestScore = 0;
+  const sRows = shape.length, sCols = shape[0].length;
 
-  for (let sr = 0; sr < ROWS; sr++) {
-    for (let sc = 0; sc < COLS; sc++) {
-      if (!canPlace(shape, sr, sc)) continue;
+  for(let sr = 0; sr <= ROWS - sRows; sr++) {
+    for(let sc = 0; sc <= COLS - sCols; sc++) {
+      if(!canPlace(shape, sr, sc)) continue;
 
-      // Simulate placing this piece
-      const filled = [];
-      for (let r = 0; r < shape.length; r++) {
-        for (let c = 0; c < shape[r].length; c++) {
-          if (shape[r][c]) filled.push([sr + r, sc + c]);
+      // Count cells per row/col this piece would add
+      let linesCompleted = 0, nearMisses = 0;
+      // Quick per-row check
+      for(let r = sr; r < sr + sRows; r++) {
+        if(_rowBlocked[r]) continue;
+        let added = 0;
+        for(let c = 0; c < sCols; c++) if(shape[r - sr][c]) added++;
+        if(added > 0) {
+          const total = _rowFills[r] + added;
+          if(total === COLS) linesCompleted++;
+          else if(COLS - total <= 2) nearMisses++;
+        }
+      }
+      // Quick per-col check
+      for(let c = sc; c < sc + sCols; c++) {
+        if(_colBlocked[c]) continue;
+        let added = 0;
+        for(let r = 0; r < sRows; r++) if(shape[r][c - sc]) added++;
+        if(added > 0) {
+          const total = _colFills[c] + added;
+          if(total === ROWS) linesCompleted++;
+          else if(ROWS - total <= 2) nearMisses++;
         }
       }
 
-      // Count how many rows/cols this placement would complete
-      let linesCompleted = 0;
-      for (let r = 0; r < ROWS; r++) {
-        if (board[r].some(c => c === OBSTACLE_COLOR)) continue; // obstacles block clears
-        const rowCells = filled.filter(([fr]) => fr === r).length;
-        const alreadyFilled = board[r].filter(c => c).length;
-        if (alreadyFilled + rowCells === COLS) linesCompleted++;
-      }
-      for (let c = 0; c < COLS; c++) {
-        if (board.some(r => r[c] === OBSTACLE_COLOR)) continue; // obstacles block clears
-        const colCells = filled.filter(([, fc]) => fc === c).length;
-        const alreadyFilled = board.filter(row => row[c]).length;
-        if (alreadyFilled + colCells === ROWS) linesCompleted++;
-      }
-
-      // Also reward pieces that get close to completing lines
-      let nearMisses = 0;
-      for (let r = 0; r < ROWS; r++) {
-        if (board[r].some(c => c === OBSTACLE_COLOR)) continue;
-        const rowCells = filled.filter(([fr]) => fr === r).length;
-        const alreadyFilled = board[r].filter(c => c).length;
-        const remaining = COLS - alreadyFilled - rowCells;
-        if (remaining <= 2 && remaining > 0) nearMisses++;
-      }
-      for (let c = 0; c < COLS; c++) {
-        if (board.some(r => r[c] === OBSTACLE_COLOR)) continue;
-        const colCells = filled.filter(([, fc]) => fc === c).length;
-        const alreadyFilled = board.filter(row => row[c]).length;
-        const remaining = ROWS - alreadyFilled - colCells;
-        if (remaining <= 2 && remaining > 0) nearMisses++;
-      }
-
       const placementScore = linesCompleted * 10 + nearMisses * 2 + 1;
-      if (placementScore > bestScore) bestScore = placementScore;
+      if(placementScore > bestScore) bestScore = placementScore;
     }
   }
-
   return bestScore;
 }
 
@@ -6048,18 +6060,16 @@ function rngPiece() {
   let shape;
 
   if (useSmartPick) {
-    const scored = pool.map(s => ({ shape: s, weight: scorePieceUsefulness(s) }));
+    _updateFillCache(); // precompute once for all scoring
+    const scored = pool.map(s => ({ shape: s, weight: scorePieceUsefulnessFast(s) }));
     const maxWeight = Math.max(...scored.map(s => s.weight));
     if (maxWeight <= 0) {
-      // All pieces score 0 — fall back to pure random
       shape = pool[Math.floor(rng() * pool.length)];
     } else {
-    // Bias toward best pieces but include all with at least some weight
     const weighted = scored.map(s => ({ shape: s.shape, weight: s.weight / maxWeight }));
-    // Weighted random selection
     const totalWeight = weighted.reduce((sum, s) => sum + s.weight, 0);
     let pick = rng() * totalWeight;
-    shape = weighted[weighted.length - 1].shape; // fallback
+    shape = weighted[weighted.length - 1].shape;
     for (const entry of weighted) {
       pick -= entry.weight;
       if (pick <= 0) { shape = entry.shape; break; }
@@ -6080,10 +6090,12 @@ function rngPiece() {
 let cellSize=0;
 let _boardInitialized = false;
 let _prevBoard = null; // tracks last rendered state for diffing
+let _cellCache = []; // cached board cell DOM elements — avoids repeated querySelectorAll
 
 function _initBoardCells() {
   const el = $id('board');
   el.innerHTML = '';
+  _cellCache = [];
   // Build scanline overlay once
   const overlay = document.createElement('div');
   overlay.id = 'board-scanline';
@@ -6096,6 +6108,7 @@ function _initBoardCells() {
     cell.dataset.r = r;
     cell.dataset.c = c;
     el.appendChild(cell);
+    _cellCache.push(cell);
   }
   _boardInitialized = true;
   _prevBoard = Array.from({length: ROWS}, () => Array(COLS).fill(null));
@@ -6106,12 +6119,12 @@ function _initBoardCells() {
 function renderBoard() {
   const el = $id('board');
   // First time or after a full reset — build cell DOM
-  if(!_boardInitialized || el.querySelectorAll('.cell').length !== ROWS * COLS) {
+  if(!_boardInitialized || (_cellCache.length ? _cellCache : el.querySelectorAll('.cell')).length !== ROWS * COLS) {
     _initBoardCells();
   }
 
   const isGlass = (THEMES.find(t => t.id === activeTheme) || {}).glassStyle;
-  const cells = el.querySelectorAll('.cell');
+  const cells = (_cellCache.length ? _cellCache : el.querySelectorAll('.cell'));
 
   for(let r = 0; r < ROWS; r++) for(let c = 0; c < COLS; c++) {
     const color = board[r][c];
@@ -6311,8 +6324,9 @@ function moveGhost(e) {
   const cols=dragPiece.shape[0].length, rows=dragPiece.shape.length;
   const gap=2;
   const gw=cols*(ghostCellSize+gap), gh=rows*(ghostCellSize+gap);
+  const offset = Math.max(28, ghostCellSize * 0.8); // scale with cell size
   ghost.style.left=(pos.x-gw/2)+'px';
-  ghost.style.top=(pos.y-gh-28)+'px';
+  ghost.style.top=(pos.y-gh-offset)+'px';
 }
 
 function onDragMove(e) {
@@ -6354,7 +6368,8 @@ function getBoardPos(pos) {
   const cs=(totalW-gap*(COLS-1))/COLS;
   const cols=dragPiece.shape[0].length, rows=dragPiece.shape.length;
   const gw=cols*(ghostCellSize+2), gh=rows*(ghostCellSize+2);
-  const px=pos.x-gw/2, py=pos.y-gh-28;
+  const offset = Math.max(28, ghostCellSize * 0.8);
+  const px=pos.x-gw/2, py=pos.y-gh-offset;
   return{
     boardRow:Math.round((py-rect.top-pad)/(cs+gap)),
     boardCol:Math.round((px-rect.left-pad)/(cs+gap))
@@ -6362,6 +6377,7 @@ function getBoardPos(pos) {
 }
 
 let _lastHighlightRow = -1, _lastHighlightCol = -1;
+let _highlightedCells = []; // track which cells have highlight class
 
 function highlightBoard(startRow,startCol) {
   // Rainbow — only update color when moving to a different cell
@@ -6372,7 +6388,7 @@ function highlightBoard(startRow,startCol) {
   clearHighlights();
   if(!dragPiece) return;
   if(!canPlace(dragPiece.shape,startRow,startCol)) return;
-  const cells=document.querySelectorAll('#board .cell');
+  const cells = _cellCache.length ? _cellCache : ($id('board') ? $id('board').querySelectorAll('.cell') : []);
 
   // Rainbow theme — pick a new random color each time we land on a new cell
   if(activeTheme === 'rainbow') {
@@ -6390,15 +6406,19 @@ function highlightBoard(startRow,startCol) {
   dragPiece.shape.forEach((row,r)=>row.forEach((val,c)=>{
     if(!val) return;
     const br=startRow+r, bc=startCol+c;
-    if(br>=0&&br<ROWS&&bc>=0&&bc<COLS)
-      cells[br*COLS+bc].classList.add('highlight');
+    if(br>=0&&br<ROWS&&bc>=0&&bc<COLS) {
+      const cell = cells[br*COLS+bc];
+      cell.classList.add('highlight');
+      _highlightedCells.push(cell);
+    }
   }));
 }
 
 function clearHighlights() {
   _lastHighlightRow = -1;
   _lastHighlightCol = -1;
-  document.querySelectorAll('#board .cell').forEach(c => c.classList.remove('highlight'));
+  _highlightedCells.forEach(c => c.classList.remove('highlight'));
+  _highlightedCells = [];
 }
 
 // ════════════════════════════════════
@@ -6505,9 +6525,10 @@ function refillPieces() {
       ].filter(s => canPlaceAny({ shape: s }));
 
       // Score each candidate against the current board
+      _updateFillCache();
       let bestShape = null, bestScore = -1;
       saverPool.forEach(s => {
-        const score = scorePieceUsefulness(s);
+        const score = scorePieceUsefulnessFast(s);
         if(score > bestScore) { bestScore = score; bestShape = s; }
       });
 
@@ -6579,7 +6600,7 @@ function clearLines() {
   rowsToClear.forEach(r=>{for(let c=0;c<COLS;c++) toClear.add(r*COLS+c);});
   colsToClear.forEach(c=>{for(let r=0;r<ROWS;r++) toClear.add(r*COLS+c);});
 
-  const cells=document.querySelectorAll('#board .cell');
+  const cells=(_cellCache.length ? _cellCache : document.querySelectorAll('#board .cell'));
   
   // Spawn particles for each cleared cell
   toClear.forEach(idx=>{
@@ -6821,7 +6842,7 @@ function checkGameOver() {
 
 function deathFlood(callback) {
   fadeMusicOut(2000);
-  const cells = document.querySelectorAll('#board .cell');
+  const cells = (_cellCache.length ? _cellCache : document.querySelectorAll('#board .cell'));
   const totalCells = ROWS * COLS;
 
   // Collect all empty cells
@@ -7675,7 +7696,7 @@ function triggerBombExplosion(centerRow, centerCol, hex) {
 
   // Visual: animate exploding cells
   const boardEl = $id('board');
-  const cells = boardEl ? boardEl.querySelectorAll('.cell') : [];
+  const cells = boardEl ? (_cellCache.length ? _cellCache : boardEl.querySelectorAll('.cell')) : [];
 
   affected.forEach(({r, c}) => {
     const idx = r * COLS + c;
@@ -7718,7 +7739,7 @@ function renderBombOnBoard() {
     for(let c = 0; c < COLS; c++) {
       if(board[r][c] && board[r][c].startsWith && board[r][c].startsWith('BOMB_')) {
         const idx = r * COLS + c;
-        const cell = boardEl.querySelectorAll('.cell')[idx];
+        const cell = (_cellCache.length ? _cellCache : boardEl.querySelectorAll('.cell'))[idx];
         if(cell) {
           cell.classList.add('bomb');
           cell.style.background = board[r][c].replace('BOMB_','');
@@ -8013,7 +8034,7 @@ function activatePower(type) {
     // Row select mode — highlight rows on hover
     if(boardEl) {
       boardEl.classList.add('select-row-mode');
-      boardEl.querySelectorAll('.cell').forEach(cell => {
+      (_cellCache.length ? _cellCache : boardEl.querySelectorAll('.cell')).forEach(cell => {
         cell.addEventListener('click', onLaserClick, {once:false});
         cell.addEventListener('pointerenter', onLaserHover);
         cell.addEventListener('pointerleave', onLaserUnhover);
@@ -8024,7 +8045,7 @@ function activatePower(type) {
   } else if(type === 'shatter') {
     if(boardEl) {
       boardEl.classList.add('select-mode');
-      boardEl.querySelectorAll('.cell').forEach(cell => {
+      (_cellCache.length ? _cellCache : boardEl.querySelectorAll('.cell')).forEach(cell => {
         cell.addEventListener('click', onShatterClick, {once:false});
       });
     }
@@ -8078,7 +8099,7 @@ function activatePower(type) {
     const boardEl = $id('board');
     if(boardEl) {
       boardEl.classList.add('select-mode');
-      boardEl.querySelectorAll('.cell').forEach(cell => {
+      (_cellCache.length ? _cellCache : boardEl.querySelectorAll('.cell')).forEach(cell => {
         cell.addEventListener('click', onBeamClick, {once:false});
         cell.addEventListener('pointerenter', onBeamHover);
         cell.addEventListener('pointerleave', onBeamUnhover);
@@ -8109,7 +8130,7 @@ function clearBoardSelectMode() {
   const boardEl = $id('board');
   if(!boardEl) return;
   boardEl.classList.remove('select-mode', 'select-row-mode');
-  boardEl.querySelectorAll('.cell').forEach(cell => {
+  (_cellCache.length ? _cellCache : boardEl.querySelectorAll('.cell')).forEach(cell => {
     cell.removeEventListener('click', onLaserClick);
     cell.removeEventListener('click', onShatterClick);
     cell.removeEventListener('click', onWildfireClick);
@@ -8143,14 +8164,14 @@ function onLaserHover(e) {
   const r = parseInt(e.currentTarget.dataset.r);
   const boardEl = $id('board');
   if(!boardEl) return;
-  boardEl.querySelectorAll('.cell').forEach(cell => {
+  (_cellCache.length ? _cellCache : boardEl.querySelectorAll('.cell')).forEach(cell => {
     cell.classList.toggle('row-hover', parseInt(cell.dataset.r) === r);
   });
 }
 
 function onLaserUnhover() {
   const boardEl = $id('board');
-  if(boardEl) boardEl.querySelectorAll('.cell').forEach(c => c.classList.remove('row-hover'));
+  if(boardEl) (_cellCache.length ? _cellCache : boardEl.querySelectorAll('.cell')).forEach(c => c.classList.remove('row-hover'));
 }
 
 function onLaserClick(e) {
@@ -8162,7 +8183,7 @@ function onLaserClick(e) {
   // Flash the row
   const boardEl = $id('board');
   if(boardEl) {
-    boardEl.querySelectorAll('.cell').forEach(cell => {
+    (_cellCache.length ? _cellCache : boardEl.querySelectorAll('.cell')).forEach(cell => {
       if(parseInt(cell.dataset.r) === row) {
         cell.classList.add('clearing');
         const rect = cell.getBoundingClientRect();
@@ -8206,7 +8227,7 @@ function onShatterClick(e) {
   const boardEl = $id('board');
   targets.forEach(t => {
     const idx = t.r * COLS + t.c;
-    const cell = boardEl ? boardEl.querySelectorAll('.cell')[idx] : null;
+    const cell = boardEl ? (_cellCache.length ? _cellCache : boardEl.querySelectorAll('.cell'))[idx] : null;
     const color = board[t.r][t.c] || '#0af5ff';
     if(cell) {
       cell.classList.add('clearing');
@@ -8266,7 +8287,7 @@ function onWildfireClick(e) {
         board[row][col] = null;
         count++;
         if(boardEl) {
-          const cell = boardEl.querySelectorAll('.cell')[row * COLS + col];
+          const cell = (_cellCache.length ? _cellCache : boardEl.querySelectorAll('.cell'))[row * COLS + col];
           if(cell) {
             cell.classList.add('clearing');
             const rect2 = cell.getBoundingClientRect();
@@ -8341,7 +8362,7 @@ function onSniperClick(e) {
     _powerAnimating = true;
 
     targets.forEach(({r, c}) => {
-      const cell = document.querySelectorAll('#board .cell')[r * COLS + c];
+      const cell = (_cellCache.length ? _cellCache : document.querySelectorAll('#board .cell'))[r * COLS + c];
       if(cell) {
         cell.classList.add('clearing');
         const rect = cell.getBoundingClientRect();
@@ -8371,7 +8392,7 @@ function _animateBlockShift(moves, direction, onComplete) {
   const boardEl = $id('board');
   if(!boardEl || !moves.length) { onComplete(); return; }
 
-  const cells = boardEl.querySelectorAll('.cell');
+  const cells = (_cellCache.length ? _cellCache : boardEl.querySelectorAll('.cell'));
 
   // Sort moves so animation cascades naturally
   // Gravity: bottom columns first (blocks fall from top). Magnet: top columns first.
@@ -8452,7 +8473,7 @@ function _animateBlockShift(moves, direction, onComplete) {
   const totalWait = COLS * COL_STAGGER + maxDuration + 160;
   setTimeout(() => {
     // Restore source cells (renderBoard will repaint everything cleanly)
-    const boardCells = boardEl.querySelectorAll('.cell');
+    const boardCells = (_cellCache.length ? _cellCache : boardEl.querySelectorAll('.cell'));
     boardCells.forEach(c => { c.style.opacity = ''; });
     // Remove all clones
     clones.forEach(cl => cl.remove());
@@ -8605,7 +8626,7 @@ function applyAirstrike() {
 
     // 2. Warning flash on target cells
     setTimeout(() => {
-      const cells = boardEl.querySelectorAll('.cell');
+      const cells = (_cellCache.length ? _cellCache : boardEl.querySelectorAll('.cell'));
       [[r,c],[r,c+1],[r+1,c],[r+1,c+1]].forEach(([br, bc]) => {
         if(br < 0 || br >= ROWS || bc < 0 || bc >= COLS) return;
         const cell = cells[br * COLS + bc];
@@ -8688,7 +8709,7 @@ function _airstrikeImpact(r, c, cx, cy, cw, ch, boardEl) {
   flashScreen('rgba(255,45,85,0.15)');
 
   // Cell clearing animations
-  const cells = boardEl.querySelectorAll('.cell');
+  const cells = (_cellCache.length ? _cellCache : boardEl.querySelectorAll('.cell'));
   [[r,c],[r,c+1],[r+1,c],[r+1,c+1]].forEach(([br, bc]) => {
     if(br < 0 || br >= ROWS || bc < 0 || bc >= COLS) return;
     const cell = cells[br * COLS + bc];
@@ -8728,7 +8749,7 @@ function onBeamClick(e) {
   usePower('beam');
 
   // Highlight the whole column
-  const cells = document.querySelectorAll('#board .cell');
+  const cells = (_cellCache.length ? _cellCache : document.querySelectorAll('#board .cell'));
   for(let r = 0; r < ROWS; r++) {
     const cell = cells[r * COLS + c];
     if(cell) { cell.classList.add('clearing'); }
@@ -8759,12 +8780,12 @@ function onBeamClick(e) {
 function onBeamHover(e) {
   if(activePower !== 'beam') return;
   const c = parseInt(e.currentTarget.dataset.c);
-  document.querySelectorAll('#board .cell').forEach(cell => {
+  (_cellCache.length ? _cellCache : document.querySelectorAll('#board .cell')).forEach(cell => {
     cell.classList.toggle('row-hover', parseInt(cell.dataset.c) === c);
   });
 }
 function onBeamUnhover() {
-  document.querySelectorAll('#board .cell').forEach(cell => cell.classList.remove('row-hover'));
+  (_cellCache.length ? _cellCache : document.querySelectorAll('#board .cell')).forEach(cell => cell.classList.remove('row-hover'));
 }
 
 function applyMagnet() {
@@ -9068,28 +9089,43 @@ function updateXPBar() {
   const xlbl = $id('xp-label'); if(xlbl) xlbl.textContent = current.toLocaleString() + ' / ' + needed.toLocaleString() + ' PTS';
 }
 
+// Cached milestone flags — refreshed on game end / unlock checks
+let _milestoneCache = null;
+function _refreshMilestones() {
+  _milestoneCache = {
+    lines100:  !!localStorage.getItem('bb_cleared_100'),
+    score100k: !!localStorage.getItem('bb_score100k'),
+    score250k: !!localStorage.getItem('bb_score250k'),
+    score500k: !!localStorage.getItem('bb_score500k'),
+    games100:  !!localStorage.getItem('bb_games100'),
+    streak7:   !!localStorage.getItem('bb_streak7'),
+    streak10:  !!localStorage.getItem('bb_streak10'),
+    streak30:  !!localStorage.getItem('bb_streak30'),
+    bestStages: parseInt(localStorage.getItem('bb_dr_best_stages') || '0'),
+  };
+}
+
 function isThemeUnlocked(t) {
   if(t.req === 0) return true;
+  if(!_milestoneCache) _refreshMilestones();
   if(typeof t.req === 'string') {
-    if(t.req === 'lines100')  return !!localStorage.getItem('bb_cleared_100');
-    if(t.req === 'score500k') return !!localStorage.getItem('bb_score500k');
-    if(t.req === 'score100k') return best >= 100000 || !!localStorage.getItem('bb_score100k');
-    if(t.req === 'score250k') return best >= 250000 || !!localStorage.getItem('bb_score250k');
-    if(t.req === 'games100')  return gamesPlayed >= 100 || !!localStorage.getItem('bb_games100');
+    if(t.req === 'lines100')  return _milestoneCache.lines100;
+    if(t.req === 'score500k') return _milestoneCache.score500k;
+    if(t.req === 'score100k') return best >= 100000 || _milestoneCache.score100k;
+    if(t.req === 'score250k') return best >= 250000 || _milestoneCache.score250k;
+    if(t.req === 'games100')  return gamesPlayed >= 100 || _milestoneCache.games100;
     if(t.req === 'dex50pct') {
       const seen = getSeenPieces().length;
       const total = PIECE_DEX.length;
       return total > 0 && seen >= Math.ceil(total / 2);
     }
-    if(t.req === 'streak7')   return streak >= 7  || !!localStorage.getItem('bb_streak7');
-    if(t.req === 'streak10')  return streak >= 10 || !!localStorage.getItem('bb_streak10');
-    if(t.req === 'streak30')  return streak >= 30 || !!localStorage.getItem('bb_streak30');
+    if(t.req === 'streak7')   return streak >= 7  || _milestoneCache.streak7;
+    if(t.req === 'streak10')  return streak >= 10 || _milestoneCache.streak10;
+    if(t.req === 'streak30')  return streak >= 30 || _milestoneCache.streak30;
     // Roguelike stage requirements: 'stage1', 'stage2', etc.
     const stageMatch = t.req.match(/^stage(\d+)$/);
     if(stageMatch) {
-      const needed = parseInt(stageMatch[1]);
-      const bestStages = parseInt(localStorage.getItem('bb_dr_best_stages') || '0');
-      return bestStages >= needed;
+      return _milestoneCache.bestStages >= parseInt(stageMatch[1]);
     }
     return false;
   }
@@ -9098,6 +9134,7 @@ function isThemeUnlocked(t) {
 }
 
 function checkNewUnlocks() {
+  _refreshMilestones();
   const newOnes = [];
   THEMES.forEach(t => {
     const tUnlocked = isThemeUnlocked(t);
@@ -9206,14 +9243,21 @@ function showTierStamp(tier) {
   setTimeout(() => el.remove(), 2400);
 }
 
+let _toastEl = null, _toastTimer = null;
 function showToast(msg) {
-  const old = document.querySelector('.unlock-toast');
-  if(old) old.remove();
-  const t = document.createElement('div');
-  t.className = 'unlock-toast';
-  t.textContent = msg;
-  document.body.appendChild(t);
-  setTimeout(() => t.remove(), 3200);
+  if(!_toastEl) {
+    _toastEl = document.createElement('div');
+    _toastEl.className = 'unlock-toast';
+    document.body.appendChild(_toastEl);
+  }
+  // Reset animation
+  clearTimeout(_toastTimer);
+  _toastEl.style.animation = 'none';
+  _toastEl.offsetWidth; // force reflow
+  _toastEl.textContent = msg;
+  _toastEl.style.animation = '';
+  _toastEl.style.display = 'block';
+  _toastTimer = setTimeout(() => { if(_toastEl) _toastEl.style.display = 'none'; }, 3200);
 }
 
 // ════════════════════════════════════
