@@ -8306,13 +8306,40 @@ function _animateBlockShift(moves, direction, onComplete) {
   if(!boardEl || !moves.length) { onComplete(); return; }
 
   const cells = boardEl.querySelectorAll('.cell');
-  const boardRect = boardEl.getBoundingClientRect();
 
-  // Hide source cells and spawn floating clones
+  // Sort moves so animation cascades naturally
+  // Gravity: bottom columns first (blocks fall from top). Magnet: top columns first.
+  if(direction === 'down') {
+    moves.sort((a, b) => a.c - b.c || b.fromR - a.fromR);
+  } else {
+    moves.sort((a, b) => a.c - b.c || a.fromR - b.fromR);
+  }
+
   const clones = [];
-  const COL_STAGGER = 18; // ms between columns
-  const DURATION = 300;
+  const COL_STAGGER = 35;  // ms between columns — visible wave effect
+  const BASE_DURATION = 380; // ms base travel time
 
+  // Hide ALL filled cells on the board (not just moving ones) so clones fully replace the board view
+  const allFilledClones = [];
+  for(let r = 0; r < ROWS; r++) {
+    for(let c = 0; c < COLS; c++) {
+      if(!board[r][c]) continue;
+      const cell = cells[r * COLS + c];
+      if(!cell) continue;
+
+      const isMoving = moves.some(m => m.fromR === r && m.c === c);
+      if(!isMoving) {
+        // Static block — create a non-moving clone so it stays visible
+        const rect = cell.getBoundingClientRect();
+        const clone = _createBlockClone(rect, board[r][c]);
+        document.body.appendChild(clone);
+        allFilledClones.push(clone);
+      }
+      cell.style.opacity = '0';
+    }
+  }
+
+  // Create moving clones
   moves.forEach(({ fromR, toR, c, color }) => {
     const srcCell = cells[fromR * COLS + c];
     const dstCell = cells[toR   * COLS + c];
@@ -8321,49 +8348,80 @@ function _animateBlockShift(moves, direction, onComplete) {
     const srcRect = srcCell.getBoundingClientRect();
     const dstRect = dstCell.getBoundingClientRect();
 
-    // Create a floating clone that looks like the block
-    const clone = document.createElement('div');
-    clone.style.cssText = `
-      position:fixed;
-      left:${srcRect.left}px;
-      top:${srcRect.top}px;
-      width:${srcRect.width}px;
-      height:${srcRect.height}px;
-      background:${color};
-      box-shadow:0 0 6px ${color};
-      border-radius:3px;
-      z-index:999;
-      pointer-events:none;
-      will-change:transform;
-    `;
+    const clone = _createBlockClone(srcRect, color);
     document.body.appendChild(clone);
     clones.push(clone);
 
-    // Hide the original cell while clone is flying
-    srcCell.style.opacity = '0';
+    // Distance-based duration — farther = slightly longer, feels more physical
+    const distance = Math.abs(toR - fromR);
+    const duration = BASE_DURATION + distance * 30;
 
-    // Animate clone to destination with staggered delay per column
     const delay = c * COL_STAGGER;
     const dy = dstRect.top - srcRect.top;
-    const easing = direction === 'down'
-      ? 'cubic-bezier(0.25, 0.46, 0.45, 0.94)' // ease-out quad — natural fall
-      : 'cubic-bezier(0.16, 1, 0.3, 1)';         // ease-out expo — snappy pull up
 
+    // Gravity: accelerating fall with bounce. Magnet: snappy pull with overshoot.
     setTimeout(() => {
-      clone.style.transition = `transform ${DURATION}ms ${easing}`;
-      clone.style.transform = `translateY(${dy}px)`;
+      if(direction === 'down') {
+        // Two-phase: fast fall then small bounce
+        clone.style.transition = `transform ${duration}ms cubic-bezier(0.33, 0, 0.67, 1)`;
+        clone.style.transform = `translateY(${dy}px)`;
+        // Bounce settle
+        setTimeout(() => {
+          clone.style.transition = `transform 120ms cubic-bezier(0.34, 1.56, 0.64, 1)`;
+          clone.style.transform = `translateY(${dy - 3}px) scaleY(1.06)`;
+          setTimeout(() => {
+            clone.style.transition = `transform 100ms ease-out`;
+            clone.style.transform = `translateY(${dy}px) scaleY(1)`;
+          }, 120);
+        }, duration);
+      } else {
+        // Magnet: ease-out with slight overshoot
+        clone.style.transition = `transform ${duration}ms cubic-bezier(0.22, 1.4, 0.36, 1)`;
+        clone.style.transform = `translateY(${dy}px)`;
+      }
     }, delay);
   });
 
-  const totalWait = COLS * COL_STAGGER + DURATION + 30;
+  const maxDuration = BASE_DURATION + ROWS * 30;
+  const totalWait = COLS * COL_STAGGER + maxDuration + 250;
   setTimeout(() => {
     // Restore source cells (renderBoard will repaint everything cleanly)
     const boardCells = boardEl.querySelectorAll('.cell');
     boardCells.forEach(c => { c.style.opacity = ''; });
     // Remove all clones
     clones.forEach(cl => cl.remove());
+    allFilledClones.forEach(cl => cl.remove());
     onComplete();
   }, totalWait);
+}
+
+function _createBlockClone(rect, color) {
+  const clone = document.createElement('div');
+  clone.style.cssText = `
+    position:fixed;
+    left:${rect.left}px;
+    top:${rect.top}px;
+    width:${rect.width}px;
+    height:${rect.height}px;
+    background:${color};
+    box-shadow:0 0 6px ${color}, inset 0 0 3px rgba(255,255,255,0.1);
+    border-radius:3px;
+    z-index:999;
+    pointer-events:none;
+    will-change:transform;
+    overflow:hidden;
+  `;
+  // Add the pixel shine highlight that filled cells have
+  const shine = document.createElement('div');
+  shine.style.cssText = `
+    position:absolute;
+    top:0; left:0; right:0;
+    height:40%;
+    background:rgba(255,255,255,0.18);
+    border-radius:3px 3px 0 0;
+  `;
+  clone.appendChild(shine);
+  return clone;
 }
 
 function applyGravity() {
@@ -8394,7 +8452,7 @@ function applyGravity() {
       for(let r = 0; r < ROWS; r++) if(board[r][c]) col.push(board[r][c]);
       for(let r = 0; r < ROWS; r++) board[r][c] = r >= ROWS - col.length ? col[r - (ROWS - col.length)] : null;
     }
-    shakeBoard(2);
+    shakeBoard(1);
     renderBoard();
     setTimeout(() => {
       clearLines();
@@ -8609,7 +8667,7 @@ function applyMagnet() {
       for(let r = 0; r < ROWS; r++) if(board[r][c]) col.push(board[r][c]);
       for(let r = 0; r < ROWS; r++) board[r][c] = r < col.length ? col[r] : null;
     }
-    shakeBoard(2);
+    shakeBoard(1);
     renderBoard();
     setTimeout(() => {
       clearLines();
