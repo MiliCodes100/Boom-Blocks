@@ -5816,7 +5816,6 @@ function _drCheckFloorComplete() {
 
 function _drShowFloorComplete(floor, floorScore, isLastFloorOfStage) {
   haptic([30, 20, 50, 20, 80]);
-  sfxLevelUp();
 
   // Particles
   const cx = window.innerWidth / 2, cy = window.innerHeight / 2;
@@ -5965,7 +5964,7 @@ function _drShowCardPicker(onChosen) {
       card.style.borderColor = p.color;
       card.style.boxShadow = `0 0 30px ${p.glow}`;
       haptic([20, 10, 50]);
-      sfxUnlock();
+      sfxPowerEarned();
       setTimeout(() => {
         overlay.remove();
         if(type === 'overclock') {
@@ -7920,7 +7919,6 @@ function updateMissionProgress(stat, value) {
 
 function showMissionComplete(mission) {
   haptic([20, 10, 40, 10, 60]);
-  sfxUnlock();
 
   const toast = document.createElement('div');
   toast.style.cssText = `
@@ -8503,7 +8501,7 @@ function _drUnlockRandomPower(floorIdx) {
     }, 'POWER-UP UNLOCKED');
   }, 800);
 
-  sfxUnlock();
+  sfxPowerEarned();
   haptic([20, 10, 40, 10, 60]);
 }
 
@@ -9896,7 +9894,6 @@ function addXP(amount) {
   const newLevel = getLevel();
   if(newLevel > oldLevel) {
     showToast('★ LEVEL UP! LEVEL ' + newLevel + ' ★');
-    sfxLevelUp();
   }
   updateXPBar();
   checkNewUnlocks();
@@ -10060,7 +10057,6 @@ function showTierStamp(tier) {
       <div class="tier-stamp-sub">${tier.sub}</div>
     </div>`;
   document.body.appendChild(el);
-  sfxLevelUp();
   setTimeout(() => el.remove(), 2400);
 }
 
