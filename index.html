@@ -5871,12 +5871,12 @@ function _drShowFloorComplete(floor, floorScore, isLastFloorOfStage) {
       <div class="dr-fc-title">${_pick(isLastFloorOfStage ? _drStageTitles : _drFloorTitles)}</div>
       <div class="dr-fc-floor">${_pick(isLastFloorOfStage ? _drStageDescs : _drFloorDescs)}</div>
       <div class="dr-fc-score">+${floorScore.toLocaleString()}</div>
-      <div class="dr-fc-next">${_pick(_drNextTexts)}</div>
+      <div class="dr-fc-next" style="animation:bossIntroBlink 1s infinite">TAP TO CONTINUE</div>
     </div>
   `;
   document.body.appendChild(popup);
 
-  setTimeout(() => {
+  const proceed = () => {
     popup.remove();
     if(isLastFloorOfStage) {
       // Start next stage
@@ -5891,7 +5891,12 @@ function _drShowFloorComplete(floor, floorScore, isLastFloorOfStage) {
     } else {
       _drShowCardPicker(() => _drStartFloor(_drFloor + 1));
     }
-  }, 1800);
+  };
+
+  // Require tap but add a small delay so players don't accidentally skip it
+  setTimeout(() => {
+    popup.addEventListener('click', proceed, { once: true });
+  }, 400);
 }
 
 // Power descriptions for cards
@@ -10670,16 +10675,45 @@ function showLevelUpStamp(level) {
 let musicEnabled = localStorage.getItem('bb_music') !== '0';
 let bgMusic = null;
 
+function _createMusicElement() {
+  const track = MUSIC_TRACKS.find(t => t.id === activeTrackId) || MUSIC_TRACKS[0];
+  const audio = new Audio(track.file);
+  audio.loop = true;
+  audio.volume = 0.35;
+  audio.preload = 'auto';
+  return audio;
+}
+
 function initMusic() {
   if(bgMusic) return;
-  const track = MUSIC_TRACKS.find(t => t.id === activeTrackId) || MUSIC_TRACKS[0];
-  bgMusic = new Audio(track.file);
-  bgMusic.loop = true;
-  bgMusic.volume = 0.35;
+  bgMusic = _createMusicElement();
   updateMusicBtn();
-  if(musicEnabled) {
+  if(musicEnabled) _playMusic();
+}
+
+function _playMusic() {
+  if(!bgMusic) return;
+  bgMusic.volume = 0.35;
+  // Wait for audio to be ready before playing
+  const doPlay = () => {
     const p = bgMusic.play();
-    if(p) p.catch(() => {});
+    if(p) p.catch(() => {
+      // Autoplay blocked — retry on next user interaction
+      const retry = () => {
+        if(musicEnabled && bgMusic && bgMusic.paused) {
+          bgMusic.play().catch(() => {});
+        }
+      };
+      document.addEventListener('click', retry, { once: true });
+      document.addEventListener('touchstart', retry, { once: true, passive: true });
+    });
+  };
+  if(bgMusic.readyState >= 2) {
+    doPlay();
+  } else {
+    bgMusic.addEventListener('canplay', doPlay, { once: true });
+    // Fallback — try anyway after a short delay
+    setTimeout(doPlay, 300);
   }
 }
 
@@ -10691,23 +10725,8 @@ function toggleMusic() {
   localStorage.setItem('bb_music', musicEnabled ? '1' : '0');
   if(bgMusic) {
     if(musicEnabled) {
-      // Cancel any active fade
       _musicFading = false;
-      bgMusic.volume = 0.35;
-      // Wait for any pending pause to settle, then play
-      const p = bgMusic.play();
-      if(p) p.catch(() => {
-        // Autoplay blocked — retry on next user interaction
-        const retry = () => {
-          if(musicEnabled && bgMusic.paused) {
-            bgMusic.play().catch(() => {});
-          }
-          document.removeEventListener('click', retry);
-          document.removeEventListener('touchstart', retry);
-        };
-        document.addEventListener('click', retry, { once: true });
-        document.addEventListener('touchstart', retry, { once: true, passive: true });
-      });
+      _playMusic();
     } else {
       bgMusic.pause();
     }
@@ -10728,7 +10747,7 @@ function fadeMusicOut(duration = 2000) {
   const decrement = start / steps;
   const interval = duration / steps;
   const fade = setInterval(() => {
-    if(!_musicFading) { clearInterval(fade); return; } // cancelled by toggle
+    if(!_musicFading) { clearInterval(fade); return; }
     if(bgMusic.volume > decrement) {
       bgMusic.volume -= decrement;
     } else {
@@ -10736,13 +10755,9 @@ function fadeMusicOut(duration = 2000) {
       bgMusic.pause();
       clearInterval(fade);
       _musicFading = false;
-      // Reset volume for next play
       setTimeout(() => {
         if(bgMusic) bgMusic.volume = 0.35;
-        if(musicEnabled && bgMusic && bgMusic.paused) {
-          const p = bgMusic.play();
-          if(p) p.catch(() => {});
-        }
+        if(musicEnabled && bgMusic && bgMusic.paused) _playMusic();
       }, 1500);
     }
   }, interval);
@@ -10823,12 +10838,19 @@ function setActiveTrack(id) {
   activeTrackId = id;
   localStorage.setItem('bb_active_track', id);
   const track = MUSIC_TRACKS.find(t => t.id === id);
-  if(bgMusic && track) {
-    const wasPlaying = !bgMusic.paused;
-    bgMusic.src = track.file;
-    bgMusic.load();
-    if(wasPlaying && musicEnabled) bgMusic.play().catch(() => {});
+  if(!track) return;
+
+  const wasPlaying = bgMusic && !bgMusic.paused && musicEnabled;
+
+  // Destroy old audio and create fresh one — avoids broken state from load()
+  if(bgMusic) {
+    bgMusic.pause();
+    bgMusic.src = '';
+    bgMusic = null;
   }
+  bgMusic = _createMusicElement();
+  if(wasPlaying) _playMusic();
+
   renderMusicSection();
 }
 
