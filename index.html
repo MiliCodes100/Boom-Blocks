@@ -5828,12 +5828,12 @@ function _drShowFloorComplete(floor, floorScore, isLastFloorOfStage) {
 
   // Floor/stage clear sound
   if(isLastFloorOfStage) {
-    if(hasSFXFile('stageclear')) sfxFile('stageclear');
-    else sfxDailyComplete();
+    sfxFile('stageclear');
+    if(!hasSFXFile('stageclear')) sfxDailyComplete();
   } else {
     const pick = 'floorclear' + (Math.floor(Math.random() * 5) + 1);
-    if(hasSFXFile(pick)) sfxFile(pick);
-    else sfxPowerEarned();
+    sfxFile(pick);
+    if(!hasSFXFile(pick)) sfxPowerEarned();
   }
 
   // Particles
@@ -5921,6 +5921,7 @@ const POWER_DESCS = {
   lucky:     '+2% better pieces\nfor the whole run\n(STACKS!)',
   nuke:      'Clears EVERY block\nfrom the board\n★★ ULTRA RARE ★★',
   machinegun:'Sprays 12 random\nshots across the board\n(some may miss!)',
+  reroll:    'Rerolls your tray\nwith brand new pieces',
 };
 
 function _drShowCardPicker(onChosen) {
@@ -6152,7 +6153,7 @@ function _drFinishRun(cleared) {
   });
   const passiveBar = $id('dr-passive-bar');
   if(passiveBar) { passiveBar.style.display = 'none'; passiveBar.innerHTML = ''; }
-  powerInventory = { laser:0, shatter:0, wildfire:0, bomb:0, sniper:0, gravity:0, shield:0, turbo:0, airstrike:0, beam:0, magnet:0, overclock:0, lucky:0, nuke:0, machinegun:0 };
+  powerInventory = { laser:0, shatter:0, wildfire:0, bomb:0, sniper:0, gravity:0, shield:0, turbo:0, airstrike:0, beam:0, magnet:0, overclock:0, lucky:0, nuke:0, machinegun:0, reroll:0 };
   _drTurboActive = false;
   _drOverclockActive = false;
   // Shrink board back if expanded
@@ -7079,22 +7080,32 @@ function refillPieces() {
       attempts++;
     } while(attempts < 20 && !pieces.some(p => canPlaceAny(p)));
 
-    // In roguelike: max 1 nightmare (T5) piece per tray
-    if(isDaily && _drActive) {
-      const t5Indices = pieces.reduce((acc, p, i) => {
-        if(p && PIECES_T5.includes(p.shape)) acc.push(i);
-        return acc;
-      }, []);
-      // If more than 1 T5, replace extras with non-T5 pieces
-      while(t5Indices.length > 1) {
-        const idx = t5Indices.pop();
-        // Generate from T1-T3 pool only to guarantee no T5
-        const safePool = [...PIECES_T1, ...PIECES_T2, ...PIECES_T3];
-        const safeShape = safePool[Math.floor(Math.random() * safePool.length)];
-        const theme = THEMES.find(t => t.id === activeTheme) || THEMES[0];
-        const color = theme.colors[Math.floor(Math.random() * theme.colors.length)];
-        pieces[idx] = { shape: safeShape, color, hex: colorHex[color] || color || '#0af5ff' };
-      }
+    // Max 1 nightmare (T5) piece per tray
+    const t5Indices = pieces.reduce((acc, p, i) => {
+      if(p && PIECES_T5.includes(p.shape)) acc.push(i);
+      return acc;
+    }, []);
+    while(t5Indices.length > 1) {
+      const idx = t5Indices.pop();
+      const safePool = [...PIECES_T1, ...PIECES_T2, ...PIECES_T3];
+      const safeShape = safePool[Math.floor(Math.random() * safePool.length)];
+      const theme = THEMES.find(t => t.id === activeTheme) || THEMES[0];
+      const color = theme.colors[Math.floor(Math.random() * theme.colors.length)];
+      pieces[idx] = { shape: safeShape, color, hex: colorHex[color] || color || '#0af5ff' };
+    }
+
+    // Max 1 epic (T4) piece per tray
+    const t4Indices = pieces.reduce((acc, p, i) => {
+      if(p && PIECES_T4.includes(p.shape)) acc.push(i);
+      return acc;
+    }, []);
+    while(t4Indices.length > 1) {
+      const idx = t4Indices.pop();
+      const safePool = [...PIECES_T1, ...PIECES_T2, ...PIECES_T3];
+      const safeShape = safePool[Math.floor(Math.random() * safePool.length)];
+      const theme = THEMES.find(t => t.id === activeTheme) || THEMES[0];
+      const color = theme.colors[Math.floor(Math.random() * theme.colors.length)];
+      pieces[idx] = { shape: safeShape, color, hex: colorHex[color] || color || '#0af5ff' };
     }
     if(consecutiveClearCount >= 3) {
       const color = '#ffd60a'; // golden streak saver color
@@ -7396,6 +7407,9 @@ function checkGameOver() {
       for(let c = 0; c < COLS; c++) if(!_isJail(row, c)) board[row][c] = null;
       renderBoard();
     }
+    // Fresh tray so the player isn't stuck with unplaceable pieces
+    pieces = pieces.map(() => null);
+    refillPieces(); renderTray();
     return;
   }
 
@@ -8404,9 +8418,10 @@ const POWERS = {
   lucky:     { color:'#30d158', glow:'rgba(48,209,88,0.5)',  icon:'🍀', name:'LUCKY',         rogueLikeOnly:true },
   nuke:      { color:'#ff0000', glow:'rgba(255,0,0,0.6)',    icon:'☢️', name:'TACTICAL NUKE', rogueLikeOnly:true, rare:true },
   machinegun:{ color:'#ff9f0a', glow:'rgba(255,159,10,0.5)', icon:'🔫', name:'MACHINE GUN',  rogueLikeOnly:true },
+  reroll:    { color:'#00bfff', glow:'rgba(0,191,255,0.5)',  icon:'🎲', name:'REROLL',       rogueLikeOnly:true },
 };
 
-let powerInventory = { laser:0, shatter:0, wildfire:0, bomb:0, sniper:0, gravity:0, shield:0, turbo:0, airstrike:0, beam:0, magnet:0, overclock:0, lucky:0, nuke:0, machinegun:0 };
+let powerInventory = { laser:0, shatter:0, wildfire:0, bomb:0, sniper:0, gravity:0, shield:0, turbo:0, airstrike:0, beam:0, magnet:0, overclock:0, lucky:0, nuke:0, machinegun:0, reroll:0 };
 let _movesSincePowerup = 0;   // moves placed since player first got a powerup
 let _powerRemindShown = false; // only show once per game
 let activePower = null; // currently selected power waiting for board tap
@@ -8422,7 +8437,7 @@ let _drSlotAgeCounter = 0; // increments each time a slot is filled
 const _drPowerSlots = ['laser', 'shatter', 'wildfire', 'bomb']; // 4 slots — any power type can go in any slot
 
 function _drLockAllPowers() {
-  powerInventory = { laser:0, shatter:0, wildfire:0, bomb:0, sniper:0, gravity:0, shield:0, turbo:0, airstrike:0, beam:0, magnet:0, overclock:0, lucky:0, nuke:0, machinegun:0 };
+  powerInventory = { laser:0, shatter:0, wildfire:0, bomb:0, sniper:0, gravity:0, shield:0, turbo:0, airstrike:0, beam:0, magnet:0, overclock:0, lucky:0, nuke:0, machinegun:0, reroll:0 };
   activePower = null;
   _drUnlockedPowers = [null, null, null, null];
   _drSlotAge = [0, 0, 0, 0];
@@ -8720,6 +8735,10 @@ function activatePower(type) {
     usePower('machinegun');
     cancelPower();
     applyMachineGun();
+  } else if(type === 'reroll') {
+    usePower('reroll');
+    cancelPower();
+    applyReroll();
   }
 }
 
@@ -9546,7 +9565,7 @@ function applyMachineGun() {
       haptic([12, 8]);
 
       // Small shake every few shots
-      if(i % 3 === 0) shakeBoard(1);
+      if(i % 3 === 0) shakeBoard(2);
 
     }, i * SHOT_INTERVAL);
   });
@@ -9560,6 +9579,32 @@ function applyMachineGun() {
     _powerAnimating = false;
     setTimeout(() => checkGameOver(), 150);
   }, totalTime);
+}
+
+// ── REROLL ──
+function applyReroll() {
+  flashPower('#00bfff');
+  sfxPowerEarned();
+  haptic([20, 10, 30, 10, 20]);
+
+  // Remember current piece shapes to avoid duplicates
+  const oldShapes = pieces.filter(p => p !== null).map(p => p.shape);
+
+  // Clear tray and generate new pieces that don't match the old ones
+  pieces = pieces.map(() => null);
+  refillPieces();
+
+  // Check for duplicates and reroll any that match old pieces
+  let retries = 0;
+  for(let i = 0; i < pieces.length; i++) {
+    while(pieces[i] && oldShapes.includes(pieces[i].shape) && retries < 30) {
+      pieces[i] = rngPiece();
+      retries++;
+    }
+  }
+
+  renderTray();
+  showToast('🎲 REROLLED!');
 }
 
 // ── TACTICAL NUKE ──
@@ -9716,7 +9761,7 @@ function flashPower(color) {
 }
 
 function resetPowers() {
-  powerInventory = { laser:0, shatter:0, wildfire:0, bomb:0, sniper:0, gravity:0, shield:0, turbo:0, airstrike:0, beam:0, magnet:0, overclock:0, lucky:0, nuke:0, machinegun:0 };
+  powerInventory = { laser:0, shatter:0, wildfire:0, bomb:0, sniper:0, gravity:0, shield:0, turbo:0, airstrike:0, beam:0, magnet:0, overclock:0, lucky:0, nuke:0, machinegun:0, reroll:0 };
   activePower = null;
   _movesSincePowerup = 0;
   _powerRemindShown = false;
@@ -10574,6 +10619,7 @@ const POWER_DEX = [
   { id:'magnet',    cat:'active',  catLabel:'ACTIVE',   catColor:'#0af5ff' },
   { id:'nuke',      cat:'active',  catLabel:'ACTIVE',   catColor:'#0af5ff' },
   { id:'machinegun',cat:'active',  catLabel:'ACTIVE',   catColor:'#0af5ff' },
+  { id:'reroll',    cat:'active',  catLabel:'ACTIVE',   catColor:'#0af5ff' },
   { id:'shield',    cat:'passive', catLabel:'PASSIVE',  catColor:'#ffd60a' },
   { id:'turbo',     cat:'passive', catLabel:'PASSIVE',  catColor:'#ffd60a' },
   { id:'overclock', cat:'passive', catLabel:'PASSIVE',  catColor:'#ffd60a' },
