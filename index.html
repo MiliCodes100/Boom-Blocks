@@ -388,6 +388,7 @@ header {
   position:relative;
   overflow:hidden;
   contain: layout style paint;
+  box-sizing: border-box;
 }
 
 /* pixel shine on filled cells — disabled in expand mode */
@@ -5265,6 +5266,7 @@ function _launchClassic(boardSize) {
     ROWS = DEFAULT_ROWS; COLS = DEFAULT_COLS;
   }
   _drExpandActive = false;
+  document.body.classList.remove('expand-active');
 
   $id('mode-label').textContent = boardSize === '12x12' ? 'CLASSIC 12×12' : 'CLASSIC';
   $id('mode-label').className='mode-label';
@@ -6697,17 +6699,17 @@ function renderBoard() {
 
     if(color === OBSTACLE_COLOR) {
       cell.className = 'cell filled obstacle';
-      cell.style.cssText = 'background:repeating-linear-gradient(-45deg,#ffd60a 0px,#ffd60a 4px,#1a1200 4px,#1a1200 8px);box-shadow:0 0 8px rgba(255,214,10,0.5);border:1.5px solid #ffd60a;border-radius:3px';
+      cell.style.cssText = 'background:repeating-linear-gradient(-45deg,#ffd60a 0px,#ffd60a 4px,#1a1200 4px,#1a1200 8px);box-shadow:0 0 8px rgba(255,214,10,0.5);outline:1.5px solid #ffd60a;outline-offset:-1.5px;border-radius:3px';
       cell.textContent = '';
     } else if(color === JAIL_COLOR) {
       cell.className = 'cell filled jail';
-      cell.style.cssText = 'background:repeating-linear-gradient(-45deg,#333 0px,#333 4px,#111 4px,#111 8px);box-shadow:0 0 4px rgba(100,100,100,0.4);border:1.5px solid #555;border-radius:3px';
+      cell.style.cssText = 'background:repeating-linear-gradient(-45deg,#333 0px,#333 4px,#111 4px,#111 8px);box-shadow:0 0 4px rgba(100,100,100,0.4);outline:1.5px solid #555;outline-offset:-1.5px;border-radius:3px';
       cell.textContent = '';
     } else if(color) {
       cell.className = 'cell filled';
       const glow = _drExpandActive ? '' : `0 0 6px ${color},`; // skip glow in expand mode for perf
       if(isGlass) {
-        cell.style.cssText = `background:${color};backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,0.7);box-shadow:0 4px 16px ${color};border-radius:6px`;
+        cell.style.cssText = `background:${color};backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);outline:1px solid rgba(255,255,255,0.7);outline-offset:-1px;box-shadow:0 4px 16px ${color};border-radius:6px`;
       } else {
         cell.style.cssText = `background:${color};box-shadow:${glow}inset 0 0 3px rgba(255,255,255,0.1)`;
       }
