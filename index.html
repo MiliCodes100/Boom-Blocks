@@ -5350,7 +5350,7 @@ const DAILY_RUN_FLOORS = [
 ];
 
 // Boss type rotates by stage — first boss is randomized per run, then cycles
-const BOSS_TYPES = ['jail', 'expand', 'obstacles'];
+const BOSS_TYPES = ['jail', 'expand', 'obstacles', 'pit'];
 let _drBossOffset = 0; // random starting offset, set at run start
 function _getBossType() {
   return BOSS_TYPES[(_drStage + _drBossOffset) % BOSS_TYPES.length];
@@ -5380,6 +5380,10 @@ function startDaily() {
   _drFloor = 0;
   _drStage = 0;
   _drBossOffset = Math.floor(Math.random() * BOSS_TYPES.length);
+  // Ensure expand is never the first boss — reroll if needed
+  while(BOSS_TYPES[(_drBossOffset) % BOSS_TYPES.length] === 'expand') {
+    _drBossOffset = Math.floor(Math.random() * BOSS_TYPES.length);
+  }
   _drTotalScore = 0;
   _drFloorResults = [];
   _drTransitioning = false;
@@ -5441,12 +5445,14 @@ function _drStartFloor(floorIdx) {
       expand:    { emoji:'🔳', name:'EXPAND',    desc:'BOARD GROWS TO 12×12' },
       obstacles: { emoji:'💀', name:'OBSTACLES',  desc:`${obstacleCount} OBSTACLE${obstacleCount > 1 ? 'S' : ''} INCOMING` },
       jail:      { emoji:'🔒', name:'JAIL LINE',  desc:'AN ENTIRE ROW IS LOCKED' },
+      pit:       { emoji:'🕳️', name:'THE PIT',    desc:'THE CENTER IS SEALED OFF' },
     };
     const info = bossInfo[bossType] || { emoji:'👾', name:'BOSS', desc:'SURVIVE THIS!' };
     _drShowBossIntro(info.emoji, info.name, info.desc, () => {
       if(bossType === 'expand') _drExpandBoard();
       else if(bossType === 'obstacles') _drSpawnBossObstacle(obstacleCount);
       else if(bossType === 'jail') _drSpawnJailLine();
+      else if(bossType === 'pit') _drSpawnPit();
     });
   } else {
     // Leaving a boss floor — clean up
@@ -5561,6 +5567,49 @@ function _drClearJailCells() {
     }
   }
   if(cleared) renderBoard();
+}
+
+function _drSpawnPit() {
+  // Fill the center 4x4 area with jail blocks (on 8x8 board: rows 2-5, cols 2-5)
+  const pitSize = 4;
+  const startR = Math.floor((ROWS - pitSize) / 2);
+  const startC = Math.floor((COLS - pitSize) / 2);
+
+  for(let r = startR; r < startR + pitSize; r++) {
+    if(!board[r]) continue;
+    for(let c = startC; c < startC + pitSize; c++) {
+      board[r][c] = JAIL_COLOR;
+    }
+  }
+
+  renderBoard();
+
+  // Animate pit cells spawning with a spiral-in stagger
+  setTimeout(() => {
+    const cells = _cellCache.length ? _cellCache : [];
+    let delay = 0;
+    // Spiral from outside to inside for dramatic effect
+    for(let ring = 0; ring < Math.ceil(pitSize / 2); ring++) {
+      for(let r = startR + ring; r < startR + pitSize - ring; r++) {
+        for(let c = startC + ring; c < startC + pitSize - ring; c++) {
+          if(r === startR + ring || r === startR + pitSize - ring - 1 ||
+             c === startC + ring || c === startC + pitSize - ring - 1) {
+            const cell = cells[r * COLS + c];
+            if(cell) {
+              setTimeout(() => {
+                cell.classList.add('spawning');
+                setTimeout(() => cell.classList.remove('spawning'), 450);
+              }, delay);
+              delay += 30;
+            }
+          }
+        }
+      }
+    }
+    sfxObstacle();
+    haptic([20, 10, 40, 10, 60]);
+    showToast('🕳️ THE PIT! Clear around the center!');
+  }, 100);
 }
 
 function _drShowBossIntro(emoji, name, desc, onComplete) {
@@ -11231,7 +11280,7 @@ const PT_STEPS = [
   },
   {
     title: 'BOSS FLOORS',
-    body: 'Every 5th floor is a\n<b>BOSS FLOOR!</b>\n\n🔒 <b>JAIL</b> — locks a row\n🔳 <b>EXPAND</b> — 12×12 board\n💀 <b>OBSTACLES</b> — blocks spawn\n\nBosses are tough but\npower-ups help!',
+    body: 'Every 5th floor is a\n<b>BOSS FLOOR!</b>\n\nThese are <em>unique challenges</em>\nyou\'ll have to overcome.\n\nPower-ups will help\nyou survive them!',
     target: 'board',
     hand: false,
     btn: 'BRING IT ON ▶',
