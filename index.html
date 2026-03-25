@@ -4197,6 +4197,12 @@ const SFX_FILES = {
   'lucky':       './lucky.mp3',
   'levelup':     './levelup.mp3',
   'unlock':      './unlock.mp3',
+  'floorclear1': './floorclear1.mp3',
+  'floorclear2': './floorclear2.mp3',
+  'floorclear3': './floorclear3.mp3',
+  'floorclear4': './floorclear4.mp3',
+  'floorclear5': './floorclear5.mp3',
+  'stageclear':  './stageclear.mp3',
 };
 
 const _sfxBuffers = {}; // name → AudioBuffer (loaded)
@@ -4619,7 +4625,7 @@ function sfxPowerActivate(type) {
     note(1800, 'sine',     0.005, 0.03, 0.04, 0.06, 0.06);
     noise(0.02, 0.03, 0.05);
   } else if(type === 'gravity') {
-    if(hasSFXFile('gravity')) { sfxFile('gravity'); return; }
+    if(hasSFXFile('gravity')) { sfxFile('gravity', { volume: 0.5 }); return; }
     // Heavy whoosh downward
     note(300, 'sawtooth',  0.01, 0.15, 0.2, 0.25, 0, 80);
     note(150, 'sawtooth',  0.01, 0.12, 0.18, 0.2, 0.05, 60);
@@ -4646,7 +4652,7 @@ function sfxPowerActivate(type) {
     note(600, 'square',   0.003, 0.06, 0.04, 0.15, 0.05, 1600);
     noise(0.04, 0.08, 0.05);
   } else if(type === 'magnet') {
-    if(hasSFXFile('magnet')) { sfxFile('magnet'); return; }
+    if(hasSFXFile('magnet')) { sfxFile('magnet', { volume: 0.5 }); return; }
     // Magnetic pull whoosh upward
     note(80,  'sawtooth', 0.008, 0.15, 0.2, 0.25, 0, 400);
     note(200, 'sawtooth', 0.006, 0.12, 0.15, 0.2, 0.05, 600);
@@ -5816,6 +5822,14 @@ function _drCheckFloorComplete() {
 
 function _drShowFloorComplete(floor, floorScore, isLastFloorOfStage) {
   haptic([30, 20, 50, 20, 80]);
+
+  // Floor/stage clear sound
+  if(isLastFloorOfStage) {
+    if(hasSFXFile('stageclear')) sfxFile('stageclear');
+  } else {
+    const pick = 'floorclear' + (Math.floor(Math.random() * 5) + 1);
+    if(hasSFXFile(pick)) sfxFile(pick);
+  }
 
   // Particles
   const cx = window.innerWidth / 2, cy = window.innerHeight / 2;
@@ -9471,7 +9485,7 @@ function applyMachineGun() {
   }
 
   const cells = _cellCache.length ? _cellCache : [];
-  const SHOT_INTERVAL = 80; // ms between shots — rapid fire feel
+  const SHOT_INTERVAL = 120; // ms between shots
 
   targets.forEach((t, i) => {
     setTimeout(() => {
@@ -9480,7 +9494,7 @@ function applyMachineGun() {
       const hasFill = board[t.r] && board[t.r][t.c];
 
       // Muzzle flash on the cell
-      cell.style.transition = 'transform 0.08s ease-out, filter 0.08s ease-out';
+      cell.style.transition = 'transform 0.1s ease-out, filter 0.1s ease-out';
       cell.style.transform = 'scale(1.4)';
       cell.style.filter = 'brightness(3)';
 
@@ -9488,7 +9502,7 @@ function applyMachineGun() {
         cell.style.transform = 'scale(1)';
         cell.style.filter = '';
         if(hasFill) cell.classList.add('clearing');
-      }, 80);
+      }, 100);
 
       // Particles — different for hit vs miss
       const rect = cell.getBoundingClientRect();
