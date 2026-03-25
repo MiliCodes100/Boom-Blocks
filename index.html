@@ -4193,6 +4193,10 @@ const SFX_FILES = {
   'magnet':      './magnet.mp3',
   'gravity':     './gravity.mp3',
   'bomb':        './bomb.mp3',
+  'sniper':      './sniper.mp3',
+  'lucky':       './lucky.mp3',
+  'levelup':     './levelup.mp3',
+  'unlock':      './unlock.mp3',
 };
 
 const _sfxBuffers = {}; // name → AudioBuffer (loaded)
@@ -4686,6 +4690,7 @@ function sfxGloryBlock() {
 }
 
 function sfxLevelUp() {
+  if(hasSFXFile('levelup')) { sfxFile('levelup'); return; }
   const fanfare = [523, 659, 784, 1047, 1319];
   fanfare.forEach((f, i) => {
     note(f, 'sine', 0.003, 0.08, 0.15, 0.22, i * 0.09);
@@ -4695,6 +4700,7 @@ function sfxLevelUp() {
 
 // ── UNLOCK ──
 function sfxUnlock() {
+  if(hasSFXFile('unlock')) { sfxFile('unlock'); return; }
   chord([392, 494, 659], 'sine', 0.01, 0.2, 0.3, 0.2);
   note(1319, 'sine', 0.01, 0.15, 0.3, 0.18, 0.15);
   noise(0.05, 0.06, 0.1);
@@ -4716,6 +4722,7 @@ function sfxObstacle() {
 
 // ── SNIPER SHOT ──
 function sfxSniperShot() {
+  if(hasSFXFile('sniper')) { sfxFile('sniper'); return; }
   note(2400, 'sine',     0.005, 0.02, 0.04, 0.08);
   note(1800, 'square',   0.003, 0.03, 0.05, 0.06, 0.02, 600);
   noise(0.04, 0.06, 0.01);
@@ -5465,7 +5472,12 @@ function _drStartFloor(floorIdx) {
     });
   } else {
     // Leaving a boss floor — clean up
-    if(_drExpandActive) _drShrinkBoard();
+    if(_drExpandActive) {
+      _drShrinkBoard();
+      // Force new tray — old pieces may be too big for 8×8
+      pieces = [null, null, null];
+      refillPieces(); renderTray();
+    }
     // Remove any jail cells from the board
     _drClearJailCells();
   }
@@ -5885,7 +5897,7 @@ const POWER_DESCS = {
   overclock: 'Next floor score\ncounts as double XP\n★ RARE ★',
   lucky:     '+2% better pieces\nfor the whole run\n(STACKS!)',
   nuke:      'Clears EVERY block\nfrom the board\n★★ ULTRA RARE ★★',
-  machinegun:'Sprays 8 random\nblocks off the board',
+  machinegun:'Sprays 12 random\nshots across the board\n(some may miss!)',
 };
 
 function _drShowCardPicker(onChosen) {
@@ -5986,7 +5998,7 @@ function _drShowCardPicker(onChosen) {
           _drLuckyStacks++;
           _drUpdatePassiveBar();
           flashPower('#30d158');
-          sfxPowerActivate('shield');
+          if(hasSFXFile('lucky')) sfxFile('lucky'); else sfxPowerActivate('shield');
           haptic([20, 10, 40, 10, 60]);
           const totalBonus = _drLuckyStacks * 2;
           showToast(`🍀 LUCKY +${totalBonus}%! Better pieces!`);
@@ -8240,6 +8252,7 @@ function triggerBombExplosion(centerRow, centerCol, hex) {
   const cells = boardEl ? (_cellCache.length ? _cellCache : boardEl.querySelectorAll('.cell')) : [];
 
   affected.forEach(({r, c}) => {
+    if(_isJail(r, c)) return; // skip jail cells visually
     const idx = r * COLS + c;
     const cell = cells[idx];
     if(cell) {
@@ -8567,7 +8580,7 @@ function activatePower(type) {
   if(powerInventory[type] <= 0) return;
   // In roguelike, only allow unlocked powers
   if(isDaily && _drActive && !_drUnlockedPowers.includes(type)) return;
-  sfxPowerActivate(type);
+  if(type !== 'bomb') sfxPowerActivate(type); // bomb has its own sound on placement
   haptic(30);
   if(activePower === type) {
     // deselect
@@ -8746,7 +8759,7 @@ function onLaserClick(e) {
   const boardEl = $id('board');
   if(boardEl) {
     (_cellCache.length ? _cellCache : boardEl.querySelectorAll('.cell')).forEach(cell => {
-      if(parseInt(cell.dataset.r) === row) {
+      if(parseInt(cell.dataset.r) === row && !_isJail(row, parseInt(cell.dataset.c))) {
         cell.classList.add('clearing');
         const rect = cell.getBoundingClientRect();
         spawnParticles(rect.left + rect.width/2, rect.top + rect.height/2, 'var(--c2)', 8);
@@ -9300,8 +9313,8 @@ function _airstrikeImpact(r, c, cx, cy, cw, ch, boardEl) {
       _trackObstacleBroken(br, bc);
       board[br][bc] = null;
     }
-    // Miss — show a small dust puff even on empty cells
-    else {
+    // Miss — show a small dust puff even on empty cells (but not jail)
+    else if(!_isJail(br, bc)) {
       const dust = document.createElement('div');
       const rect = cell.getBoundingClientRect();
       dust.style.cssText = `
@@ -9330,6 +9343,7 @@ function onBeamClick(e) {
   // Highlight the whole column
   const cells = (_cellCache.length ? _cellCache : document.querySelectorAll('#board .cell'));
   for(let r = 0; r < ROWS; r++) {
+    if(_isJail(r, c)) continue; // skip jail cells visually
     const cell = cells[r * COLS + c];
     if(cell) { cell.classList.add('clearing'); }
     const rect = cell?.getBoundingClientRect();
@@ -9432,24 +9446,24 @@ function sfxMachineGunShot() {
 }
 
 function applyMachineGun() {
-  const SHOTS = 8;
+  const SHOTS = 12;
   const boardEl = $id('board');
   if(!boardEl) return;
 
   _powerAnimating = true;
   flashPower('#ff9f0a');
 
-  // Collect all filled non-jail cells as targets
-  const filledCells = [];
+  // Collect ALL non-jail cells as targets (including empty ones)
+  const allCells = [];
   for(let r = 0; r < ROWS; r++) {
     if(!board[r]) continue;
     for(let c = 0; c < COLS; c++) {
-      if(board[r][c] && board[r][c] !== JAIL_COLOR) filledCells.push({r, c});
+      if(!_isJail(r, c)) allCells.push({r, c});
     }
   }
 
-  // Shuffle and pick up to SHOTS targets
-  const shuffled = filledCells.sort(() => Math.random() - 0.5);
+  // Shuffle and pick SHOTS targets
+  const shuffled = allCells.sort(() => Math.random() - 0.5);
   const targets = shuffled.slice(0, Math.min(SHOTS, shuffled.length));
 
   if(!targets.length) {
@@ -9465,6 +9479,7 @@ function applyMachineGun() {
     setTimeout(() => {
       const cell = cells[t.r * COLS + t.c];
       if(!cell) return;
+      const hasFill = board[t.r] && board[t.r][t.c];
 
       // Muzzle flash on the cell
       cell.style.transition = 'transform 0.08s ease-out, filter 0.08s ease-out';
@@ -9474,21 +9489,25 @@ function applyMachineGun() {
       setTimeout(() => {
         cell.style.transform = 'scale(1)';
         cell.style.filter = '';
-        cell.classList.add('clearing');
+        if(hasFill) cell.classList.add('clearing');
       }, 80);
 
-      // Particles from the hit
-      const color = board[t.r][t.c] === OBSTACLE_COLOR ? '#888' : board[t.r][t.c];
+      // Particles — different for hit vs miss
       const rect = cell.getBoundingClientRect();
-      spawnParticles(rect.left + rect.width/2, rect.top + rect.height/2, color || '#ff9f0a', 6);
+      if(hasFill) {
+        const color = board[t.r][t.c] === OBSTACLE_COLOR ? '#888' : board[t.r][t.c];
+        spawnParticles(rect.left + rect.width/2, rect.top + rect.height/2, color || '#ff9f0a', 6);
+        // Clear the cell
+        _trackObstacleBroken(t.r, t.c);
+        board[t.r][t.c] = null;
+      } else {
+        // Miss — small spark
+        spawnParticles(rect.left + rect.width/2, rect.top + rect.height/2, '#666', 2);
+      }
 
       // Sound + haptic per shot
       sfxMachineGunShot();
       haptic([12, 8]);
-
-      // Clear the cell
-      _trackObstacleBroken(t.r, t.c);
-      board[t.r][t.c] = null;
 
       // Small shake every few shots
       if(i % 3 === 0) shakeBoard(1);
@@ -10648,15 +10667,37 @@ function initMusic() {
   bgMusic.loop = true;
   bgMusic.volume = 0.35;
   updateMusicBtn();
-  if(musicEnabled) bgMusic.play().catch(() => {});
+  if(musicEnabled) {
+    const p = bgMusic.play();
+    if(p) p.catch(() => {});
+  }
 }
 
+let _musicFading = false;
+
 function toggleMusic() {
+  if(!bgMusic) initMusic();
   musicEnabled = !musicEnabled;
   localStorage.setItem('bb_music', musicEnabled ? '1' : '0');
   if(bgMusic) {
     if(musicEnabled) {
-      bgMusic.play().catch(() => {});
+      // Cancel any active fade
+      _musicFading = false;
+      bgMusic.volume = 0.35;
+      // Wait for any pending pause to settle, then play
+      const p = bgMusic.play();
+      if(p) p.catch(() => {
+        // Autoplay blocked — retry on next user interaction
+        const retry = () => {
+          if(musicEnabled && bgMusic.paused) {
+            bgMusic.play().catch(() => {});
+          }
+          document.removeEventListener('click', retry);
+          document.removeEventListener('touchstart', retry);
+        };
+        document.addEventListener('click', retry, { once: true });
+        document.addEventListener('touchstart', retry, { once: true, passive: true });
+      });
     } else {
       bgMusic.pause();
     }
@@ -10671,21 +10712,27 @@ function updateMusicBtn() {
 
 function fadeMusicOut(duration = 2000) {
   if(!bgMusic || bgMusic.paused) return;
+  _musicFading = true;
   const start = bgMusic.volume;
   const steps = 30;
   const decrement = start / steps;
   const interval = duration / steps;
   const fade = setInterval(() => {
+    if(!_musicFading) { clearInterval(fade); return; } // cancelled by toggle
     if(bgMusic.volume > decrement) {
       bgMusic.volume -= decrement;
     } else {
       bgMusic.volume = 0;
       bgMusic.pause();
       clearInterval(fade);
-      // Reset volume for next game
+      _musicFading = false;
+      // Reset volume for next play
       setTimeout(() => {
-        bgMusic.volume = 0.35;
-        if(musicEnabled) bgMusic.play().catch(() => {});
+        if(bgMusic) bgMusic.volume = 0.35;
+        if(musicEnabled && bgMusic && bgMusic.paused) {
+          const p = bgMusic.play();
+          if(p) p.catch(() => {});
+        }
       }, 1500);
     }
   }, interval);
