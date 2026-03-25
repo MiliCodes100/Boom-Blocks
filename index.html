@@ -4190,6 +4190,9 @@ const SFX_FILES = {
   'beam':        './beam.mp3',
   'nuke':        './nuke.mp3',
   'wildfire':    './wildfire.mp3',
+  'magnet':      './magnet.mp3',
+  'gravity':     './gravity.mp3',
+  'bomb':        './bomb.mp3',
 };
 
 const _sfxBuffers = {}; // name → AudioBuffer (loaded)
@@ -4600,6 +4603,7 @@ function sfxPowerActivate(type) {
     note(300, 'sawtooth', 0.02, 0.15, 0.1, 0.15, 0.05, 900);
     noise(0.18, 0.14, 0.02);
   } else if(type === 'bomb') {
+    if(hasSFXFile('bomb')) { sfxFile('bomb', { volume: 0.6 }); return; }
     // Deep arm sequence
     note(80, 'square', 0.005, 0.1, 0.1, 0.3);
     note(160, 'square', 0.005, 0.08, 0.08, 0.2, 0.08);
@@ -4611,6 +4615,7 @@ function sfxPowerActivate(type) {
     note(1800, 'sine',     0.005, 0.03, 0.04, 0.06, 0.06);
     noise(0.02, 0.03, 0.05);
   } else if(type === 'gravity') {
+    if(hasSFXFile('gravity')) { sfxFile('gravity'); return; }
     // Heavy whoosh downward
     note(300, 'sawtooth',  0.01, 0.15, 0.2, 0.25, 0, 80);
     note(150, 'sawtooth',  0.01, 0.12, 0.18, 0.2, 0.05, 60);
@@ -4637,6 +4642,7 @@ function sfxPowerActivate(type) {
     note(600, 'square',   0.003, 0.06, 0.04, 0.15, 0.05, 1600);
     noise(0.04, 0.08, 0.05);
   } else if(type === 'magnet') {
+    if(hasSFXFile('magnet')) { sfxFile('magnet'); return; }
     // Magnetic pull whoosh upward
     note(80,  'sawtooth', 0.008, 0.15, 0.2, 0.25, 0, 400);
     note(200, 'sawtooth', 0.006, 0.12, 0.15, 0.2, 0.05, 600);
@@ -4653,6 +4659,7 @@ function sfxPowerActivate(type) {
 
 // ── BOMB EXPLOSION ──
 function sfxBombExplode() {
+  if(hasSFXFile('bomb')) { sfxFile('bomb'); return; }
   // Sub bass boom
   note(60, 'sine', 0.005, 0.3, 0.5, 0.5, 0, 25);
   note(120, 'sine', 0.005, 0.2, 0.3, 0.3, 0, 40);
@@ -5886,14 +5893,14 @@ function _drShowCardPicker(onChosen) {
   const alreadyUnlocked = _drUnlockedPowers.filter(v => v !== null);
   const shieldOwned = alreadyUnlocked.includes('shield');
 
-  // Build pool — all powers, respecting roguelike-only and shield-once rules
+  // Build pool — all powers, respecting roguelike-only and rarity rules
   let pool = Object.keys(POWERS).filter(t => {
     if(t === 'shield')    return !_drShieldActive && Math.random() < 0.12;
     if(t === 'turbo')     return !_drTurboActive && Math.random() < 0.15;
     if(t === 'overclock') return !alreadyUnlocked.includes('overclock') && !_drOverclockActive && Math.random() < 0.18;
-    if(t === 'lucky')     return Math.random() < Math.max(0.4, 0.85 - _drLuckyStacks * 0.05);
+    if(t === 'lucky')     return Math.random() < Math.max(0.4, 1.0 - _drLuckyStacks * 0.08);
     if(t === 'nuke')      return !_drNukeObtained && Math.random() < 0.05; // ultra rare, once per run
-    return true;
+    return Math.random() < 0.90; // common powers 90% chance to enter pool
   });
 
   // Prefer unowned, fall back to all if needed
