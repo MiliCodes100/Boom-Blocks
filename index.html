@@ -5390,6 +5390,7 @@ let _drRescueTimer = null; // timer waiting for player to use a power to rescue 
 let _drLuckyStacks = 0;    // each stack = +2% smart piece pick chance
 let _drExpandActive = false; // true during expand boss floors
 let _drNukeObtained = false; // true once nuke is picked this run — can only get it once
+let _drLastPickerOptions = []; // track last card picker options to avoid repeats
 let _powerAnimating = false; // true while a power-up animation is in progress — blocks checkGameOver
 var _gameOverFiring = false; // true once death sequence starts — prevents duplicate triggers (var avoids re-declaration errors)
 
@@ -5418,6 +5419,7 @@ function startDaily() {
   _drOverclockActive = false;
   _drLuckyStacks = 0;
   _drNukeObtained = false;
+  _drLastPickerOptions = [];
   if(_drExpandActive) _drShrinkBoard();
   _drExpandActive = false;
   _drClearJailCells();
@@ -5938,7 +5940,13 @@ function _drShowCardPicker(onChosen) {
 
   // Prefer unowned, fall back to all if needed
   const unowned = pool.filter(t => !alreadyUnlocked.includes(t));
-  const candidates = unowned.length >= 2 ? unowned : pool.length >= 2 ? pool : Object.keys(POWERS);
+  let candidates = unowned.length >= 2 ? unowned : pool.length >= 2 ? pool : Object.keys(POWERS);
+
+  // Avoid showing the same powers as last floor (if enough alternatives exist)
+  if(_drLastPickerOptions.length) {
+    const fresh = candidates.filter(t => !_drLastPickerOptions.includes(t));
+    if(fresh.length >= 2) candidates = fresh;
+  }
 
   // Pick 2 distinct options
   const shuffled = [...candidates].sort(() => Math.random() - 0.5);
@@ -5949,6 +5957,9 @@ function _drShowCardPicker(onChosen) {
     const extra = Object.keys(POWERS).find(t => !options.includes(t) && t !== 'shield');
     if(extra) options.push(extra); else break;
   }
+
+  // Remember these for next time
+  _drLastPickerOptions = [...options];
 
   const overlay = document.createElement('div');
   overlay.id = 'dr-card-select';
@@ -8771,6 +8782,7 @@ function onLaserUnhover() {
 
 function onLaserClick(e) {
   if(activePower !== 'laser') return;
+  activePower = null; // prevent double-fire from rapid taps
   e.stopPropagation();
   const row = parseInt(e.currentTarget.dataset.r);
   usePower('laser');
@@ -8806,6 +8818,7 @@ function onLaserClick(e) {
 // ── SHATTER ──
 function onShatterClick(e) {
   if(activePower !== 'shatter') return;
+  activePower = null;
   e.stopPropagation();
   const r = parseInt(e.currentTarget.dataset.r);
   const c = parseInt(e.currentTarget.dataset.c);
@@ -8850,6 +8863,7 @@ function onShatterClick(e) {
 // ── WILDFIRE ──
 function onWildfireClick(e) {
   if(activePower !== 'wildfire') return;
+  activePower = null;
   e.stopPropagation();
   const r = parseInt(e.currentTarget.dataset.r);
   const c = parseInt(e.currentTarget.dataset.c);
@@ -8933,6 +8947,7 @@ function onWildfireClick(e) {
 let _sniperTargets = [];
 function onSniperClick(e) {
   if(activePower !== 'sniper') return;
+  if(_sniperTargets.length >= 2) return; // already fired
   e.stopPropagation();
   const r = parseInt(e.currentTarget.dataset.r);
   const c = parseInt(e.currentTarget.dataset.c);
@@ -9356,6 +9371,7 @@ let _drOverclockActive = false; // doubles XP earned this floor
 // ── BEAM (vertical laser — clears a full column) ──
 function onBeamClick(e) {
   if(activePower !== 'beam') return;
+  activePower = null;
   e.stopPropagation();
   const c = parseInt(e.currentTarget.dataset.c);
   usePower('beam');
