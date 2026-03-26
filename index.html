@@ -4203,6 +4203,11 @@ const SFX_FILES = {
   'floorclear5': './floorclear5.mp3',
   'stageclear':  './stageclear.mp3',
   'bossfloor':   './bossfloor.mp3',
+  'overclock':   './overclock.mp3',
+  'shatter':     './shatter.mp3',
+  'shield':      './shield.mp3',
+  'turbotray':   './turbotray.mp3',
+  'missioncomplete': './missioncomplete.mp3',
 };
 
 const _sfxBuffers = {}; // name → AudioBuffer (loaded)
@@ -4736,6 +4741,7 @@ function sfxSniperShot() {
 
 // ── SHIELD BREAK ──
 function sfxShieldBreak() {
+  if(hasSFXFile('shield')) { sfxFile('shield'); return; }
   chord([523, 659, 784, 1047], 'sine', 0.01, 0.1, 0.15, 0.2);
   note(200, 'sawtooth', 0.008, 0.2, 0.4, 0.3, 0.1, 50);
   noise(0.1, 0.25, 0.05);
@@ -5391,6 +5397,9 @@ let _drLuckyStacks = 0;    // each stack = +2% smart piece pick chance
 let _drExpandActive = false; // true during expand boss floors
 let _drNukeObtained = false; // true once nuke is picked this run — can only get it once
 let _drLastPickerOptions = []; // track last card picker options to avoid repeats
+let _drObstacleBossCount = 0; // how many times obstacle boss has appeared this run
+let _drPitBossCount = 0; // how many times pit boss has appeared this run
+let _drJailBossCount = 0; // how many times jail boss has appeared this run
 let _powerAnimating = false; // true while a power-up animation is in progress — blocks checkGameOver
 var _gameOverFiring = false; // true once death sequence starts — prevents duplicate triggers (var avoids re-declaration errors)
 
@@ -5420,6 +5429,9 @@ function startDaily() {
   _drLuckyStacks = 0;
   _drNukeObtained = false;
   _drLastPickerOptions = [];
+  _drObstacleBossCount = 0;
+  _drPitBossCount = 0;
+  _drJailBossCount = 0;
   if(_drExpandActive) _drShrinkBoard();
   _drExpandActive = false;
   _drClearJailCells();
@@ -5464,7 +5476,10 @@ function _drStartFloor(floorIdx) {
   const floorDef = DAILY_RUN_FLOORS[floorIdx];
   if(floorDef && floorDef.boss) {
     const bossType = _getBossType();
-    const obstacleCount = _drStage + 1;
+    let obstacleCount = 3 + _drObstacleBossCount; // starts at 3, +1 each time
+    if(bossType === 'obstacles') _drObstacleBossCount++;
+    if(bossType === 'pit') _drPitBossCount++;
+    if(bossType === 'jail') _drJailBossCount++;
     const bossInfo = {
       expand:    { emoji:'🔳', name:'EXPAND',    desc:'BOARD GROWS TO 12×12' },
       obstacles: { emoji:'💀', name:'OBSTACLES',  desc:`${obstacleCount} OBSTACLE${obstacleCount > 1 ? 'S' : ''} INCOMING` },
@@ -5537,17 +5552,24 @@ function _drSpawnBossObstacle(count) {
 }
 
 function _drSpawnJailLine() {
-  // Pick a random edge: top row, bottom row, left col, or right col
-  const edges = ['top', 'bottom', 'left', 'right'];
-  const pick = edges[Math.floor(Math.random() * edges.length)];
+  // Number of jail lines: 1st encounter = 1, 2nd = 2, 3rd = 3, 4th+ = 4 (all sides)
+  const lineCount = Math.min(_drJailBossCount, 4);
 
-  if(pick === 'top' || pick === 'bottom') {
-    const r = pick === 'top' ? 0 : ROWS - 1;
-    for(let c = 0; c < COLS; c++) board[r][c] = JAIL_COLOR;
-  } else {
-    const c = pick === 'left' ? 0 : COLS - 1;
-    for(let r = 0; r < ROWS; r++) board[r][c] = JAIL_COLOR;
-  }
+  // Pick random edges without repeats
+  const allEdges = ['top', 'bottom', 'left', 'right'];
+  const shuffled = allEdges.sort(() => Math.random() - 0.5);
+  const picks = shuffled.slice(0, lineCount);
+
+  // Place jail blocks
+  picks.forEach(pick => {
+    if(pick === 'top' || pick === 'bottom') {
+      const r = pick === 'top' ? 0 : ROWS - 1;
+      for(let c = 0; c < COLS; c++) board[r][c] = JAIL_COLOR;
+    } else {
+      const c = pick === 'left' ? 0 : COLS - 1;
+      for(let r = 0; r < ROWS; r++) board[r][c] = JAIL_COLOR;
+    }
+  });
 
   renderBoard();
 
@@ -5555,31 +5577,38 @@ function _drSpawnJailLine() {
   setTimeout(() => {
     const cells = _cellCache.length ? _cellCache : [];
     let delay = 0;
-    if(pick === 'top' || pick === 'bottom') {
-      const r = pick === 'top' ? 0 : ROWS - 1;
-      for(let c = 0; c < COLS; c++) {
-        const cell = cells[r * COLS + c];
-        if(cell) {
-          cell.classList.add('spawning');
-          setTimeout(() => cell.classList.remove('spawning'), 450 + delay);
-          delay += 40;
+    picks.forEach(pick => {
+      if(pick === 'top' || pick === 'bottom') {
+        const r = pick === 'top' ? 0 : ROWS - 1;
+        for(let c = 0; c < COLS; c++) {
+          const cell = cells[r * COLS + c];
+          if(cell) {
+            setTimeout(() => {
+              cell.classList.add('spawning');
+              setTimeout(() => cell.classList.remove('spawning'), 450);
+            }, delay);
+            delay += 30;
+          }
+        }
+      } else {
+        const c = pick === 'left' ? 0 : COLS - 1;
+        for(let r = 0; r < ROWS; r++) {
+          const cell = cells[r * COLS + c];
+          if(cell) {
+            setTimeout(() => {
+              cell.classList.add('spawning');
+              setTimeout(() => cell.classList.remove('spawning'), 450);
+            }, delay);
+            delay += 30;
+          }
         }
       }
-    } else {
-      const c = pick === 'left' ? 0 : COLS - 1;
-      for(let r = 0; r < ROWS; r++) {
-        const cell = cells[r * COLS + c];
-        if(cell) {
-          cell.classList.add('spawning');
-          setTimeout(() => cell.classList.remove('spawning'), 450 + delay);
-          delay += 40;
-        }
-      }
-    }
+      delay += 80; // gap between lines
+    });
     sfxObstacle();
     haptic([20, 10, 40, 10, 60]);
-    const side = pick === 'top' ? 'TOP' : pick === 'bottom' ? 'BOTTOM' : pick === 'left' ? 'LEFT' : 'RIGHT';
-    showToast(`🔒 ${side} ROW JAILED!`);
+    const sideNames = picks.map(p => p.toUpperCase());
+    showToast(`🔒 ${sideNames.join(' + ')} JAILED!`);
   }, 100);
 }
 
@@ -5599,8 +5628,8 @@ function _drClearJailCells() {
 }
 
 function _drSpawnPit() {
-  // Fill the center 4x4 area with jail blocks (on 8x8 board: rows 2-5, cols 2-5)
-  const pitSize = 4;
+  // 1st encounter: 2x2 center, 2nd+: 4x4 center (capped)
+  const pitSize = _drPitBossCount <= 1 ? 2 : 4;
   const startR = Math.floor((ROWS - pitSize) / 2);
   const startC = Math.floor((COLS - pitSize) / 2);
 
@@ -5935,7 +5964,7 @@ function _drShowCardPicker(onChosen) {
     if(t === 'turbo')     return !_drTurboActive && Math.random() < 0.15;
     if(t === 'overclock') return !alreadyUnlocked.includes('overclock') && !_drOverclockActive && Math.random() < 0.18;
     if(t === 'lucky')     return Math.random() < Math.max(0.4, 1.0 - _drLuckyStacks * 0.08);
-    if(t === 'nuke')      return !_drNukeObtained && Math.random() < 0.05; // ultra rare, once per run
+    if(t === 'nuke')      return !_drNukeObtained && Math.random() < 0.10; // ultra rare, once per run
     return Math.random() < 0.90; // common powers 90% chance to enter pool
   });
 
@@ -6005,7 +6034,7 @@ function _drShowCardPicker(onChosen) {
           _markPowerUsed('overclock');
           _drOverclockActive = true;
           flashPower('#ffd60a');
-          sfxPowerActivate('overclock');
+          if(hasSFXFile('overclock')) sfxFile('overclock'); else sfxPowerActivate('overclock');
           haptic([20, 10, 40, 10, 60]);
           showToast('⏩ OVERCLOCK ACTIVE! Next floor XP doubled!');
         } else if(type === 'shield') {
@@ -6022,7 +6051,7 @@ function _drShowCardPicker(onChosen) {
           _drTurboActive = true;
           _drUpdatePassiveBar();
           flashPower('#ff9f0a');
-          sfxPowerActivate('turbo');
+          if(hasSFXFile('turbotray')) sfxFile('turbotray'); else sfxPowerActivate('turbo');
           haptic([20, 10, 40, 10, 60]);
           showToast('⚡ TURBO TRAY! 4th piece slot unlocked!');
           refillPieces(); renderTray();
@@ -7966,6 +7995,7 @@ function updateMissionProgress(stat, value) {
 
 function showMissionComplete(mission) {
   haptic([20, 10, 40, 10, 60]);
+  if(hasSFXFile('missioncomplete')) sfxFile('missioncomplete', { volume: 0.5 });
 
   const toast = document.createElement('div');
   toast.style.cssText = `
@@ -8864,7 +8894,13 @@ function onShatterClick(e) {
   });
 
   flashPower('#0af5ff');
-  sfxClear(2);
+  if(hasSFXFile('shatter')) {
+    sfxFile('shatter');
+  } else {
+    // Synth fallback — louder glass break
+    sfxClear(2);
+    noise(0.06, 0.25);
+  }
   haptic([20, 10, 40, 10, 40]);
   shakeBoard(2);
   _powerAnimating = true;
