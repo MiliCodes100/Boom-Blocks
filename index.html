@@ -2322,6 +2322,16 @@ body.theme-emoji #board {
   100% { opacity:0; transform:translate(-50%,-50%) scale(0.85); }
 }
 
+@keyframes goldenPopIn {
+  0%   { opacity:0; transform:translate(-50%,-50%) scale(0.3) rotate(-3deg); }
+  50%  { opacity:1; transform:translate(-50%,-50%) scale(1.1) rotate(1deg); }
+  100% { opacity:1; transform:translate(-50%,-50%) scale(1) rotate(0deg); }
+}
+@keyframes goldenPopOut {
+  0%   { opacity:1; transform:translate(-50%,-50%) scale(1); }
+  100% { opacity:0; transform:translate(-50%,-50%) scale(0.8) translateY(10px); }
+}
+
 
 #combo-popup { transition: opacity 0.3s; }
 #combo-popup.pop { animation: comboBoardPop 0.3s cubic-bezier(0.175,0.885,0.32,1.275); }
@@ -4208,6 +4218,7 @@ const SFX_FILES = {
   'shield':      './shield.mp3',
   'turbotray':   './turbotray.mp3',
   'missioncomplete': './missioncomplete.mp3',
+  'golden':      './golden.mp3',
 };
 
 const _sfxBuffers = {}; // name → AudioBuffer (loaded)
@@ -7257,7 +7268,8 @@ function clearLines() {
       addScore(megaBonus, 0, 0, '#ffd60a');
       flashPower('#ffd60a');
       haptic([20, 10, 40, 10, 80, 10, 120]);
-      showToast('⭐ STREAK SAVER BONUS! +' + megaBonus.toLocaleString());
+      if(hasSFXFile('golden')) sfxFile('golden'); else sfxGloryBlock();
+      _showGoldenStreakPopup(lines);
     }, 350);
   } else {
     _lastPlacedWasStreakSaver = false;
@@ -8393,9 +8405,14 @@ const POWER_HINT_DELAY = 12000; // 12 seconds idle with unused power
 
 function resetPowerHintTimer() {
   clearTimeout(powerHintTimer);
-  // Only nudge if they have a power and aren't already in select mode
+  // Only nudge if they have a usable power and aren't already in select mode
   powerHintTimer = setTimeout(() => {
-    const hasPower = Object.entries(powerInventory).some(([,count]) => count > 0);
+    const hasPower = Object.entries(powerInventory).some(([type, count]) => {
+      if(count <= 0) return false;
+      if(isDaily && _drActive && !_drUnlockedPowers.includes(type)) return false;
+      if(type === 'shield' || type === 'turbo' || type === 'overclock' || type === 'lucky') return false;
+      return true;
+    });
     if(hasPower && !activePower) {
       showPowerHint();
     }
@@ -8403,9 +8420,16 @@ function resetPowerHintTimer() {
 }
 
 function showPowerHint() {
-  // Find which power they have
+  // Find which power they have and can actually use
   const available = Object.entries(powerInventory)
-    .filter(([,count]) => count > 0)
+    .filter(([type, count]) => {
+      if(count <= 0) return false;
+      // In roguelike, only show hint for powers in unlocked slots
+      if(isDaily && _drActive && !_drUnlockedPowers.includes(type)) return false;
+      // Skip passive powers (shield, turbo, overclock, lucky)
+      if(type === 'shield' || type === 'turbo' || type === 'overclock' || type === 'lucky') return false;
+      return true;
+    })
     .map(([type]) => type);
   if(!available.length) return;
 
@@ -9543,6 +9567,7 @@ function applyMachineGun() {
 
   _powerAnimating = true;
   flashPower('#ff9f0a');
+  shakeBoard(2); // initial shake
 
   // Collect ALL non-jail cells as targets (including empty ones)
   const allCells = [];
@@ -9578,8 +9603,9 @@ function applyMachineGun() {
       cell.style.filter = 'brightness(3)';
 
       setTimeout(() => {
-        cell.style.transform = 'scale(1)';
+        cell.style.transform = '';
         cell.style.filter = '';
+        cell.style.transition = '';
         if(hasFill) cell.classList.add('clearing');
       }, 130);
 
@@ -9593,22 +9619,32 @@ function applyMachineGun() {
         board[t.r][t.c] = null;
       } else {
         // Miss — small spark
-        spawnParticles(rect.left + rect.width/2, rect.top + rect.height/2, '#666', 2);
+        spawnParticles(rect.left + rect.width/2, rect.top + rect.height/2, '#666', 3);
       }
 
       // Sound + haptic per shot
       sfxMachineGunShot();
-      haptic([12, 8]);
+      haptic([15, 10]);
 
-      // Small shake every few shots
-      if(i % 3 === 0) shakeBoard(2);
+      // Shake — remove and re-add class to restart animation
+      if(i % 3 === 0) {
+        boardEl.classList.remove('shake');
+        void boardEl.offsetWidth; // force reflow to restart animation
+        boardEl.classList.add('shake');
+      }
 
     }, i * SHOT_INTERVAL);
   });
 
-  // After all shots land
-  const totalTime = targets.length * SHOT_INTERVAL + 200;
+  // After all shots land — add extra buffer for last flash to finish
+  const totalTime = targets.length * SHOT_INTERVAL + 350;
   setTimeout(() => {
+    // Clean up any lingering inline styles from muzzle flash
+    cells.forEach(cell => {
+      cell.style.transform = '';
+      cell.style.filter = '';
+      cell.style.transition = '';
+    });
     renderBoard();
     clearLines();
     refillPieces(); renderTray();
@@ -10780,7 +10816,7 @@ function _createMusicElement() {
   const track = MUSIC_TRACKS.find(t => t.id === activeTrackId) || MUSIC_TRACKS[0];
   const audio = new Audio(track.file);
   audio.loop = true;
-  audio.volume = 0.35;
+  audio.volume = 0.25;
   audio.preload = 'auto';
   return audio;
 }
@@ -10794,7 +10830,7 @@ function initMusic() {
 
 function _playMusic() {
   if(!bgMusic) return;
-  bgMusic.volume = 0.35;
+  bgMusic.volume = 0.25;
   // Wait for audio to be ready before playing
   const doPlay = () => {
     const p = bgMusic.play();
@@ -10857,7 +10893,7 @@ function fadeMusicOut(duration = 2000) {
       clearInterval(fade);
       _musicFading = false;
       setTimeout(() => {
-        if(bgMusic) bgMusic.volume = 0.35;
+        if(bgMusic) bgMusic.volume = 0.25;
         if(musicEnabled && bgMusic && bgMusic.paused) _playMusic();
       }, 1500);
     }
@@ -11226,6 +11262,42 @@ function showPowerReminder() {
   popup.classList.add('show');
   clearTimeout(popup._timer);
   popup._timer = setTimeout(() => popup.classList.remove('show'), 3000);
+}
+
+function _showGoldenStreakPopup(lines) {
+  const old = document.querySelector('.golden-streak-popup');
+  if(old) old.remove();
+  const el = document.createElement('div');
+  el.className = 'golden-streak-popup';
+  el.style.cssText = `
+    position:fixed; top:50%; left:50%;
+    transform:translate(-50%,-50%) scale(0.3);
+    background:rgba(8,8,16,0.95);
+    border:3px solid #ffd60a;
+    border-radius:16px;
+    padding:20px 28px;
+    display:flex; flex-direction:column; align-items:center; gap:8px;
+    z-index:9999; pointer-events:none; text-align:center;
+    box-shadow:0 0 40px rgba(255,214,10,0.5), 0 0 80px rgba(255,214,10,0.2);
+    opacity:0;
+    animation: goldenPopIn 0.5s cubic-bezier(0.175,0.885,0.32,1.275) forwards;
+  `;
+  el.innerHTML = `
+    <div style="font-size:2.2rem;line-height:1;text-shadow:0 0 20px gold">⭐</div>
+    <div style="font-family:'Press Start 2P',monospace;font-size:0.7rem;color:#ffd60a;letter-spacing:3px;text-shadow:0 0 15px rgba(255,214,10,0.8)">GOLDEN STREAK</div>
+    <div style="font-family:'Press Start 2P',monospace;font-size:1.2rem;color:#fff;text-shadow:0 0 12px rgba(255,214,10,0.6)">×${lines}</div>
+  `;
+  document.body.appendChild(el);
+
+  // Particles
+  const cx = window.innerWidth / 2, cy = window.innerHeight / 2;
+  spawnParticles(cx, cy, '#ffd60a', 15);
+  spawnParticles(cx, cy, '#fff', 8);
+
+  setTimeout(() => {
+    el.style.animation = 'goldenPopOut 0.3s ease forwards';
+    setTimeout(() => el.remove(), 350);
+  }, 1800);
 }
 
 function showGloryPopup() {
