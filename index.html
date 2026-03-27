@@ -5226,6 +5226,7 @@ function goMenu() {
   // Clean up roguelike if active
   if(_drActive) { _drActive = false; }
   if(_drExpandActive) _drShrinkBoard();
+  _drStopSnake();
   _drClearJailCells();
   if(_drRescueTimer) { clearInterval(_drRescueTimer); _drRescueTimer = null; _drClearRescueHint(); }
   const hud = $id('daily-run-hud');
@@ -5381,7 +5382,7 @@ function _showClassicBoardPicker() {
 // ════════════════════════════════════
 
 const DAILY_RUN_FLOORS = [
-  { floor: 1, type: 'lines',  target: 5,  label: 'CLEAR 5 LINES', emoji: '🌱', desc: 'WARM UP' },
+  { floor: 1, type: 'lines',  target: 5,  label: 'CLEAR 5 LINES', emoji: '🐍', desc: 'BOSS FLOOR', boss: true }, // TEST
   { floor: 2, type: 'lines',  target: 5,  label: 'CLEAR 5 LINES', emoji: '⚡', desc: 'BUILDING UP' },
   { floor: 3, type: 'lines',  target: 5,  label: 'CLEAR 5 LINES', emoji: '🔥', desc: 'HEATING UP' },
   { floor: 4, type: 'lines',  target: 5,  label: 'CLEAR 5 LINES', emoji: '💥', desc: 'DANGER ZONE' },
@@ -5389,10 +5390,11 @@ const DAILY_RUN_FLOORS = [
 ];
 
 // Boss type rotates by stage — first boss is randomized per run, then cycles
-const BOSS_TYPES = ['jail', 'expand', 'obstacles', 'pit'];
+const BOSS_TYPES = ['jail', 'expand', 'obstacles', 'pit', 'snake'];
 let _drBossOffset = 0; // random starting offset, set at run start
 function _getBossType() {
-  return BOSS_TYPES[(_drStage + _drBossOffset) % BOSS_TYPES.length];
+  return 'snake'; // TEST: force snake boss
+  // return BOSS_TYPES[(_drStage + _drBossOffset) % BOSS_TYPES.length];
 }
 
 let _drActive = false;
@@ -5411,6 +5413,9 @@ let _drLastPickerOptions = []; // track last card picker options to avoid repeat
 let _drObstacleBossCount = 0; // how many times obstacle boss has appeared this run
 let _drPitBossCount = 0; // how many times pit boss has appeared this run
 let _drJailBossCount = 0; // how many times jail boss has appeared this run
+let _drSnakeTimer = null; // interval for snake movement
+let _drSnakeBody = []; // array of {r, c} positions, head is [0]
+let _drSnakeBossCount = 0; // how many times snake boss has appeared this run
 let _powerAnimating = false; // true while a power-up animation is in progress — blocks checkGameOver
 var _gameOverFiring = false; // true once death sequence starts — prevents duplicate triggers (var avoids re-declaration errors)
 
@@ -5443,8 +5448,10 @@ function startDaily() {
   _drObstacleBossCount = 0;
   _drPitBossCount = 0;
   _drJailBossCount = 0;
+  _drSnakeBossCount = 0;
   if(_drExpandActive) _drShrinkBoard();
   _drExpandActive = false;
+  _drStopSnake();
   _drClearJailCells();
   _drLockAllPowers();
 
@@ -5491,11 +5498,13 @@ function _drStartFloor(floorIdx) {
     if(bossType === 'obstacles') _drObstacleBossCount++;
     if(bossType === 'pit') _drPitBossCount++;
     if(bossType === 'jail') _drJailBossCount++;
+    if(bossType === 'snake') _drSnakeBossCount++;
     const bossInfo = {
       expand:    { emoji:'🔳', name:'EXPAND',    desc:'BOARD GROWS TO 12×12' },
       obstacles: { emoji:'💀', name:'OBSTACLES',  desc:`${obstacleCount} OBSTACLE${obstacleCount > 1 ? 'S' : ''} INCOMING` },
       jail:      { emoji:'🔒', name:'JAIL LINE',  desc:'AN ENTIRE ROW IS LOCKED' },
       pit:       { emoji:'🕳️', name:'THE PIT',    desc:'THE CENTER IS SEALED OFF' },
+      snake:     { emoji:'🐍', name:'THE SNAKE',  desc:'WATCH OUT — IT MOVES!' },
     };
     const info = bossInfo[bossType] || { emoji:'👾', name:'BOSS', desc:'SURVIVE THIS!' };
     _drShowBossIntro(info.emoji, info.name, info.desc, () => {
@@ -5503,6 +5512,7 @@ function _drStartFloor(floorIdx) {
       else if(bossType === 'obstacles') _drSpawnBossObstacle(obstacleCount);
       else if(bossType === 'jail') _drSpawnJailLine();
       else if(bossType === 'pit') _drSpawnPit();
+      else if(bossType === 'snake') _drStartSnake();
     });
   } else {
     // Leaving a boss floor — clean up
@@ -5512,7 +5522,8 @@ function _drStartFloor(floorIdx) {
       pieces = [null, null, null];
       refillPieces(); renderTray();
     }
-    // Remove any jail cells from the board
+    // Remove any jail cells from the board (also clears snake)
+    _drStopSnake();
     _drClearJailCells();
   }
 
@@ -5679,6 +5690,157 @@ function _drSpawnPit() {
     haptic([20, 10, 40, 10, 60]);
     showToast('🕳️ THE PIT! Clear around the center!');
   }, 100);
+}
+
+// ── SNAKE BOSS ──
+function _drStartSnake() {
+  _drStopSnake(); // clear any previous snake
+
+  // Start snake in center, length 4, heading right
+  // Snake gets longer each encounter: 4, 6, capped at 6
+  const snakeLength = Math.min(6, 4 + (_drSnakeBossCount - 1) * 2);
+  const startR = Math.floor(ROWS / 2);
+  const startC = Math.floor(COLS / 2) - Math.floor(snakeLength / 2);
+  _drSnakeBody = [];
+  for(let i = 0; i < snakeLength; i++) {
+    _drSnakeBody.push({ r: startR, c: startC + (snakeLength - 1 - i) }); // head at rightmost
+  }
+  let dir = { r: 0, c: 1 }; // moving right
+
+  // Place initial snake on board
+  _drSnakeBody.forEach(seg => {
+    if(board[seg.r] && seg.c >= 0 && seg.c < COLS) board[seg.r][seg.c] = JAIL_COLOR;
+  });
+  renderBoard();
+
+  // Animate spawn
+  setTimeout(() => {
+    const cells = _cellCache.length ? _cellCache : [];
+    _drSnakeBody.forEach((seg, i) => {
+      const cell = cells[seg.r * COLS + seg.c];
+      if(cell) {
+        setTimeout(() => {
+          cell.classList.add('spawning');
+          setTimeout(() => cell.classList.remove('spawning'), 400);
+        }, i * 60);
+      }
+    });
+    sfxObstacle();
+    haptic([20, 10, 40, 10, 60]);
+    showToast('🐍 THE SNAKE! It moves every few seconds!');
+  }, 100);
+
+  // Movement loop
+  const MOVE_INTERVAL = 1000; // moves every 1 second
+  _drSnakeTimer = setInterval(() => {
+    if(!_drActive || _drTransitioning) return;
+
+    const head = _drSnakeBody[0];
+
+    // Pick new direction — prefer current, but turn if hitting wall or filled cell
+    const directions = [
+      { r: 0, c: 1 },  // right
+      { r: 0, c: -1 }, // left
+      { r: 1, c: 0 },  // down
+      { r: -1, c: 0 }, // up
+    ];
+
+    // Try current direction first, then sides, then reverse as last resort
+    const reverse = { r: -dir.r, c: -dir.c };
+    const sides = directions.filter(d =>
+      !(d.r === dir.r && d.c === dir.c) && !(d.r === reverse.r && d.c === reverse.c)
+    ).sort(() => Math.random() - 0.5);
+    const options = [dir, ...sides, reverse];
+
+    let moved = false;
+    for(const tryDir of options) {
+      const newR = head.r + tryDir.r;
+      const newC = head.c + tryDir.c;
+
+      // Check bounds
+      if(newR < 0 || newR >= ROWS || newC < 0 || newC >= COLS) continue;
+
+      // Check not hitting own body (except tail which is about to move)
+      const tail = _drSnakeBody[_drSnakeBody.length - 1];
+      const hitsBody = _drSnakeBody.some((seg, i) =>
+        i < _drSnakeBody.length - 1 && seg.r === newR && seg.c === newC
+      );
+      if(hitsBody) continue;
+
+      // Eat any filled block in the way (not jail — that's the snake itself)
+      if(board[newR][newC] && board[newR][newC] !== JAIL_COLOR) {
+        // Spawn particles as the block gets eaten
+        const cells = _cellCache.length ? _cellCache : [];
+        const cell = cells[newR * COLS + newC];
+        if(cell) {
+          const rect = cell.getBoundingClientRect();
+          spawnParticles(rect.left + rect.width/2, rect.top + rect.height/2, board[newR][newC], 4);
+        }
+        board[newR][newC] = null;
+      }
+
+      // Move: add new head, remove tail
+      const cells = _cellCache.length ? _cellCache : [];
+
+      // Animate tail fading out
+      const tailCell = cells[tail.r * COLS + tail.c];
+      if(tailCell) {
+        tailCell.style.transition = 'opacity 0.2s ease-out, transform 0.2s ease-out';
+        tailCell.style.opacity = '0.3';
+        tailCell.style.transform = 'scale(0.5)';
+        setTimeout(() => {
+          tailCell.style.transition = '';
+          tailCell.style.opacity = '';
+          tailCell.style.transform = '';
+        }, 250);
+      }
+
+      // Clear tail from board
+      if(board[tail.r] && board[tail.r][tail.c] === JAIL_COLOR) {
+        board[tail.r][tail.c] = null;
+      }
+      _drSnakeBody.pop();
+
+      // Add new head
+      _drSnakeBody.unshift({ r: newR, c: newC });
+      board[newR][newC] = JAIL_COLOR;
+
+      // Animate head popping in
+      renderBoard();
+      const headCell = cells[newR * COLS + newC];
+      if(headCell) {
+        headCell.style.transform = 'scale(0.3)';
+        headCell.style.opacity = '0.3';
+        headCell.style.transition = 'transform 0.2s cubic-bezier(0.34,1.56,0.64,1), opacity 0.15s ease-out';
+        requestAnimationFrame(() => {
+          headCell.style.transform = 'scale(1)';
+          headCell.style.opacity = '1';
+          setTimeout(() => {
+            headCell.style.transition = '';
+            headCell.style.transform = '';
+            headCell.style.opacity = '';
+          }, 250);
+        });
+      }
+
+      dir = tryDir;
+      moved = true;
+      break;
+    }
+
+    if(moved) {
+      // Subtle haptic on each move
+      haptic([8]);
+    }
+  }, MOVE_INTERVAL);
+}
+
+function _drStopSnake() {
+  if(_drSnakeTimer) {
+    clearInterval(_drSnakeTimer);
+    _drSnakeTimer = null;
+  }
+  _drSnakeBody = [];
 }
 
 function _drShowBossIntro(emoji, name, desc, onComplete) {
@@ -6198,6 +6360,7 @@ function _drFinishRun(cleared) {
   _drOverclockActive = false;
   // Shrink board back if expanded
   if(_drExpandActive) _drShrinkBoard();
+  _drStopSnake();
   _drClearJailCells();
   updatePowerUI();
   _drUpdateHeaderFloor(); // restores BEST label
@@ -11582,6 +11745,7 @@ function startPlayTutorial() {
   _drLuckyStacks = 0;
   if(_drExpandActive) _drShrinkBoard();
   _drExpandActive = false;
+  _drStopSnake();
   _drClearJailCells();
   _drLockAllPowers();
 
