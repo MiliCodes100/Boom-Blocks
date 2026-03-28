@@ -4221,6 +4221,7 @@ const SFX_FILES = {
   'golden':      './golden.mp3',
   'snakebite':   './snakebite.mp3',
   'reroll':      './reroll.mp3',
+  'snakeboss':   './snakeboss.mp3',
 };
 
 const _sfxBuffers = {}; // name → AudioBuffer (loaded)
@@ -5509,7 +5510,7 @@ function _drStartFloor(floorIdx) {
       snake:     { emoji:'🐍', name:'THE SNAKE',  desc:'WATCH OUT — IT MOVES!' },
     };
     const info = bossInfo[bossType] || { emoji:'👾', name:'BOSS', desc:'SURVIVE THIS!' };
-    _drShowBossIntro(info.emoji, info.name, info.desc, () => {
+    _drShowBossIntro(info.emoji, info.name, info.desc, bossType, () => {
       if(bossType === 'expand') _drExpandBoard();
       else if(bossType === 'obstacles') _drSpawnBossObstacle(obstacleCount);
       else if(bossType === 'jail') _drSpawnJailLine();
@@ -5851,8 +5852,10 @@ function _drStopSnake() {
   _drSnakeRecheck = false;
 }
 
-function _drShowBossIntro(emoji, name, desc, onComplete) {
-  if(hasSFXFile('bossfloor')) sfxFile('bossfloor'); else sfxObstacle();
+function _drShowBossIntro(emoji, name, desc, bossType, onComplete) {
+  if(bossType === 'snake' && hasSFXFile('snakeboss')) sfxFile('snakeboss');
+  else if(hasSFXFile('bossfloor')) sfxFile('bossfloor');
+  else sfxObstacle();
   const overlay = document.createElement('div');
   overlay.id = 'boss-intro-overlay';
   overlay.style.cssText = `
