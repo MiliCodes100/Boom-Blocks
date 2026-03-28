@@ -5384,7 +5384,7 @@ function _showClassicBoardPicker() {
 // ════════════════════════════════════
 
 const DAILY_RUN_FLOORS = [
-  { floor: 1, type: 'lines',  target: 5,  label: 'CLEAR 5 LINES', emoji: '🐍', desc: 'BOSS FLOOR', boss: true }, // TEST
+  { floor: 1, type: 'lines',  target: 5,  label: 'CLEAR 5 LINES', emoji: '🌱', desc: 'WARM UP' },
   { floor: 2, type: 'lines',  target: 5,  label: 'CLEAR 5 LINES', emoji: '⚡', desc: 'BUILDING UP' },
   { floor: 3, type: 'lines',  target: 5,  label: 'CLEAR 5 LINES', emoji: '🔥', desc: 'HEATING UP' },
   { floor: 4, type: 'lines',  target: 5,  label: 'CLEAR 5 LINES', emoji: '💥', desc: 'DANGER ZONE' },
@@ -5395,8 +5395,7 @@ const DAILY_RUN_FLOORS = [
 const BOSS_TYPES = ['jail', 'expand', 'obstacles', 'pit', 'snake'];
 let _drBossOffset = 0; // random starting offset, set at run start
 function _getBossType() {
-  return 'snake'; // TEST: force snake boss
-  // return BOSS_TYPES[(_drStage + _drBossOffset) % BOSS_TYPES.length];
+  return BOSS_TYPES[(_drStage + _drBossOffset) % BOSS_TYPES.length];
 }
 
 let _drActive = false;
@@ -5849,6 +5848,7 @@ function _drStopSnake() {
     _drSnakeTimer = null;
   }
   _drSnakeBody = [];
+  _drSnakeRecheck = false;
 }
 
 function _drShowBossIntro(emoji, name, desc, onComplete) {
@@ -5923,7 +5923,7 @@ function _drExpandBoard() {
     cells.forEach((cell, i) => {
       const r = Math.floor(i / COLS), c = i % COLS;
       const isNew = r < offsetR || r >= offsetR + oldRows || c < offsetC || c >= offsetC + oldCols;
-      if(isNew && !board[r][c]) {
+      if(isNew && board[r] && !board[r][c]) {
         cell.style.transition = 'transform 0.3s ease, opacity 0.3s ease';
         cell.style.transform = 'scale(0)';
         cell.style.opacity = '0';
@@ -6037,7 +6037,8 @@ function _drShowFloorComplete(floor, floorScore, isLastFloorOfStage) {
   haptic([30, 20, 50, 20, 80]);
 
   // Floor/stage clear sound
-  if(isLastFloorOfStage) {
+  const isBossFloor = floor && floor.boss;
+  if(isLastFloorOfStage || isBossFloor) {
     sfxFile('stageclear');
     if(!hasSFXFile('stageclear')) sfxDailyComplete();
   } else {
@@ -8557,6 +8558,7 @@ function renderBombOnBoard() {
   const boardEl = $id('board');
   if(!boardEl) return;
   for(let r = 0; r < ROWS; r++) {
+    if(!board[r]) continue;
     for(let c = 0; c < COLS; c++) {
       if(board[r][c] && board[r][c].startsWith && board[r][c].startsWith('BOMB_')) {
         const idx = r * COLS + c;
@@ -10996,14 +10998,21 @@ let bgMusic = null;
 function _createMusicElement() {
   const track = MUSIC_TRACKS.find(t => t.id === activeTrackId) || MUSIC_TRACKS[0];
   const audio = new Audio(track.file);
-  audio.loop = true;
+  audio.loop = false; // don't loop — auto-cycle to next track
   audio.volume = 0.18;
   audio.preload = 'auto';
+  // When track ends, pick a random enabled track and play it
+  audio.addEventListener('ended', () => {
+    const nextId = _pickRandomTrack();
+    setActiveTrack(nextId);
+  });
   return audio;
 }
 
 function initMusic() {
   if(bgMusic) return;
+  // Pick a random enabled track each session
+  activeTrackId = _pickRandomTrack();
   bgMusic = _createMusicElement();
   updateMusicBtn();
   if(musicEnabled) _playMusic();
@@ -11097,19 +11106,19 @@ const MUSIC_TRACKS = [
     id: 'chill',
     name: 'CHILL',
     file: 'Chill.mp3',
-    req: 'games25',
-    reqLabel: 'PLAY 25 GAMES',
+    req: null,
+    reqLabel: 'DEFAULT',
     emoji: '☁️',
-    unlockKey: 'bb_music_chill',
+    unlockKey: null,
   },
   {
     id: 'distant-star',
     name: 'DISTANT STAR',
     file: 'distant-star.mp3',
-    req: 'level15',
-    reqLabel: 'REACH LEVEL 15',
+    req: null,
+    reqLabel: 'DEFAULT',
     emoji: '⭐',
-    unlockKey: 'bb_music_distant',
+    unlockKey: null,
   },
   {
     id: 'lover',
@@ -11132,6 +11141,43 @@ const MUSIC_TRACKS = [
 ];
 
 let activeTrackId = localStorage.getItem('bb_active_track') || 'rendezvous';
+
+// Tracks can be enabled/disabled — only enabled tracks are in the shuffle rotation
+function _getEnabledTracks() {
+  try { return JSON.parse(localStorage.getItem('bb_enabled_tracks') || 'null'); } catch { return null; }
+}
+function _setEnabledTracks(ids) {
+  localStorage.setItem('bb_enabled_tracks', JSON.stringify(ids));
+}
+function _isTrackEnabled(id) {
+  const enabled = _getEnabledTracks();
+  if(!enabled) return true; // default: all unlocked tracks enabled
+  return enabled.includes(id);
+}
+function _toggleTrackEnabled(id) {
+  const unlocked = MUSIC_TRACKS.filter(t => isTrackUnlocked(t)).map(t => t.id);
+  let enabled = _getEnabledTracks() || [...unlocked];
+  if(enabled.includes(id)) {
+    // Don't allow disabling all tracks
+    if(enabled.length <= 1) return;
+    enabled = enabled.filter(e => e !== id);
+  } else {
+    enabled.push(id);
+  }
+  _setEnabledTracks(enabled);
+}
+
+// Pick a random enabled track (different from current if possible)
+function _pickRandomTrack() {
+  const unlocked = MUSIC_TRACKS.filter(t => isTrackUnlocked(t)).map(t => t.id);
+  const enabled = _getEnabledTracks() || unlocked;
+  const pool = enabled.filter(id => unlocked.includes(id));
+  if(!pool.length) return unlocked[0] || 'rendezvous';
+  // Prefer a different track than current
+  const others = pool.filter(id => id !== activeTrackId);
+  const picks = others.length ? others : pool;
+  return picks[Math.floor(Math.random() * picks.length)];
+}
 
 function isTrackUnlocked(track) {
   if(!track.req) return true;
@@ -11311,15 +11357,24 @@ function renderMusicSection() {
   container.innerHTML = '';
   MUSIC_TRACKS.forEach(track => {
     const unlocked = isTrackUnlocked(track);
-    const isActive = activeTrackId === track.id;
+    const enabled = unlocked && _isTrackEnabled(track.id);
+    const isPlaying = activeTrackId === track.id && musicEnabled && bgMusic && !bgMusic.paused;
     const card = document.createElement('div');
-    card.className = 'unlock-card music-card' + (unlocked ? ' unlocked' : ' locked') + (isActive ? ' active-theme' : '');
+    card.className = 'unlock-card music-card' + (unlocked ? ' unlocked' : ' locked') + (enabled ? ' active-theme' : '');
     card.innerHTML = `
       <div style="font-size:1.8rem;margin-bottom:6px">${track.emoji}</div>
-      <div style="font-family:'Press Start 2P',monospace;font-size:0.4rem;color:${unlocked ? 'var(--c2)' : 'var(--muted)'};letter-spacing:1px;text-align:center;margin-bottom:4px">${track.name}</div>
-      <div style="font-family:'Press Start 2P',monospace;font-size:0.3rem;color:var(--muted);text-align:center">${unlocked ? (isActive ? '♪ NOW PLAYING' : 'TAP TO PLAY') : '🔒 ' + track.reqLabel}</div>
+      <div style="font-family:'Press Start 2P',monospace;font-size:0.4rem;color:${unlocked ? (enabled ? 'var(--c2)' : 'var(--muted)') : 'var(--muted)'};letter-spacing:1px;text-align:center;margin-bottom:4px">${track.name}</div>
+      <div style="font-family:'Press Start 2P',monospace;font-size:0.3rem;color:var(--muted);text-align:center">${
+        !unlocked ? '🔒 ' + track.reqLabel :
+        isPlaying ? '♪ NOW PLAYING' :
+        enabled ? '✅ IN ROTATION' : '⬜ DISABLED'
+      }</div>
     `;
-    if(unlocked) card.onclick = () => { sfxMenu(); setActiveTrack(track.id); };
+    if(unlocked) card.onclick = () => {
+      sfxMenu();
+      _toggleTrackEnabled(track.id);
+      renderMusicSection();
+    };
     container.appendChild(card);
   });
 }
