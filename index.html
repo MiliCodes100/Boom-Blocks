@@ -4220,6 +4220,7 @@ const SFX_FILES = {
   'missioncomplete': './missioncomplete.mp3',
   'golden':      './golden.mp3',
   'snakebite':   './snakebite.mp3',
+  'reroll':      './reroll.mp3',
 };
 
 const _sfxBuffers = {}; // name → AudioBuffer (loaded)
@@ -5417,6 +5418,7 @@ let _drJailBossCount = 0; // how many times jail boss has appeared this run
 let _drSnakeTimer = null; // interval for snake movement
 let _drSnakeBody = []; // array of {r, c} positions, head is [0]
 let _drSnakeBossCount = 0; // how many times snake boss has appeared this run
+let _drSnakeRecheck = false; // true while waiting for snake to move before final game over check
 let _powerAnimating = false; // true while a power-up animation is in progress — blocks checkGameOver
 var _gameOverFiring = false; // true once death sequence starts — prevents duplicate triggers (var avoids re-declaration errors)
 
@@ -5780,7 +5782,7 @@ function _drStartSnake() {
           spawnParticles(rect.left + rect.width/2, rect.top + rect.height/2, board[newR][newC], 4);
         }
         board[newR][newC] = null;
-        if(hasSFXFile('snakebite')) sfxFile('snakebite'); else sfxObstacle();
+        if(hasSFXFile('snakebite')) sfxFile('snakebite', { volume: 0.25 }); else sfxObstacle();
       }
 
       // Move: add new head, remove tail
@@ -5835,6 +5837,8 @@ function _drStartSnake() {
     if(moved) {
       // Subtle haptic on each move
       haptic([8]);
+      // Recheck game over — snake may have freed or blocked cells
+      setTimeout(() => checkGameOver(), 100);
     }
   }, MOVE_INTERVAL);
 }
@@ -7566,6 +7570,16 @@ function checkGameOver() {
   if(avail.some(p => canPlaceAny(p))) {
     // Cancel any active rescue timer — player found a move
     if(_drRescueTimer) { clearInterval(_drRescueTimer); _drRescueTimer = null; _drClearRescueHint(); }
+    return;
+  }
+
+  // During snake boss, the snake might move and free up space — recheck after it moves
+  if(_drSnakeTimer && !_drSnakeRecheck) {
+    _drSnakeRecheck = true;
+    setTimeout(() => {
+      _drSnakeRecheck = false;
+      checkGameOver(); // recheck after snake has had time to move
+    }, 1200);
     return;
   }
 
@@ -9823,7 +9837,7 @@ function applyMachineGun() {
 // ── REROLL ──
 function applyReroll() {
   flashPower('#00bfff');
-  sfxPowerEarned();
+  if(hasSFXFile('reroll')) sfxFile('reroll'); else sfxPowerEarned();
   haptic([20, 10, 30, 10, 20]);
 
   // Remember current piece shapes to avoid duplicates
@@ -10983,7 +10997,7 @@ function _createMusicElement() {
   const track = MUSIC_TRACKS.find(t => t.id === activeTrackId) || MUSIC_TRACKS[0];
   const audio = new Audio(track.file);
   audio.loop = true;
-  audio.volume = 0.25;
+  audio.volume = 0.18;
   audio.preload = 'auto';
   return audio;
 }
@@ -10997,7 +11011,7 @@ function initMusic() {
 
 function _playMusic() {
   if(!bgMusic) return;
-  bgMusic.volume = 0.25;
+  bgMusic.volume = 0.18;
   // Wait for audio to be ready before playing
   const doPlay = () => {
     const p = bgMusic.play();
@@ -11060,7 +11074,7 @@ function fadeMusicOut(duration = 2000) {
       clearInterval(fade);
       _musicFading = false;
       setTimeout(() => {
-        if(bgMusic) bgMusic.volume = 0.25;
+        if(bgMusic) bgMusic.volume = 0.18;
         if(musicEnabled && bgMusic && bgMusic.paused) _playMusic();
       }, 1500);
     }
