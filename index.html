@@ -5384,7 +5384,7 @@ function _showClassicBoardPicker() {
 // ════════════════════════════════════
 
 const DAILY_RUN_FLOORS = [
-  { floor: 1, type: 'lines',  target: 5,  label: 'CLEAR 5 LINES', emoji: '🌱', desc: 'WARM UP' },
+  { floor: 1, type: 'lines',  target: 5,  label: 'CLEAR 5 LINES', emoji: '🐍', desc: 'BOSS FLOOR', boss: true }, // TEST
   { floor: 2, type: 'lines',  target: 5,  label: 'CLEAR 5 LINES', emoji: '⚡', desc: 'BUILDING UP' },
   { floor: 3, type: 'lines',  target: 5,  label: 'CLEAR 5 LINES', emoji: '🔥', desc: 'HEATING UP' },
   { floor: 4, type: 'lines',  target: 5,  label: 'CLEAR 5 LINES', emoji: '💥', desc: 'DANGER ZONE' },
@@ -5395,7 +5395,7 @@ const DAILY_RUN_FLOORS = [
 const BOSS_TYPES = ['jail', 'expand', 'obstacles', 'pit', 'snake'];
 let _drBossOffset = 0; // random starting offset, set at run start
 function _getBossType() {
-  return BOSS_TYPES[(_drStage + _drBossOffset) % BOSS_TYPES.length];
+  return 'snake'; // TEST: force snake boss
 }
 
 let _drActive = false;
