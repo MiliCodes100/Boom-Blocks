@@ -4219,6 +4219,7 @@ const SFX_FILES = {
   'turbotray':   './turbotray.mp3',
   'missioncomplete': './missioncomplete.mp3',
   'golden':      './golden.mp3',
+  'snakebite':   './snakebite.mp3',
 };
 
 const _sfxBuffers = {}; // name → AudioBuffer (loaded)
@@ -5746,11 +5747,13 @@ function _drStartSnake() {
     ];
 
     // Try current direction first, then sides, then reverse as last resort
+    // 30% chance to randomly turn even if forward is open
     const reverse = { r: -dir.r, c: -dir.c };
     const sides = directions.filter(d =>
       !(d.r === dir.r && d.c === dir.c) && !(d.r === reverse.r && d.c === reverse.c)
     ).sort(() => Math.random() - 0.5);
-    const options = [dir, ...sides, reverse];
+    const wantsTurn = Math.random() < 0.15;
+    const options = wantsTurn ? [...sides, dir, reverse] : [dir, ...sides, reverse];
 
     let moved = false;
     for(const tryDir of options) {
@@ -5777,6 +5780,7 @@ function _drStartSnake() {
           spawnParticles(rect.left + rect.width/2, rect.top + rect.height/2, board[newR][newC], 4);
         }
         board[newR][newC] = null;
+        if(hasSFXFile('snakebite')) sfxFile('snakebite'); else sfxObstacle();
       }
 
       // Move: add new head, remove tail
