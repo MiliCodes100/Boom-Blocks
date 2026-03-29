@@ -5396,7 +5396,7 @@ const DAILY_RUN_FLOORS = [
 const BOSS_TYPES = ['jail', 'expand', 'obstacles', 'pit', 'snake'];
 let _drBossOffset = 0; // random starting offset, set at run start
 function _getBossType() {
-  return 'snake'; // TEST: force snake boss
+  return 'snake'; // TEST
 }
 
 let _drActive = false;
@@ -5643,7 +5643,7 @@ function _drClearJailCells() {
   for(let r = 0; r < ROWS; r++) {
     if(!board[r]) continue;
     for(let c = 0; c < COLS; c++) {
-      if(board[r][c] === JAIL_COLOR) {
+      if(board[r][c] === JAIL_COLOR || board[r][c] === SNAKE_COLOR) {
         board[r][c] = null;
         cleared = true;
       }
@@ -5712,7 +5712,7 @@ function _drStartSnake() {
 
   // Place initial snake on board
   _drSnakeBody.forEach(seg => {
-    if(board[seg.r] && seg.c >= 0 && seg.c < COLS) board[seg.r][seg.c] = JAIL_COLOR;
+    if(board[seg.r] && seg.c >= 0 && seg.c < COLS) board[seg.r][seg.c] = SNAKE_COLOR;
   });
   renderBoard();
 
@@ -5772,8 +5772,8 @@ function _drStartSnake() {
       );
       if(hitsBody) continue;
 
-      // Eat any filled block in the way (not jail — that's the snake itself)
-      if(board[newR][newC] && board[newR][newC] !== JAIL_COLOR) {
+      // Eat any filled block in the way (not snake body)
+      if(board[newR][newC] && board[newR][newC] !== SNAKE_COLOR) {
         // Spawn particles as the block gets eaten
         const cells = _cellCache.length ? _cellCache : [];
         const cell = cells[newR * COLS + newC];
@@ -5802,14 +5802,14 @@ function _drStartSnake() {
       }
 
       // Clear tail from board
-      if(board[tail.r] && board[tail.r][tail.c] === JAIL_COLOR) {
+      if(board[tail.r] && board[tail.r][tail.c] === SNAKE_COLOR) {
         board[tail.r][tail.c] = null;
       }
       _drSnakeBody.pop();
 
       // Add new head
       _drSnakeBody.unshift({ r: newR, c: newC });
-      board[newR][newC] = JAIL_COLOR;
+      board[newR][newC] = SNAKE_COLOR;
 
       // Animate head popping in
       renderBoard();
@@ -6719,9 +6719,26 @@ function addStartingObstacles() {
 
 const OBSTACLE_COLOR = 'OBSTACLE';
 const JAIL_COLOR = 'JAIL';
+const SNAKE_COLOR = 'SNAKE';
+
+// Get complementary (opposite) color from hex
+function _invertColor(hex) {
+  hex = hex.replace('#', '');
+  if(hex.length === 3) hex = hex[0]+hex[0]+hex[1]+hex[1]+hex[2]+hex[2];
+  const r = 255 - parseInt(hex.substring(0,2), 16);
+  const g = 255 - parseInt(hex.substring(2,4), 16);
+  const b = 255 - parseInt(hex.substring(4,6), 16);
+  return `rgb(${r},${g},${b})`;
+}
+
+function _getSnakeColor() {
+  const theme = THEMES.find(t => t.id === activeTheme) || THEMES[0];
+  const mainColor = theme.colors[0] || '#ff2d55';
+  return _invertColor(mainColor);
+}
 
 function _isJail(r, c) {
-  return board[r] && board[r][c] === JAIL_COLOR;
+  return board[r] && (board[r][c] === JAIL_COLOR || board[r][c] === SNAKE_COLOR);
 }
 
 function _trackObstacleBroken(r, c) {
@@ -6824,8 +6841,8 @@ function _updateFillCache() {
     if(!board[r]) { _rowFills[r] = 0; continue; }
     let count = 0;
     for(let c = 0; c < COLS; c++) {
-      if(board[r][c]) { count++; if(board[r][c] === OBSTACLE_COLOR || board[r][c] === JAIL_COLOR) _rowBlocked[r] = true; }
-      if(board[r][c]) { _colFills[c]++; if(board[r][c] === OBSTACLE_COLOR || board[r][c] === JAIL_COLOR) _colBlocked[c] = true; }
+      if(board[r][c]) { count++; if(board[r][c] === OBSTACLE_COLOR || board[r][c] === JAIL_COLOR || board[r][c] === SNAKE_COLOR) _rowBlocked[r] = true; }
+      if(board[r][c]) { _colFills[c]++; if(board[r][c] === OBSTACLE_COLOR || board[r][c] === JAIL_COLOR || board[r][c] === SNAKE_COLOR) _colBlocked[c] = true; }
     }
     _rowFills[r] = count;
   }
@@ -6972,6 +6989,13 @@ function renderBoard() {
       cell.className = 'cell filled jail';
       cell.style.cssText = 'background:repeating-linear-gradient(-45deg,#333 0px,#333 4px,#111 4px,#111 8px);box-shadow:0 0 4px rgba(100,100,100,0.4);outline:1.5px solid #555;outline-offset:-1.5px;border-radius:3px';
       cell.textContent = '';
+    } else if(color === SNAKE_COLOR) {
+      const sc = _getSnakeColor();
+      cell.className = 'cell filled snake-cell';
+      cell.style.cssText = `background:${sc};box-shadow:0 0 10px ${sc};outline:1.5px solid ${sc};outline-offset:-1.5px;border-radius:3px`;
+      cell.textContent = '';
+      const oldEyes = cell.querySelector('.snake-eyes');
+      if(oldEyes) oldEyes.remove();
     } else if(color) {
       cell.className = 'cell filled';
       const glow = _drExpandActive ? '' : `0 0 6px ${color},`; // skip glow in expand mode for perf
@@ -6996,6 +7020,8 @@ function renderBoard() {
       cell.className = 'cell';
       cell.style.cssText = '';
       cell.textContent = '';
+      const oldEyes2 = cell.querySelector('.snake-eyes');
+      if(oldEyes2) oldEyes2.remove();
     }
     if(_prevBoard && _prevBoard[r]) _prevBoard[r][c] = color;
   }
@@ -7005,6 +7031,30 @@ function renderBoard() {
     if(first) cellSize = first.getBoundingClientRect().width;
   }
   // Render bomb icons on existing bomb cells
+  // Snake head eyes — remove all old eyes first, then add to head
+  if(_drSnakeBody.length > 0) {
+    const cells2 = _cellCache.length ? _cellCache : el.querySelectorAll('.cell');
+    // Clear eyes from ALL cells
+    cells2.forEach(c => { const e = c.querySelector('.snake-eyes'); if(e) e.remove(); });
+    // Add eyes to head only
+    const head = _drSnakeBody[0];
+    const headCell = cells2[head.r * COLS + head.c];
+    if(headCell) {
+      const eyes = document.createElement('div');
+      eyes.className = 'snake-eyes';
+      eyes.style.cssText = `
+        position:absolute; inset:0;
+        display:flex; align-items:center; justify-content:center; gap:25%;
+        pointer-events:none; z-index:1;
+      `;
+      eyes.innerHTML = `
+        <div style="width:22%;height:22%;background:#000;border-radius:50%;box-shadow:inset 0 0 1px rgba(255,255,255,0.5)"></div>
+        <div style="width:22%;height:22%;background:#000;border-radius:50%;box-shadow:inset 0 0 1px rgba(255,255,255,0.5)"></div>
+      `;
+      headCell.appendChild(eyes);
+    }
+  }
+
   renderBombOnBoard();
 }
 
@@ -7381,8 +7431,8 @@ function showStreakSaverHint() {
 // ════════════════════════════════════
 function clearLines() {
   const rowsToClear=[], colsToClear=[];
-  for(let r=0;r<ROWS;r++) if(board[r] && board[r].every(c=>c) && !board[r].some(c=>c===OBSTACLE_COLOR||c===JAIL_COLOR)) rowsToClear.push(r);
-  for(let c=0;c<COLS;c++) if(board.every(r=>r && r[c]) && !board.some(r=>r && (r[c]===OBSTACLE_COLOR||r[c]===JAIL_COLOR))) colsToClear.push(c);
+  for(let r=0;r<ROWS;r++) if(board[r] && board[r].every(c=>c) && !board[r].some(c=>c===OBSTACLE_COLOR||c===JAIL_COLOR||c===SNAKE_COLOR)) rowsToClear.push(r);
+  for(let c=0;c<COLS;c++) if(board.every(r=>r && r[c]) && !board.some(r=>r && (r[c]===OBSTACLE_COLOR||r[c]===JAIL_COLOR||r[c]===SNAKE_COLOR))) colsToClear.push(c);
   if(!rowsToClear.length&&!colsToClear.length){
     consecutiveClearCount=0;
     _lastPlacedWasStreakSaver = false; // no lines cleared — reset flag
