@@ -5853,9 +5853,13 @@ function _drStopSnake() {
 }
 
 function _drShowBossIntro(emoji, name, desc, bossType, onComplete) {
-  if(bossType === 'snake' && hasSFXFile('snakeboss')) sfxFile('snakeboss');
-  else if(hasSFXFile('bossfloor')) sfxFile('bossfloor');
-  else sfxObstacle();
+  if(bossType === 'snake') {
+    sfxFile('snakeboss');
+    if(!hasSFXFile('snakeboss')) sfxObstacle();
+  } else {
+    sfxFile('bossfloor');
+    if(!hasSFXFile('bossfloor')) sfxObstacle();
+  }
   const overlay = document.createElement('div');
   overlay.id = 'boss-intro-overlay';
   overlay.style.cssText = `
