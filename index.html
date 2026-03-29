@@ -5,7 +5,7 @@
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>BOOM BOOM BLOCKS</title>
-<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Courgette&family=Audiowide&family=Almendra:wght@700&family=Cormorant+Garamond:wght@300;400;600&family=Pacifico&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Courgette&family=Audiowide&family=Almendra:wght@700&family=Cormorant+Garamond:wght@300;400;600&family=Pacifico&family=Cinzel:wght@400;700&display=swap" rel="stylesheet">
 <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -2542,6 +2542,45 @@ body.theme-bloodmoon #menu-screen .blood-moon::before {
     radial-gradient(4px 3px at 70% 65%, rgba(0,0,0,0.2) 0%, transparent 100%),
     radial-gradient(2px 2px at 25% 70%, rgba(0,0,0,0.15) 0%, transparent 100%);
   border-radius: 50%;
+}
+
+/* DUNE — desert sands */
+body.theme-dune {
+  --c1:#e8a030; --c2:#f0c050; --c3:#d08828; --c4:#f5d070; --c5:#c07820; --c6:#e09030; --c7:#f8d888;
+  --glow1:rgba(232,160,48,0.4); --glow2:rgba(240,192,80,0.4);
+  --text:#f5e0c0; --muted:#a08050;
+  --surface:#3d2208; --surface2:#4e2d0e;
+  background: linear-gradient(180deg, #301800 0%, #4a2505 50%, #301800 100%);
+}
+body.theme-dune #board {
+  border-color: rgba(240,170,50,0.35);
+  box-shadow: 0 0 30px rgba(240,150,30,0.2), 0 0 60px rgba(0,0,0,0.4);
+  background: #361e06;
+}
+body.theme-dune .cell {
+  --cell-radius: 2px;
+}
+body.theme-dune .logo-boom,
+body.theme-dune .logo-blocks {
+  font-family: 'Cinzel', serif !important;
+  letter-spacing: 6px;
+  font-weight: 400;
+  text-transform: uppercase;
+}
+body.theme-dune .menu-btn,
+body.theme-dune .score-label,
+body.theme-dune .mode-label,
+body.theme-dune .unlock-section-label,
+body.theme-dune .unlocks-title {
+  font-family: 'Cinzel', serif !important;
+  letter-spacing: 3px;
+  font-weight: 400;
+}
+body.theme-dune .cell.filled::before {
+  background: rgba(255,240,200,0.12);
+}
+body.theme-dune .cell.filled::after {
+  background: rgba(0,0,0,0.2);
 }
 
 /* RAINBOW — cycling hue rotation */
@@ -7376,37 +7415,41 @@ function refillPieces() {
       const color = theme.colors[Math.floor(Math.random() * theme.colors.length)];
       pieces[idx] = { shape: safeShape, color, hex: colorHex[color] || color || '#0af5ff' };
     }
-    if(consecutiveClearCount >= 3) {
-      const color = '#ffd60a'; // golden streak saver color
+  }
 
-      // Build a pool of small placeable shapes to evaluate
-      const saverPool = [
-        ...PIECES_T1,
-        [[1,1]], [[1],[1]],           // dominoes
-        [[1,1,1]], [[1],[1],[1]],     // trominoes
-        [[1,1],[1,0]], [[1,0],[1,1]], // L-shapes
-        [[1,1],[0,1]], [[0,1],[1,1]], // S/Z shapes
-        [[1]],                        // single
-      ].filter(s => canPlaceAny({ shape: s }));
+  // Golden streak saver — triggers on 3+ consecutive clears regardless of tray state
+  if(consecutiveClearCount >= 3 && !pieces.some(p => p && p.isStreakSaver)) {
+    const color = '#ffd60a'; // golden streak saver color
 
-      // Score each candidate against the current board
-      _updateFillCache();
-      let bestShape = null, bestScore = -1;
-      saverPool.forEach(s => {
-        const score = scorePieceUsefulnessFast(s);
-        if(score > bestScore) { bestScore = score; bestShape = s; }
-      });
+    // Build a pool of small placeable shapes to evaluate
+    const saverPool = [
+      ...PIECES_T1,
+      [[1,1]], [[1],[1]],           // dominoes
+      [[1,1,1]], [[1],[1],[1]],     // trominoes
+      [[1,1],[1,0]], [[1,0],[1,1]], // L-shapes
+      [[1,1],[0,1]], [[0,1],[1,1]], // S/Z shapes
+      [[1]],                        // single
+    ].filter(s => canPlaceAny({ shape: s }));
 
-      // Fall back to random T1 if nothing scored well
-      if(!bestShape) {
-        const t1s = PIECES_T1.filter(s => canPlaceAny({ shape: s }));
-        bestShape = t1s[Math.floor(Math.random() * t1s.length)] || PIECES_T1[0];
-      }
+    // Score each candidate against the current board
+    _updateFillCache();
+    let bestShape = null, bestScore = -1;
+    saverPool.forEach(s => {
+      const score = scorePieceUsefulnessFast(s);
+      if(score > bestScore) { bestScore = score; bestShape = s; }
+    });
 
-      const slot = Math.floor(Math.random() * pieces.length);
-      pieces[slot] = { shape: bestShape, color, hex: color, isStreakSaver: true };
-      setTimeout(() => showStreakSaverHint(), 200);
+    // Fall back to random T1 if nothing scored well
+    if(!bestShape) {
+      const t1s = PIECES_T1.filter(s => canPlaceAny({ shape: s }));
+      bestShape = t1s[Math.floor(Math.random() * t1s.length)] || PIECES_T1[0];
     }
+
+    // Replace a non-null piece, or slot 0 if all empty
+    const availSlots = pieces.map((p, i) => p !== null ? i : -1).filter(i => i >= 0);
+    const slot = availSlots.length ? availSlots[Math.floor(Math.random() * availSlots.length)] : 0;
+    pieces[slot] = { shape: bestShape, color, hex: color, isStreakSaver: true };
+    setTimeout(() => showStreakSaverHint(), 200);
   }
 }
 
@@ -7775,6 +7818,7 @@ function updateStreak() {
   localStorage.setItem('bb_last_day', dk);
   // Persist streak milestones so themes stay unlocked even if streak resets
   if(streak >= 7 && !localStorage.getItem('bb_streak7'))   localStorage.setItem('bb_streak7', '1');
+  if(streak >= 3 && !localStorage.getItem('bb_streak3')) localStorage.setItem('bb_streak3', '1');
   if(streak >= 10 && !localStorage.getItem('bb_streak10')) localStorage.setItem('bb_streak10', '1');
   if(streak >= 30 && !localStorage.getItem('bb_streak30')) localStorage.setItem('bb_streak30', '1');
   // Persist games played milestone
@@ -8917,6 +8961,7 @@ function updatePowerUI() {
 }
 
 function activatePower(type) {
+  if(_powerAnimating) return; // block while animation is playing
   if(powerInventory[type] <= 0) return;
   // In roguelike, only allow unlocked powers
   if(isDaily && _drActive && !_drUnlockedPowers.includes(type)) return;
@@ -10216,6 +10261,16 @@ const THEMES = [
     emoji:'🌈'
   },
   // ── SPECIAL UNLOCKS ──
+  // ── DUNE ──
+  {
+    id:'dune', name:'DUNE', req:'streak3', reqLabel:'3 DAY STREAK', category:'special',
+    bg:'#301800', surface:'#3d2208', surface2:'#4e2d0e',
+    colors:['#e8a030','#d08828','#f0c050','#c07820','#f5d070','#e09030','#f8d888'],
+    boardBg:'#361e06', boardBorder:'rgba(240,170,50,0.35)',
+    preview:['#e8a030','#d08828','#f0c050','#c07820','#e09030'],
+    emoji:'🏜️',
+    font: "'Cinzel', serif"
+  },
   {
     id:'blossom', name:'BLOSSOM', req:'streak10', reqLabel:'10 DAY STREAK', category:'special',
     bg:'#1a0010', surface:'#2a0018', surface2:'#380020',
@@ -10311,6 +10366,7 @@ function _refreshMilestones() {
     score250k: !!localStorage.getItem('bb_score250k'),
     score500k: !!localStorage.getItem('bb_score500k'),
     games100:  !!localStorage.getItem('bb_games100'),
+    streak3:   !!localStorage.getItem('bb_streak3'),
     streak7:   !!localStorage.getItem('bb_streak7'),
     streak10:  !!localStorage.getItem('bb_streak10'),
     streak30:  !!localStorage.getItem('bb_streak30'),
@@ -10333,6 +10389,7 @@ function isThemeUnlocked(t) {
       return total > 0 && seen >= Math.ceil(total / 2);
     }
     if(t.req === 'streak7')   return streak >= 7  || _milestoneCache.streak7;
+    if(t.req === 'streak3')   return streak >= 3 || _milestoneCache.streak3;
     if(t.req === 'streak10')  return streak >= 10 || _milestoneCache.streak10;
     if(t.req === 'streak30')  return streak >= 30 || _milestoneCache.streak30;
     // Roguelike stage requirements: 'stage1', 'stage2', etc.
