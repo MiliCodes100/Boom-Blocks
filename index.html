@@ -2341,6 +2341,52 @@ body.theme-emoji #board {
   100% { transform: translate(-50%,-50%) scale(1); opacity:1; }
 }
 
+/* ── COMBO ANNOUNCEMENTS ── */
+.combo-announce {
+  position:fixed;
+  top:38%;
+  left:50%;
+  transform:translate(-50%,-50%) scale(0.3);
+  pointer-events:none;
+  z-index:9800;
+  text-align:center;
+  opacity:0;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:4px;
+}
+.combo-announce-text {
+  font-family:'Press Start 2P', monospace;
+  letter-spacing:3px;
+  line-height:1;
+  -webkit-text-stroke: 1px rgba(0,0,0,0.3);
+}
+.combo-announce-sub {
+  font-family:'Press Start 2P', monospace;
+  font-size:0.35rem;
+  letter-spacing:2px;
+  opacity:0.8;
+}
+@keyframes comboSlam {
+  0%   { transform:translate(-50%,-50%) scale(3) rotate(-5deg); opacity:0; }
+  30%  { transform:translate(-50%,-50%) scale(0.9) rotate(1deg); opacity:1; }
+  50%  { transform:translate(-50%,-50%) scale(1.1) rotate(-0.5deg); opacity:1; }
+  70%  { transform:translate(-50%,-50%) scale(1) rotate(0deg); opacity:1; }
+  100% { transform:translate(-50%,-50%) scale(1) rotate(0deg); opacity:1; }
+}
+@keyframes comboFloat {
+  0%   { transform:translate(-50%,-50%) scale(1) translateY(0); opacity:1; }
+  100% { transform:translate(-50%,-50%) scale(0.8) translateY(-30px); opacity:0; }
+}
+@keyframes comboShake {
+  0%, 100% { transform:translate(-50%,-50%) scale(1) translateX(0); }
+  20% { transform:translate(-50%,-50%) scale(1) translateX(-4px) rotate(-1deg); }
+  40% { transform:translate(-50%,-50%) scale(1) translateX(4px) rotate(1deg); }
+  60% { transform:translate(-50%,-50%) scale(1) translateX(-3px) rotate(-0.5deg); }
+  80% { transform:translate(-50%,-50%) scale(1) translateX(3px) rotate(0.5deg); }
+}
+
 
 /* PASTEL — light dreamy theme */
 body.theme-pastel {
@@ -7473,6 +7519,64 @@ function showStreakSaverHint() {
   setTimeout(() => el.remove(), 2200);
 }
 
+// ── COMBO ANNOUNCEMENTS ──
+const COMBO_TIERS = [
+  { min:2,  text:'NICE!',       sub:'x2 COMBO',     color:'#ffd60a', size:'1.2rem', shake:false },
+  { min:3,  text:'GREAT!',      sub:'x3 COMBO',     color:'#ff9f0a', size:'1.4rem', shake:false },
+  { min:4,  text:'AWESOME!',    sub:'x4 COMBO',     color:'#ff6030', size:'1.6rem', shake:true },
+  { min:5,  text:'AMAZING!',    sub:'x5 COMBO',     color:'#ff2d55', size:'1.8rem', shake:true },
+  { min:7,  text:'INCREDIBLE!', sub:'x${n} COMBO',  color:'#bf5af2', size:'2rem',   shake:true },
+  { min:10, text:'UNSTOPPABLE!',sub:'x${n} COMBO',  color:'#0af5ff', size:'2.2rem', shake:true },
+  { min:15, text:'GODLIKE!',    sub:'x${n} COMBO',  color:'#fff',    size:'2.5rem', shake:true },
+];
+
+function _showComboAnnounce(combo) {
+  if(combo < 2) return;
+
+  // Find the highest matching tier
+  let tier = COMBO_TIERS[0];
+  for(const t of COMBO_TIERS) {
+    if(combo >= t.min) tier = t;
+  }
+
+  // Remove any existing announcement
+  const old = document.querySelector('.combo-announce');
+  if(old) old.remove();
+
+  const text = tier.text;
+  const sub = tier.sub.replace('${n}', combo);
+
+  const el = document.createElement('div');
+  el.className = 'combo-announce';
+  el.innerHTML = `
+    <div class="combo-announce-text" style="font-size:${tier.size};color:${tier.color};text-shadow:0 0 20px ${tier.color}, 0 0 40px ${tier.color}80, 0 2px 0 rgba(0,0,0,0.5)">${text}</div>
+    <div class="combo-announce-sub" style="color:${tier.color}">${sub}</div>
+  `;
+  document.body.appendChild(el);
+
+  // Slam in animation
+  el.style.animation = 'comboSlam 0.4s cubic-bezier(0.175,0.885,0.32,1.275) forwards';
+
+  // Shake for high combos
+  if(tier.shake) {
+    setTimeout(() => {
+      el.style.animation = 'comboShake 0.3s ease';
+    }, 400);
+  }
+
+  // Particles burst from center
+  const cx = window.innerWidth / 2;
+  const cy = window.innerHeight * 0.38;
+  spawnParticles(cx, cy, tier.color, Math.min(combo * 3, 20));
+  if(combo >= 5) spawnParticles(cx, cy, '#fff', 8);
+
+  // Float away and remove
+  setTimeout(() => {
+    el.style.animation = 'comboFloat 0.5s ease forwards';
+    setTimeout(() => el.remove(), 500);
+  }, tier.shake ? 900 : 700);
+}
+
 // ════════════════════════════════════
 //  LINE CLEARING
 // ════════════════════════════════════
@@ -7488,6 +7592,7 @@ function clearLines() {
   }
 
   consecutiveClearCount++;
+  _showComboAnnounce(consecutiveClearCount);
   const comboPopup = $id('combo-popup');
   if(comboPopup) {
     comboPopup.style.display = 'block';
