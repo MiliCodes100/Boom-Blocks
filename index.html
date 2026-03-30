@@ -2386,6 +2386,16 @@ body.theme-emoji #board {
   60% { transform:translate(-50%,-50%) scale(1) translateX(-3px) rotate(-0.5deg); }
   80% { transform:translate(-50%,-50%) scale(1) translateX(3px) rotate(0.5deg); }
 }
+@keyframes crissCrossSpin {
+  0%   { transform:translate(-50%,-50%) scale(0) rotate(-180deg); opacity:0; }
+  50%  { transform:translate(-50%,-50%) scale(1.2) rotate(10deg); opacity:1; }
+  70%  { transform:translate(-50%,-50%) scale(0.95) rotate(-3deg); opacity:1; }
+  100% { transform:translate(-50%,-50%) scale(1) rotate(0deg); opacity:1; }
+}
+@keyframes crissCrossPulse {
+  0%, 100% { text-shadow: 0 0 20px currentColor, 0 0 40px currentColor; }
+  50% { text-shadow: 0 0 30px currentColor, 0 0 60px currentColor, 0 0 80px currentColor; }
+}
 
 
 /* PASTEL — light dreamy theme */
@@ -7521,13 +7531,13 @@ function showStreakSaverHint() {
 
 // ── COMBO ANNOUNCEMENTS ──
 const COMBO_TIERS = [
-  { min:2,  text:'NICE!',       sub:'x2 COMBO',     color:'#ffd60a', size:'1.2rem', shake:false },
-  { min:3,  text:'GREAT!',      sub:'x3 COMBO',     color:'#ff9f0a', size:'1.4rem', shake:false },
-  { min:4,  text:'AWESOME!',    sub:'x4 COMBO',     color:'#ff6030', size:'1.6rem', shake:true },
-  { min:5,  text:'AMAZING!',    sub:'x5 COMBO',     color:'#ff2d55', size:'1.8rem', shake:true },
-  { min:7,  text:'INCREDIBLE!', sub:'x${n} COMBO',  color:'#bf5af2', size:'2rem',   shake:true },
-  { min:10, text:'UNSTOPPABLE!',sub:'x${n} COMBO',  color:'#0af5ff', size:'2.2rem', shake:true },
-  { min:15, text:'GODLIKE!',    sub:'x${n} COMBO',  color:'#fff',    size:'2.5rem', shake:true },
+  { min:2,  text:'NICE!',       sub:'x2 COMBO',     color:'#ffd60a', size:'1.2rem', shake:false, particles:6,  flash:false },
+  { min:3,  text:'GREAT!',      sub:'x3 COMBO',     color:'#ff9f0a', size:'1.4rem', shake:true,  particles:10, flash:false },
+  { min:4,  text:'AWESOME!',    sub:'x4 COMBO',     color:'#ff6030', size:'1.6rem', shake:true,  particles:14, flash:true },
+  { min:5,  text:'AMAZING!',    sub:'x5 COMBO',     color:'#ff2d55', size:'1.8rem', shake:true,  particles:18, flash:true },
+  { min:7,  text:'INCREDIBLE!', sub:'x${n} COMBO',  color:'#bf5af2', size:'2rem',   shake:true,  particles:24, flash:true },
+  { min:10, text:'UNSTOPPABLE!',sub:'x${n} COMBO',  color:'#0af5ff', size:'2.2rem', shake:true,  particles:30, flash:true },
+  { min:15, text:'GODLIKE!',    sub:'x${n} COMBO',  color:'#fff',    size:'2.5rem', shake:true,  particles:40, flash:true },
 ];
 
 function _showComboAnnounce(combo) {
@@ -7557,28 +7567,93 @@ function _showComboAnnounce(combo) {
   // Slam in animation
   el.style.animation = 'comboSlam 0.4s cubic-bezier(0.175,0.885,0.32,1.275) forwards';
 
-  // Shake for high combos
+  // Screen flash for big combos
+  if(tier.flash) {
+    flashScreen(tier.color + '30');
+  }
+
+  // Shake for x3+ with escalating intensity
   if(tier.shake) {
+    const shakeIntensity = Math.min(combo - 1, 5);
+    shakeBoard(shakeIntensity);
     setTimeout(() => {
       el.style.animation = 'comboShake 0.3s ease';
     }, 400);
   }
 
-  // Particles burst from center
+  // Particles burst from center — escalating with combo
   const cx = window.innerWidth / 2;
   const cy = window.innerHeight * 0.38;
-  spawnParticles(cx, cy, tier.color, Math.min(combo * 3, 20));
-  if(combo >= 5) spawnParticles(cx, cy, '#fff', 8);
+  spawnParticles(cx, cy, tier.color, tier.particles);
+  if(combo >= 4) spawnParticles(cx, cy, '#fff', Math.min(combo * 2, 16));
+  if(combo >= 7) spawnParticles(cx, cy, '#ffd60a', 10);
+  if(combo >= 10) {
+    spawnParticles(cx, cy, '#ff2d55', 12);
+    spawnParticles(cx, cy, '#0af5ff', 12);
+  }
 
-  // Float away and remove
+  // Haptic scales with combo
+  if(combo >= 5) haptic([30, 15, 50, 15, 80]);
+  else if(combo >= 3) haptic([20, 10, 40]);
+
+  // Float away and remove — longer display for bigger combos
+  const displayTime = tier.shake ? 900 + Math.min(combo * 50, 400) : 700;
   setTimeout(() => {
     el.style.animation = 'comboFloat 0.5s ease forwards';
     setTimeout(() => el.remove(), 500);
-  }, tier.shake ? 900 : 700);
+  }, displayTime);
 }
 
-// ════════════════════════════════════
-//  LINE CLEARING
+function _showCrissCrossAnnounce(rows, cols) {
+  // Remove any existing announcement
+  const old = document.querySelector('.combo-announce');
+  if(old) old.remove();
+
+  const totalLines = rows + cols;
+  const isDouble = rows >= 2 && cols >= 2;
+  const text = isDouble ? 'MEGA CROSS!' : 'CRISS CROSS!';
+  const color = isDouble ? '#ff2d55' : '#bf5af2';
+  const size = isDouble ? '2rem' : '1.8rem';
+
+  const el = document.createElement('div');
+  el.className = 'combo-announce';
+  el.innerHTML = `
+    <div style="font-size:2.5rem;line-height:1;animation:crissCrossPulse 0.4s ease infinite">✖️</div>
+    <div class="combo-announce-text" style="font-size:${size};color:${color};text-shadow:0 0 20px ${color}, 0 0 40px ${color}80, 0 2px 0 rgba(0,0,0,0.5)">${text}</div>
+    <div class="combo-announce-sub" style="color:${color}">${rows} ROW${rows > 1 ? 'S' : ''} + ${cols} COL${cols > 1 ? 'S' : ''}</div>
+  `;
+  document.body.appendChild(el);
+
+  // Spin in animation
+  el.style.animation = 'crissCrossSpin 0.5s cubic-bezier(0.175,0.885,0.32,1.275) forwards';
+
+  // Screen flash + shake
+  flashScreen(color + '35');
+  shakeBoard(isDouble ? 5 : 3);
+  haptic([40, 15, 60, 15, 100]);
+
+  // Particles — cross pattern burst
+  const cx = window.innerWidth / 2;
+  const cy = window.innerHeight * 0.38;
+  spawnParticles(cx, cy, color, 20);
+  spawnParticles(cx, cy, '#fff', 12);
+  spawnParticles(cx, cy, '#ffd60a', 8);
+  if(isDouble) {
+    spawnParticles(cx, cy, '#0af5ff', 10);
+    spawnParticles(cx, cy, '#ff2d55', 10);
+  }
+
+  // Also show the regular combo announcement if it's a combo streak
+  if(consecutiveClearCount >= 2) {
+    setTimeout(() => _showComboAnnounce(consecutiveClearCount), 600);
+  }
+
+  // Float away
+  setTimeout(() => {
+    el.style.animation = 'comboFloat 0.5s ease forwards';
+    setTimeout(() => el.remove(), 500);
+  }, 1200);
+}
 // ════════════════════════════════════
 function clearLines() {
   const rowsToClear=[], colsToClear=[];
@@ -7592,7 +7667,12 @@ function clearLines() {
   }
 
   consecutiveClearCount++;
-  _showComboAnnounce(consecutiveClearCount);
+  const isCrissCross = rowsToClear.length > 0 && colsToClear.length > 0;
+  if(isCrissCross) {
+    _showCrissCrossAnnounce(rowsToClear.length, colsToClear.length);
+  } else {
+    _showComboAnnounce(consecutiveClearCount);
+  }
   const comboPopup = $id('combo-popup');
   if(comboPopup) {
     comboPopup.style.display = 'block';
