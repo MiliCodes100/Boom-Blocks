@@ -1,0 +1,3133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>BOOM BLOCKS</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+
+:root {
+  --bg: #080810;
+  --surface: #0e0e1e;
+  --surface2: #141428;
+  --text: #e8eaff;
+  --muted: #4a4a7a;
+  --c1: #ff2d55;
+  --c2: #ffd60a;
+  --c3: #30d158;
+  --c4: #0af5ff;
+  --c5: #bf5af2;
+  --c6: #ff6b35;
+  --c7: #ff375f;
+  --glow1: rgba(255,45,85,0.6);
+  --glow4: rgba(10,245,255,0.6);
+  --glow2: rgba(255,214,10,0.6);
+}
+
+html, body {
+  width:100%; height:100%;
+  background: var(--bg);
+  overflow: hidden;
+  touch-action: none;
+  user-select: none;
+}
+
+/* ── CRT OVERLAY ── */
+body::before {
+  content:'';
+  position:fixed; inset:0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0,0,0,0.08) 2px,
+    rgba(0,0,0,0.08) 4px
+  );
+  pointer-events:none;
+  z-index:9999;
+}
+
+body::after {
+  content:'';
+  position:fixed; inset:0;
+  background: radial-gradient(ellipse at center, transparent 60%, rgba(0,0,0,0.7) 100%);
+  pointer-events:none;
+  z-index:9998;
+}
+
+/* ── CANVAS (particles) ── */
+#fx-canvas {
+  position:fixed; inset:0;
+  pointer-events:none;
+  z-index:500;
+}
+
+/* ── SCREEN SYSTEM ── */
+#app {
+  width:100%; height:100%;
+  display:flex; flex-direction:column; align-items:center;
+  overflow-y:auto; overflow-x:hidden;
+  scroll-behavior:smooth;
+}
+
+.screen { display:none; width:100%; max-width:440px; flex-direction:column; align-items:center; min-height:100vh; }
+.screen.active { display:flex; }
+
+/* ── MENU ── */
+#menu-screen {
+  justify-content:center;
+  gap:16px;
+  padding:24px 20px 40px;
+  position:relative;
+}
+
+.menu-bg-grid {
+  position:absolute; inset:0;
+  background-image:
+    linear-gradient(rgba(10,245,255,0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(10,245,255,0.04) 1px, transparent 1px);
+  background-size: 32px 32px;
+  animation: gridShift 20s linear infinite;
+}
+@keyframes gridShift { from{background-position:0 0;} to{background-position:32px 32px;} }
+
+.logo-wrap { position:relative; text-align:center; margin-bottom:8px; }
+
+.logo {
+  font-family:'Press Start 2P', monospace;
+  font-size:clamp(1.4rem, 6vw, 2.2rem);
+  color: var(--c4);
+  text-shadow:
+    0 0 10px var(--glow4),
+    0 0 30px var(--glow4),
+    0 0 60px var(--glow4),
+    4px 4px 0 rgba(0,0,0,0.8);
+  line-height:1.4;
+  letter-spacing:2px;
+  animation: logoFlicker 4s ease-in-out infinite;
+}
+
+@keyframes logoFlicker {
+  0%,95%,100% { opacity:1; }
+  96% { opacity:0.7; }
+  97% { opacity:1; }
+  98% { opacity:0.4; }
+  99% { opacity:1; }
+}
+
+.logo-boom {
+  color: var(--c1);
+  text-shadow:
+    0 0 10px var(--glow1),
+    0 0 30px var(--glow1),
+    0 0 60px var(--glow1),
+    4px 4px 0 rgba(0,0,0,0.8);
+  display:block;
+}
+
+.logo-blocks {
+  color: var(--c4);
+  display:block;
+}
+
+.logo-sub {
+  font-family:'Press Start 2P', monospace;
+  font-size:0.42rem;
+  color: var(--muted);
+  letter-spacing:4px;
+  margin-top:8px;
+  animation: blink 1.5s step-end infinite;
+}
+@keyframes blink { 0%,100%{opacity:1;} 50%{opacity:0;} }
+
+.menu-stats {
+  display:flex; gap:8px; width:100%; max-width:300px;
+  margin:4px 0;
+}
+
+.stat-box {
+  flex:1;
+  background: var(--surface);
+  border:1px solid rgba(10,245,255,0.2);
+  border-radius:4px;
+  padding:10px 6px;
+  text-align:center;
+  box-shadow: 0 0 12px rgba(10,245,255,0.05), inset 0 0 20px rgba(0,0,0,0.5);
+}
+
+.stat-label {
+  font-family:'Press Start 2P', monospace;
+  font-size:0.38rem;
+  color: var(--muted);
+  letter-spacing:1px;
+  margin-bottom:5px;
+}
+
+.stat-val {
+  font-family:'Press Start 2P', monospace;
+  font-size:0.75rem;
+  color: var(--c2);
+  text-shadow: 0 0 10px var(--glow2);
+}
+
+.menu-btn {
+  width:100%; max-width:300px;
+  padding:16px 12px;
+  border:none;
+  font-family:'Press Start 2P', monospace;
+  font-size:0.75rem;
+  letter-spacing:2px;
+  cursor:pointer;
+  transition:transform 0.08s, box-shadow 0.08s;
+  position:relative;
+  border-radius:4px;
+  text-transform:uppercase;
+}
+
+.menu-btn:active { transform:scale(0.96) translateY(2px); }
+
+.menu-btn.primary {
+  background: var(--c1);
+  color: white;
+  box-shadow: 0 0 20px var(--glow1), 0 4px 0 rgba(180,0,30,0.8), inset 0 1px 0 rgba(255,255,255,0.2);
+  text-shadow: 2px 2px 0 rgba(0,0,0,0.5);
+}
+
+.menu-btn.primary:active { box-shadow: 0 0 20px var(--glow1), 0 0 0 rgba(180,0,30,0.8); }
+
+.menu-btn.daily {
+  background: var(--c2);
+  color: #1a0a00;
+  box-shadow: 0 0 20px var(--glow2), 0 4px 0 rgba(180,120,0,0.8), inset 0 1px 0 rgba(255,255,255,0.3);
+  text-shadow: 1px 1px 0 rgba(0,0,0,0.3);
+}
+
+.menu-btn.ghost {
+  background: transparent;
+  color: var(--c4);
+  border: 2px solid var(--c4);
+  box-shadow: 0 0 15px rgba(10,245,255,0.2), inset 0 0 15px rgba(10,245,255,0.03);
+  text-shadow: 0 0 8px var(--glow4);
+}
+
+.daily-done-tag {
+  position:absolute; top:6px; right:8px;
+  font-family:'Press Start 2P', monospace;
+  font-size:0.35rem;
+  color: rgba(0,0,0,0.6);
+  background: rgba(0,0,0,0.2);
+  padding:2px 6px;
+  border-radius:2px;
+}
+
+/* ── GAME SCREEN ── */
+#game-screen { padding-bottom:8px; min-height:100vh; }
+
+header {
+  width:100%;
+  padding:10px 12px 6px;
+  display:flex; align-items:center; gap:8px;
+}
+
+.back-btn {
+  background: var(--surface);
+  border: 1px solid rgba(255,255,255,0.1);
+  color: var(--c4);
+  font-family:'Press Start 2P', monospace;
+  font-size:0.6rem;
+  padding:8px 10px;
+  border-radius:4px;
+  cursor:pointer;
+  flex-shrink:0;
+  box-shadow: 0 0 8px rgba(10,245,255,0.1);
+}
+
+.mode-label {
+  font-family:'Press Start 2P', monospace;
+  font-size:0.5rem;
+  color: var(--muted);
+  letter-spacing:2px;
+  flex:1;
+  text-align:center;
+}
+.mode-label.daily-mode { color: var(--c2); text-shadow: 0 0 8px var(--glow2); }
+
+.header-scores { display:flex; gap:6px; align-items:center; }
+
+.score-box {
+  text-align:center;
+  background: var(--surface);
+  border:1px solid rgba(10,245,255,0.15);
+  border-radius:4px;
+  padding:5px 10px;
+  box-shadow: 0 0 10px rgba(10,245,255,0.05);
+}
+
+.score-label {
+  font-family:'Press Start 2P', monospace;
+  font-size:0.32rem;
+  color: var(--muted);
+  letter-spacing:1px;
+}
+
+.score-val {
+  font-family:'Press Start 2P', monospace;
+  font-size:0.7rem;
+  color: var(--c2);
+  text-shadow: 0 0 8px var(--glow2);
+  line-height:1.3;
+}
+
+.sound-btn {
+  background: var(--surface);
+  border: 1px solid rgba(255,255,255,0.08);
+  color: var(--text);
+  font-size:1rem;
+  width:34px; height:34px;
+  border-radius:4px;
+  cursor:pointer;
+  display:flex; align-items:center; justify-content:center;
+  flex-shrink:0;
+}
+
+/* ── DAILY BAR ── */
+.daily-bar-wrap { width:100%; max-width:440px; padding:2px 12px 4px; }
+.daily-bar-bg { height:4px; background:var(--surface2); border-radius:2px; overflow:hidden; border:1px solid rgba(255,214,10,0.2); }
+.daily-bar-fill { height:100%; background: linear-gradient(90deg, var(--c2), var(--c6)); transition:width 0.4s; width:0%; box-shadow:0 0 8px var(--glow2); }
+
+/* ── BOARD ── */
+.board-wrap { width:100%; max-width:440px; padding:0 12px; margin-top:4px; }
+
+#board {
+  width:100%; aspect-ratio:1;
+  display:grid;
+  grid-template-columns:repeat(8,1fr);
+  gap:2px;
+  background: var(--surface);
+  border-radius:6px;
+  padding:8px;
+  border:2px solid rgba(10,245,255,0.15);
+  box-shadow:
+    0 0 30px rgba(10,245,255,0.08),
+    0 0 60px rgba(0,0,0,0.8),
+    inset 0 0 40px rgba(0,0,0,0.6);
+  position:relative;
+  transition: transform 0.05s;
+}
+
+#board.shake {
+  animation: screenShake 0.35s ease;
+}
+
+@keyframes screenShake {
+  0%   { transform: translate(0,0) rotate(0); }
+  15%  { transform: translate(-4px,3px) rotate(-0.5deg); }
+  30%  { transform: translate(4px,-3px) rotate(0.5deg); }
+  45%  { transform: translate(-3px,4px) rotate(-0.3deg); }
+  60%  { transform: translate(3px,-2px) rotate(0.3deg); }
+  75%  { transform: translate(-2px,2px) rotate(-0.2deg); }
+  90%  { transform: translate(2px,-1px) rotate(0.1deg); }
+  100% { transform: translate(0,0) rotate(0); }
+}
+
+.cell {
+  border-radius:var(--cell-radius, 3px);
+  filter:var(--cell-filter, none);
+  background: var(--surface2);
+  position:relative;
+  overflow:hidden;
+  transition: transform 0.08s;
+}
+
+/* pixel shine on filled cells */
+.cell.filled::before {
+  content:'';
+  position:absolute;
+  top:0; left:0; right:0;
+  height:40%;
+  background: rgba(255,255,255,0.18);
+  border-radius:3px 3px 0 0;
+}
+
+.cell.filled::after {
+  content:'';
+  position:absolute;
+  bottom:0; right:0;
+  width:30%; height:30%;
+  background: rgba(0,0,0,0.25);
+  border-radius:0 0 3px 0;
+}
+
+.cell.highlight { transform:scale(0.88); opacity:0.8; }
+.cell.invalid { background:rgba(255,45,85,0.4) !important; transform:scale(0.88); }
+
+.cell.clearing {
+  animation: blockPop 0.4s ease forwards;
+}
+
+@keyframes blockPop {
+  0%   { transform:scale(1); opacity:1; filter:brightness(1); }
+  30%  { transform:scale(1.3); opacity:1; filter:brightness(2.5); }
+  60%  { transform:scale(0.8); opacity:0.6; filter:brightness(3); }
+  100% { transform:scale(0); opacity:0; filter:brightness(5); }
+}
+
+/* ── TRAY ── */
+.tray {
+  width:100%; max-width:440px;
+  padding:8px 12px 4px;
+  display:flex;
+  justify-content:space-around;
+  align-items:center;
+  gap:8px;
+  min-height:100px;
+}
+
+.piece-slot {
+  flex:1;
+  display:flex; align-items:center; justify-content:center;
+  background: var(--surface);
+  border-radius:4px;
+  padding:10px 4px;
+  min-height:88px;
+  border:1px solid rgba(10,245,255,0.12);
+  cursor:grab;
+  transition:transform 0.12s, opacity 0.12s, border-color 0.12s;
+  position:relative;
+  box-shadow: inset 0 0 20px rgba(0,0,0,0.5);
+}
+
+.piece-slot.empty { opacity:0.2; cursor:default; border-color:transparent; }
+.piece-slot.dragging-source { opacity:0.2; transform:scale(0.85); }
+.piece-slot.cant-place { border-color:rgba(255,45,85,0.35); }
+.piece-slot:not(.empty):not(.dragging-source):hover { border-color:rgba(10,245,255,0.35); }
+
+.piece-grid { display:grid; gap:2px; }
+
+.piece-cell {
+  width:14px; height:14px;
+  border-radius:2px;
+  position:relative;
+  overflow:hidden;
+}
+
+.piece-cell.empty-cell {
+  background: transparent !important;
+  box-shadow: none !important;
+  pointer-events: none;
+}
+
+.piece-cell.empty-cell::before { display: none; }
+
+.piece-cell::before {
+  content:'';
+  position:absolute;
+  top:0; left:0; right:0;
+  height:40%;
+  background:rgba(255,255,255,0.2);
+  border-radius:2px 2px 0 0;
+}
+
+/* ── GHOST ── */
+#drag-ghost { position:fixed; pointer-events:none; z-index:1000; display:none; }
+.ghost-grid { display:grid; gap:2px; }
+
+.ghost-cell {
+  border-radius:3px;
+  opacity:0.9;
+  position:relative;
+  overflow:hidden;
+  box-shadow: 0 0 12px currentColor;
+}
+
+.ghost-cell[style*="opacity: 0"], .ghost-cell[style*="opacity:0"] {
+  box-shadow: none !important;
+}
+
+.ghost-cell::before {
+  content:'';
+  position:absolute;
+  top:0; left:0; right:0;
+  height:40%;
+  background:rgba(255,255,255,0.25);
+  border-radius:3px 3px 0 0;
+}
+
+/* ── HINT ── */
+.hint-text {
+  font-family:'Press Start 2P', monospace;
+  font-size:0.35rem;
+  color:var(--muted);
+  text-align:center;
+  padding:4px 0 6px;
+  letter-spacing:1px;
+}
+
+/* ── FLOATING SCORE ── */
+.score-popup {
+  position:fixed;
+  font-family:'Press Start 2P', monospace;
+  font-size:1rem;
+  color: var(--c2);
+  pointer-events:none;
+  z-index:600;
+  animation:floatUp 0.9s ease forwards;
+  text-shadow: 0 0 15px var(--glow2), 2px 2px 0 rgba(0,0,0,0.8);
+  white-space:nowrap;
+}
+
+@keyframes floatUp {
+  0%   { opacity:1; transform:translateY(0) scale(1); }
+  20%  { transform:translateY(-15px) scale(1.2); }
+  100% { opacity:0; transform:translateY(-80px) scale(0.8); }
+}
+
+/* ── COMBO BANNER ── */
+.combo-banner {
+  position:fixed;
+  top:50%; left:50%;
+  transform:translate(-50%,-50%);
+  font-family:'Press Start 2P', monospace;
+  font-size:clamp(1rem, 5vw, 1.6rem);
+  z-index:700;
+  pointer-events:none;
+  animation:comboPop 0.8s ease forwards;
+  white-space:nowrap;
+  letter-spacing:2px;
+  text-align:center;
+}
+
+@keyframes comboPop {
+  0%   { opacity:0; transform:translate(-50%,-50%) scale(0.3) rotate(-8deg); }
+  25%  { opacity:1; transform:translate(-50%,-50%) scale(1.2) rotate(3deg); }
+  55%  { opacity:1; transform:translate(-50%,-50%) scale(1) rotate(-1deg); }
+  80%  { opacity:1; transform:translate(-50%,-52%); }
+  100% { opacity:0; transform:translate(-50%,-65%) scale(0.8); }
+}
+
+/* ── GAME OVER ── */
+#gameover {
+  display:none;
+  position:fixed; inset:0;
+  background:rgba(8,8,16,0.97);
+  backdrop-filter:blur(10px);
+  z-index:800;
+  flex-direction:column; align-items:center; justify-content:center;
+  gap:0; padding:20px;
+  overflow:hidden;
+}
+#gameover.show { display:flex; }
+
+/* scanline on overlay */
+#gameover::before {
+  content:'';
+  position:absolute; inset:0;
+  background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,0.06) 3px,rgba(0,0,0,0.06) 4px);
+  pointer-events:none;
+  z-index:0;
+}
+
+#gameover > * { position:relative; z-index:1; }
+
+/* ── TITLE ── */
+.go-title {
+  font-family:'Press Start 2P', monospace;
+  font-size:clamp(1.4rem,6vw,2.2rem);
+  color:var(--c1);
+  text-shadow: 0 0 20px var(--glow1), 0 0 50px var(--glow1), 6px 6px 0 rgba(0,0,0,0.9);
+  letter-spacing:4px;
+  opacity:0;
+  transform:scale(2);
+  transition:none;
+  margin-bottom:6px;
+}
+
+.go-title.animate-in {
+  animation:titleCrash 0.5s cubic-bezier(0.22,1,0.36,1) forwards;
+}
+
+@keyframes titleCrash {
+  0%   { opacity:0; transform:scale(2.5) translateY(-20px); filter:brightness(3); }
+  60%  { opacity:1; transform:scale(0.92) translateY(4px); filter:brightness(1.5); }
+  80%  { transform:scale(1.04); }
+  100% { opacity:1; transform:scale(1) translateY(0); filter:brightness(1); }
+}
+
+@keyframes glitchText {
+  0%,85%,100% { clip-path:none; transform:none; }
+  86% { transform:translate(-3px,0); clip-path:polygon(0 15%,100% 15%,100% 35%,0 35%); filter:hue-rotate(90deg); }
+  87% { transform:translate(3px,0); }
+  88% { transform:none; clip-path:none; filter:none; }
+  90% { transform:translate(0,-2px); clip-path:polygon(0 55%,100% 55%,100% 75%,0 75%); filter:hue-rotate(-90deg); }
+  91% { transform:none; clip-path:none; filter:none; }
+}
+
+.go-title.glitching { animation:glitchText 2.5s infinite; }
+
+/* ── SCORE COUNTER ── */
+.go-score-wrap {
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:4px;
+  margin:10px 0 6px;
+  opacity:0;
+  transform:translateY(20px);
+  transition:opacity 0.4s ease, transform 0.4s ease;
+}
+
+.go-score-wrap.show { opacity:1; transform:translateY(0); }
+
+.go-score-label {
+  font-family:'Press Start 2P', monospace;
+  font-size:0.38rem;
+  color:var(--muted);
+  letter-spacing:3px;
+}
+
+.go-score-num {
+  font-family:'Press Start 2P', monospace;
+  font-size:clamp(1.8rem,8vw,2.8rem);
+  color:var(--c4);
+  text-shadow:0 0 20px var(--glow4), 0 0 40px var(--glow4);
+  line-height:1.1;
+  letter-spacing:2px;
+}
+
+/* ── GRADE ── */
+.go-grade-wrap {
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:12px;
+  margin:2px 0 10px;
+  opacity:0;
+  transition:opacity 0.3s ease;
+}
+
+.go-grade-wrap.show { opacity:1; }
+
+.go-grade {
+  font-family:'Press Start 2P', monospace;
+  font-size:clamp(2rem,10vw,3.2rem);
+  text-shadow:0 0 30px currentColor;
+  animation:gradePop 0.5s cubic-bezier(0.22,1,0.36,1) both;
+  transform-origin:center;
+}
+
+@keyframes gradePop {
+  0%   { transform:scale(0) rotate(-15deg); opacity:0; }
+  60%  { transform:scale(1.2) rotate(5deg); opacity:1; }
+  80%  { transform:scale(0.95) rotate(-2deg); }
+  100% { transform:scale(1) rotate(0); opacity:1; }
+}
+
+.go-grade-text {
+  font-family:'Press Start 2P', monospace;
+  font-size:0.5rem;
+  letter-spacing:2px;
+  line-height:2;
+}
+
+/* ── STAT ROWS ── */
+.go-stats {
+  width:100%;
+  max-width:300px;
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  margin-bottom:14px;
+}
+
+.go-stat-row {
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:8px 12px;
+  background:var(--surface);
+  border-radius:4px;
+  border:1px solid rgba(255,255,255,0.04);
+  opacity:0;
+  transform:translateX(-20px);
+  transition:opacity 0.3s ease, transform 0.3s ease;
+}
+
+.go-stat-row.show { opacity:1; transform:translateX(0); }
+
+.go-stat-row.new-best-row {
+  border-color:var(--c2);
+  box-shadow:0 0 12px rgba(255,214,10,0.2);
+  background:rgba(255,214,10,0.06);
+}
+
+.go-stat-key {
+  font-family:'Press Start 2P', monospace;
+  font-size:0.33rem;
+  color:var(--muted);
+  letter-spacing:1px;
+}
+
+.go-stat-val {
+  font-family:'Press Start 2P', monospace;
+  font-size:0.55rem;
+  color:var(--text);
+}
+
+.go-stat-val.highlight { color:var(--c2); text-shadow:0 0 8px var(--glow2); }
+
+/* ── NEW BEST BANNER ── */
+.go-new-best {
+  font-family:'Press Start 2P', monospace;
+  font-size:0.55rem;
+  color:var(--c2);
+  text-shadow:0 0 15px var(--glow2);
+  animation:pulse 0.8s infinite alternate;
+  display:none;
+  letter-spacing:2px;
+  margin-bottom:4px;
+}
+
+@keyframes pulse { from{filter:brightness(1);} to{filter:brightness(1.8);} }
+
+/* ── BUTTONS ── */
+.go-btns {
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  width:100%;
+  max-width:280px;
+  opacity:0;
+  transform:translateY(16px);
+  transition:opacity 0.4s ease, transform 0.4s ease;
+}
+
+.go-btns.show { opacity:1; transform:translateY(0); }
+
+
+.btn {
+  width:100%;
+  padding:14px;
+  border:none;
+  border-radius:4px;
+  font-family:'Press Start 2P', monospace;
+  font-size:0.7rem;
+  letter-spacing:2px;
+  cursor:pointer;
+  transition:transform 0.08s;
+  text-transform:uppercase;
+}
+.btn:active { transform:scale(0.96) translateY(2px); }
+
+.btn.primary {
+  background:var(--c1);
+  color:white;
+  box-shadow:0 0 20px var(--glow1), 0 4px 0 rgba(180,0,30,0.8), inset 0 1px 0 rgba(255,255,255,0.2);
+  text-shadow:2px 2px 0 rgba(0,0,0,0.5);
+}
+
+.btn.secondary {
+  background:transparent;
+  color:var(--c4);
+  border:2px solid var(--c4);
+  box-shadow:0 0 12px rgba(10,245,255,0.15), inset 0 0 12px rgba(10,245,255,0.03);
+  text-shadow:0 0 8px var(--glow4);
+}
+
+/* ── DAILY COMPLETE ── */
+#daily-complete {
+  display:none;
+  position:fixed; inset:0;
+  background:rgba(8,8,16,0.95);
+  backdrop-filter:blur(10px);
+  z-index:800;
+  flex-direction:column; align-items:center; justify-content:center;
+  gap:16px; padding:30px;
+}
+#daily-complete.show { display:flex; }
+
+.dc-emoji { font-size:3.5rem; animation:bounce 0.7s ease infinite alternate; }
+@keyframes bounce { from{transform:translateY(0) scale(1);} to{transform:translateY(-14px) scale(1.1);} }
+
+.dc-title {
+  font-family:'Press Start 2P', monospace;
+  font-size:clamp(0.7rem,3vw,1rem);
+  text-align:center;
+  color:var(--c2);
+  text-shadow:0 0 20px var(--glow2);
+  letter-spacing:2px;
+  line-height:2;
+}
+
+.dc-score {
+  font-family:'Press Start 2P', monospace;
+  font-size:2rem;
+  color:var(--c4);
+  text-shadow:0 0 30px var(--glow4);
+}
+
+.dc-streak {
+  background:var(--surface);
+  border-radius:4px;
+  padding:14px 30px;
+  text-align:center;
+  border:1px solid rgba(255,214,10,0.2);
+}
+.dc-streak-label { font-family:'Press Start 2P', monospace; font-size:0.38rem; color:var(--muted); letter-spacing:1px; margin-bottom:6px; }
+.dc-streak-val { font-family:'Press Start 2P', monospace; font-size:1rem; color:var(--c2); text-shadow:0 0 12px var(--glow2); }
+
+/* ── LEADERBOARD ── */
+#lb-screen { min-height:100vh; padding:20px; gap:12px; }
+
+.lb-title {
+  font-family:'Press Start 2P', monospace;
+  font-size:clamp(0.9rem,4vw,1.3rem);
+  color:var(--c4);
+  text-shadow:0 0 20px var(--glow4);
+  letter-spacing:3px;
+}
+
+.lb-tabs { display:flex; gap:8px; width:100%; }
+
+.lb-tab {
+  flex:1; padding:10px;
+  background:var(--surface);
+  border:2px solid transparent;
+  border-radius:4px;
+  color:var(--muted);
+  font-family:'Press Start 2P', monospace;
+  font-size:0.45rem;
+  letter-spacing:1px;
+  cursor:pointer;
+  transition:all 0.2s;
+}
+
+.lb-tab.active { color:var(--c4); border-color:var(--c4); box-shadow:0 0 10px rgba(10,245,255,0.15); }
+
+.lb-list { width:100%; display:flex; flex-direction:column; gap:6px; }
+
+.lb-entry {
+  display:flex; align-items:center; gap:10px;
+  background:var(--surface); border-radius:4px;
+  padding:10px 14px;
+  border:1px solid rgba(255,255,255,0.04);
+}
+
+.lb-entry.you { border-color:rgba(10,245,255,0.35); background:rgba(10,245,255,0.05); }
+.lb-entry.first { border-color:rgba(255,214,10,0.4); }
+
+.lb-rank { font-family:'Press Start 2P', monospace; font-size:0.7rem; width:28px; text-align:center; flex-shrink:0; }
+.lb-name { flex:1; font-family:'Press Start 2P', monospace; font-size:0.45rem; color:var(--text); }
+.lb-you-tag { color:var(--c4); font-size:0.35rem; display:block; margin-top:3px; }
+.lb-score { font-family:'Press Start 2P', monospace; font-size:0.7rem; color:var(--c2); text-shadow:0 0 8px var(--glow2); }
+.lb-date { font-family:'Press Start 2P', monospace; font-size:0.3rem; color:var(--muted); display:block; margin-top:3px; }
+
+.lb-empty { font-family:'Press Start 2P', monospace; font-size:0.5rem; color:var(--muted); text-align:center; padding:30px; line-height:2; }
+
+/* ── NAME MODAL ── */
+#name-modal {
+  display:none;
+  position:fixed; inset:0;
+  background:rgba(8,8,16,0.93);
+  backdrop-filter:blur(10px);
+  z-index:900;
+  flex-direction:column; align-items:center; justify-content:center;
+  gap:16px; padding:30px;
+}
+#name-modal.show { display:flex; }
+
+.nm-title {
+  font-family:'Press Start 2P', monospace;
+  font-size:clamp(0.7rem,3vw,1rem);
+  color:var(--c2);
+  text-shadow:0 0 15px var(--glow2);
+  letter-spacing:2px;
+  text-align:center;
+  line-height:1.8;
+}
+
+.nm-sub {
+  font-family:'Press Start 2P', monospace;
+  font-size:0.38rem;
+  color:var(--muted);
+  text-align:center;
+  letter-spacing:1px;
+  line-height:2;
+}
+
+.nm-input {
+  width:100%; max-width:280px;
+  background:var(--surface);
+  border:2px solid var(--c4);
+  border-radius:4px;
+  padding:14px 16px;
+  font-family:'Press Start 2P', monospace;
+  font-size:0.8rem;
+  color:var(--text);
+  text-align:center;
+  outline:none;
+  box-shadow:0 0 15px rgba(10,245,255,0.15), inset 0 0 20px rgba(0,0,0,0.5);
+  letter-spacing:3px;
+}
+
+/* ── DIFF DOTS ── */
+.diff-dots { display:flex; gap:3px; position:absolute; bottom:5px; right:7px; }
+.diff-dot { width:5px; height:5px; border-radius:50%; background:var(--surface2); }
+.diff-dot.on { background:var(--c2); box-shadow:0 0 4px var(--glow2); }
+
+/* ── SCAN LINES on board (extra flair) ── */
+#board::after {
+  content:'';
+  position:absolute; inset:0;
+  background: repeating-linear-gradient(
+    0deg, transparent, transparent 3px,
+    rgba(0,0,0,0.04) 3px, rgba(0,0,0,0.04) 4px
+  );
+  pointer-events:none;
+  border-radius:6px;
+  z-index:10;
+}
+
+/* ── SCREEN FLASH ── */
+.flash-overlay {
+  position:fixed; inset:0;
+  pointer-events:none;
+  z-index:600;
+  animation:flashFade 0.3s ease forwards;
+  background:white;
+}
+@keyframes flashFade {
+  0%{opacity:0.3;} 100%{opacity:0;}
+}
+
+/* ── PROGRESSION / UNLOCKS ── */
+#unlocks-screen { min-height:100vh; padding:20px; gap:14px; overflow-y:auto; }
+
+.unlocks-title {
+  font-family:'Press Start 2P', monospace;
+  font-size:clamp(0.8rem,3.5vw,1.1rem);
+  color:var(--c3);
+  text-shadow:0 0 20px rgba(48,209,88,0.6);
+  letter-spacing:3px;
+}
+
+.unlock-section-label {
+  font-family:'Press Start 2P', monospace;
+  font-size:0.4rem;
+  color:var(--muted);
+  letter-spacing:3px;
+  text-transform:uppercase;
+  align-self:flex-start;
+  margin-top:6px;
+}
+
+.unlock-grid {
+  display:grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap:10px;
+  width:100%;
+}
+
+.unlock-card {
+  background:var(--surface);
+  border:2px solid rgba(255,255,255,0.06);
+  border-radius:6px;
+  padding:14px 10px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:8px;
+  position:relative;
+  transition:border-color 0.3s;
+  cursor:pointer;
+}
+
+.unlock-card.unlocked {
+  border-color:var(--c3);
+  box-shadow:0 0 12px rgba(48,209,88,0.15);
+}
+
+.unlock-card.active-theme {
+  border-color:var(--c2);
+  box-shadow:0 0 16px rgba(255,214,10,0.25);
+}
+
+.unlock-card.locked {
+  opacity:0.5;
+}
+
+.unlock-preview {
+  width:100%;
+  height:48px;
+  border-radius:4px;
+  display:grid;
+  grid-template-columns:repeat(5,1fr);
+  gap:2px;
+  padding:3px;
+  background:var(--surface2);
+}
+
+.unlock-preview-cell {
+  border-radius:2px;
+}
+
+.unlock-name {
+  font-family:'Press Start 2P', monospace;
+  font-size:0.38rem;
+  color:var(--text);
+  text-align:center;
+  letter-spacing:1px;
+  line-height:1.6;
+}
+
+.unlock-req {
+  font-family:'Press Start 2P', monospace;
+  font-size:0.33rem;
+  color:var(--muted);
+  text-align:center;
+  letter-spacing:1px;
+}
+
+.unlock-badge {
+  position:absolute;
+  top:6px; right:6px;
+  font-size:0.7rem;
+}
+
+.unlock-new-badge {
+  position:absolute;
+  top:-6px; left:50%; transform:translateX(-50%);
+  background:var(--c1);
+  font-family:'Press Start 2P', monospace;
+  font-size:0.3rem;
+  color:white;
+  padding:2px 6px;
+  border-radius:2px;
+  white-space:nowrap;
+  animation:pulse 0.8s infinite alternate;
+}
+
+/* Progress bar in menu */
+.xp-bar-wrap {
+  width:100%; max-width:300px;
+  display:flex; flex-direction:column; gap:4px;
+}
+
+.xp-bar-label {
+  display:flex; justify-content:space-between;
+  font-family:'Press Start 2P', monospace;
+  font-size:0.33rem;
+  color:var(--muted);
+}
+
+.xp-bar-bg {
+  height:6px; background:var(--surface2);
+  border-radius:3px; overflow:hidden;
+  border:1px solid rgba(255,255,255,0.06);
+}
+
+.xp-bar-fill {
+  height:100%;
+  background:linear-gradient(90deg, var(--c3), var(--c4));
+  border-radius:3px;
+  transition:width 0.5s ease;
+  box-shadow:0 0 8px rgba(48,209,88,0.5);
+}
+
+/* Unlock toast */
+.unlock-toast {
+  position:fixed;
+  bottom:30px; left:50%; transform:translateX(-50%);
+  background:var(--surface);
+  border:2px solid var(--c3);
+  border-radius:6px;
+  padding:12px 20px;
+  font-family:'Press Start 2P', monospace;
+  font-size:0.5rem;
+  color:var(--c3);
+  text-align:center;
+  z-index:800;
+  box-shadow:0 0 20px rgba(48,209,88,0.3);
+  animation:toastIn 0.4s ease, toastOut 0.4s ease 2.6s forwards;
+  white-space:nowrap;
+  line-height:2;
+}
+
+@keyframes toastIn { from{opacity:0;transform:translateX(-50%) translateY(20px);} to{opacity:1;transform:translateX(-50%) translateY(0);} }
+@keyframes toastOut { from{opacity:1;} to{opacity:0;transform:translateX(-50%) translateY(10px);} }
+
+
+/* ── POWER-UPS ── */
+.powerup-bar {
+  width:100%; max-width:440px;
+  padding:4px 12px 0;
+  display:flex;
+  gap:8px;
+  align-items:center;
+  justify-content:center;
+}
+
+.powerup-btn {
+  flex:1;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:3px;
+  background:var(--surface);
+  border:2px solid rgba(255,255,255,0.06);
+  border-radius:6px;
+  padding:7px 4px;
+  cursor:pointer;
+  transition:all 0.15s;
+  position:relative;
+  min-height:52px;
+}
+
+.powerup-btn.has-power {
+  border-color:var(--pu-color, var(--c2));
+  box-shadow:0 0 12px var(--pu-glow, rgba(255,214,10,0.3));
+  animation:powerReady 2s ease-in-out infinite;
+}
+
+.powerup-btn.active-power {
+  border-color:white;
+  box-shadow:0 0 20px white, 0 0 40px var(--pu-glow, rgba(255,255,255,0.3));
+  transform:scale(1.05);
+}
+
+.powerup-btn.empty-power {
+  opacity:0.3;
+  cursor:default;
+}
+
+@keyframes powerReady {
+  0%,100% { box-shadow: 0 0 8px var(--pu-glow, rgba(255,214,10,0.3)); }
+  50%      { box-shadow: 0 0 18px var(--pu-glow, rgba(255,214,10,0.5)); }
+}
+
+.powerup-icon { font-size:1.3rem; line-height:1; }
+
+.powerup-name {
+  font-family:'Press Start 2P', monospace;
+  font-size:0.28rem;
+  color:var(--muted);
+  letter-spacing:1px;
+}
+
+.powerup-btn.has-power .powerup-name {
+  color:var(--pu-color, var(--c2));
+}
+
+.powerup-count {
+  position:absolute;
+  top:4px; right:5px;
+  font-family:'Press Start 2P', monospace;
+  font-size:0.4rem;
+  color:var(--c2);
+}
+
+/* Board in select mode */
+#board.select-mode .cell.filled {
+  cursor:pointer;
+  animation:selectPulse 1s ease-in-out infinite;
+}
+
+#board.select-mode .cell.filled:hover {
+  transform:scale(0.85);
+  filter:brightness(1.5);
+}
+
+@keyframes selectPulse {
+  0%,100% { filter:brightness(1); }
+  50%      { filter:brightness(1.3); }
+}
+
+#board.select-row-mode .cell {
+  cursor:pointer;
+}
+
+#board.select-row-mode .cell:hover,
+#board.select-row-mode .cell.row-hover {
+  background:rgba(255,214,10,0.35) !important;
+  transform:scale(0.9);
+}
+
+/* Power-up activate flash */
+.powerup-flash {
+  position:fixed; inset:0;
+  pointer-events:none;
+  z-index:700;
+  animation:puFlash 0.4s ease forwards;
+}
+
+@keyframes puFlash {
+  0%   { opacity:0.4; }
+  100% { opacity:0; }
+}
+
+/* Select mode overlay hint */
+.select-hint {
+  position:fixed;
+  top:50%; left:50%;
+  transform:translate(-50%,-50%);
+  background:rgba(0,0,0,0.85);
+  border:2px solid var(--c2);
+  border-radius:6px;
+  padding:14px 20px;
+  font-family:'Press Start 2P', monospace;
+  font-size:0.6rem;
+  color:var(--c2);
+  text-align:center;
+  z-index:300;
+  pointer-events:none;
+  line-height:2;
+  box-shadow:0 0 20px rgba(255,214,10,0.3);
+}
+
+
+/* ── STATS SCREEN ── */
+#stats-screen {
+  min-height:100vh;
+  padding:20px;
+  gap:12px;
+}
+
+.stats-title {
+  font-family:'Press Start 2P', monospace;
+  font-size:clamp(0.8rem,3.5vw,1.1rem);
+  color:var(--c4);
+  text-shadow:0 0 20px var(--glow4);
+  letter-spacing:3px;
+}
+
+.stats-grid {
+  display:grid;
+  grid-template-columns:repeat(2,1fr);
+  gap:8px;
+  width:100%;
+}
+
+.stat-card {
+  background:var(--surface);
+  border:1px solid rgba(255,255,255,0.06);
+  border-radius:6px;
+  padding:14px 12px;
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  position:relative;
+  overflow:hidden;
+}
+
+.stat-card::before {
+  content:'';
+  position:absolute;
+  top:0; left:0; right:0;
+  height:2px;
+  background:var(--sc, var(--c4));
+  opacity:0.7;
+}
+
+.stat-card-icon {
+  font-size:1.3rem;
+  line-height:1;
+}
+
+.stat-card-val {
+  font-family:'Press Start 2P', monospace;
+  font-size:clamp(0.8rem,3vw,1.1rem);
+  color:var(--text);
+  line-height:1.2;
+}
+
+.stat-card-label {
+  font-family:'Press Start 2P', monospace;
+  font-size:0.33rem;
+  color:var(--muted);
+  letter-spacing:1px;
+  line-height:1.6;
+}
+
+.stat-card.wide {
+  grid-column: span 2;
+  flex-direction:row;
+  align-items:center;
+  gap:14px;
+}
+
+.stat-card.wide .stat-card-val { font-size:clamp(1rem,4vw,1.4rem); }
+
+.stats-section-label {
+  font-family:'Press Start 2P', monospace;
+  font-size:0.38rem;
+  color:var(--muted);
+  letter-spacing:2px;
+  align-self:flex-start;
+  margin-top:4px;
+}
+
+.piece-breakdown {
+  width:100%;
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+}
+
+.piece-bar-row {
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+
+.piece-bar-label {
+  font-family:'Press Start 2P', monospace;
+  font-size:0.3rem;
+  color:var(--muted);
+  width:60px;
+  flex-shrink:0;
+  text-align:right;
+}
+
+.piece-bar-bg {
+  flex:1;
+  height:8px;
+  background:var(--surface2);
+  border-radius:4px;
+  overflow:hidden;
+}
+
+.piece-bar-fill {
+  height:100%;
+  border-radius:4px;
+  transition:width 0.6s ease;
+}
+
+.piece-bar-count {
+  font-family:'Press Start 2P', monospace;
+  font-size:0.3rem;
+  color:var(--muted);
+  width:30px;
+  text-align:right;
+  flex-shrink:0;
+}
+
+/* ── BOMB BLOCK ── */
+.cell.bomb {
+  animation:bombPulse 1.2s ease-in-out infinite;
+  cursor:default;
+}
+
+@keyframes bombPulse {
+  0%,100% { filter:brightness(1); box-shadow:0 0 6px #ff2d55; }
+  50%      { filter:brightness(1.6); box-shadow:0 0 16px #ff2d55, 0 0 30px #ff2d55; }
+}
+
+.cell.bomb-exploding {
+  animation:bombExplode 0.5s ease forwards;
+}
+
+@keyframes bombExplode {
+  0%   { transform:scale(1);   filter:brightness(1); }
+  30%  { transform:scale(2.2); filter:brightness(4); }
+  60%  { transform:scale(1.5); filter:brightness(6); }
+  100% { transform:scale(0);   filter:brightness(8); opacity:0; }
+}
+
+.bomb-icon {
+  position:absolute;
+  inset:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:0.7rem;
+  pointer-events:none;
+  z-index:5;
+}
+
+</style>
+</head>
+<body>
+
+<canvas id="fx-canvas"></canvas>
+
+<!-- ══ MENU ══ -->
+<div id="app">
+<div id="menu-screen" class="screen active">
+  <div class="menu-bg-grid"></div>
+
+  <div class="logo-wrap">
+    <div class="logo">
+      <span class="logo-boom">BOOM</span>
+      <span class="logo-blocks">BLOCKS</span>
+    </div>
+    <div class="logo-sub">► INSERT COIN ◄</div>
+  </div>
+
+  <div class="menu-stats">
+    <div class="stat-box">
+      <div class="stat-label">BEST</div>
+      <div class="stat-val" id="menu-best">0</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-label">STREAK</div>
+      <div class="stat-val">🔥<span id="menu-streak">0</span></div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-label">GAMES</div>
+      <div class="stat-val" id="menu-games">0</div>
+    </div>
+  </div>
+
+  <div class="xp-bar-wrap"><div class="xp-bar-label"><span>LEVEL <span id="xp-level">1</span></span><span id="xp-label">0 / 500 XP</span></div><div class="xp-bar-bg"><div class="xp-bar-fill" id="xp-bar" style="width:0%"></div></div></div>
+  <button class="menu-btn primary" onclick="startClassic()">▶ PLAY</button>
+  <button class="menu-btn daily" onclick="startDaily()">
+    ★ DAILY CHALLENGE
+    <span class="daily-done-tag" id="daily-badge">TODAY</span>
+  </button>
+  <button class="menu-btn ghost" onclick="showLeaderboard()">🏆 LEADERBOARD</button>
+  <button class="menu-btn ghost" onclick="showStats()" style="border-color:var(--c4);color:var(--c4);box-shadow:0 0 15px rgba(10,245,255,0.15)">📊 STATS</button>
+  <button class="menu-btn ghost" onclick="showUnlocks()" style="border-color:var(--c3);color:var(--c3);box-shadow:0 0 15px rgba(48,209,88,0.15)">🔓 UNLOCKS</button>
+</div>
+
+<!-- ══ GAME SCREEN ══ -->
+<div id="game-screen" class="screen">
+  <header>
+    <button class="back-btn" onclick="goMenu()">◀ BACK</button>
+    <span class="mode-label" id="mode-label">CLASSIC</span>
+    <div class="header-scores">
+      <div class="score-box">
+        <div class="score-label">SCORE</div>
+        <div class="score-val" id="score">0</div>
+      </div>
+      <div class="score-box">
+        <div class="score-label">BEST</div>
+        <div class="score-val" id="best-display">0</div>
+      </div>
+    </div>
+    <button class="sound-btn" onclick="toggleSound()" id="sound-btn">🔊</button>
+  </header>
+
+  <div class="daily-bar-wrap" id="daily-bar-wrap" style="display:none">
+    <div class="daily-bar-bg"><div class="daily-bar-fill" id="daily-bar"></div></div>
+  </div>
+
+  <div class="board-wrap">
+    <div id="board"></div>
+  </div>
+
+  <div class="powerup-bar" id="powerup-bar">
+    <button class="powerup-btn empty-power" id="pu-laser" onclick="activatePower('laser')">
+      <div class="powerup-icon">⚡</div>
+      <div class="powerup-name">LASER</div>
+    </button>
+    <button class="powerup-btn empty-power" id="pu-shatter" onclick="activatePower('shatter')">
+      <div class="powerup-icon">💣</div>
+      <div class="powerup-name">SHATTER</div>
+    </button>
+    <button class="powerup-btn empty-power" id="pu-wildfire" onclick="activatePower('wildfire')">
+      <div class="powerup-icon">🔥</div>
+      <div class="powerup-name">WILDFIRE</div>
+    </button>
+    <button class="powerup-btn empty-power" id="pu-bomb" onclick="activatePower('bomb')">
+      <div class="powerup-icon">💣</div>
+      <div class="powerup-name">BOMB</div>
+    </button>
+  </div>
+  <div class="tray" id="tray"></div>
+  <div class="hint-text" id="hint-text">HOLD + DRAG TO PLACE</div>
+</div>
+
+<!-- ══ LEADERBOARD ══ -->
+<div id="lb-screen" class="screen">
+  <div style="width:100%;display:flex;align-items:center;gap:12px;padding:4px 0 8px">
+    <button class="back-btn" onclick="showScreen('menu-screen')">◀ BACK</button>
+    <div class="lb-title">RANKINGS</div>
+  </div>
+  <div class="lb-tabs">
+    <button class="lb-tab active" onclick="showLbTab('classic',this)">CLASSIC</button>
+    <button class="lb-tab" onclick="showLbTab('daily',this)">DAILY</button>
+  </div>
+  <div class="lb-list" id="lb-list"></div>
+</div>
+
+
+<!-- ══ STATS SCREEN ══ -->
+<div id="stats-screen" class="screen">
+  <div style="width:100%;display:flex;align-items:center;gap:12px;padding:4px 0 8px">
+    <button class="back-btn" onclick="showScreen('menu-screen')">◀ BACK</button>
+    <div class="stats-title">STATS</div>
+  </div>
+  <div id="stats-content" style="width:100%;display:flex;flex-direction:column;gap:8px;"></div>
+</div>
+
+<!-- ══ UNLOCKS SCREEN ══ -->
+<div id="unlocks-screen" class="screen">
+  <div style="width:100%;display:flex;align-items:center;gap:12px;padding:4px 0 4px">
+    <button class="back-btn" onclick="showScreen('menu-screen')">◀ BACK</button>
+    <div class="unlocks-title">UNLOCKS</div>
+  </div>
+  <div class="unlock-section-label">🎨 THEMES — unlock by best score</div>
+  <div class="unlock-grid" id="theme-grid"></div>
+
+</div>
+
+</div>
+
+<!-- ══ DRAG GHOST ══ -->
+<div id="drag-ghost" style="position:fixed;pointer-events:none;z-index:1000;display:none;">
+  <div id="ghost-grid" class="ghost-grid"></div>
+</div>
+
+<!-- ══ OVERLAYS ══ -->
+<div id="gameover">
+  <div class="go-title" id="go-title">GAME OVER</div>
+  <div class="go-score-wrap" id="go-score-wrap">
+    <div class="go-score-label">SCORE</div>
+    <div class="go-score-num" id="final-score">0</div>
+  </div>
+  <div class="go-grade-wrap" id="go-grade-wrap">
+    <div class="go-grade" id="go-grade">?</div>
+    <div class="go-grade-text" id="go-grade-text"></div>
+  </div>
+  <div class="go-new-best" id="new-best-label">★ NEW BEST! ★</div>
+  <div class="go-stats" id="go-stats"></div>
+  <div class="go-btns" id="go-btns">
+    <button class="btn primary" onclick="restartGame()">▶ PLAY AGAIN</button>
+    <button class="btn secondary" onclick="goMenu()">MENU</button>
+  </div>
+</div>
+
+<div id="daily-complete">
+  <div class="dc-emoji">🌟</div>
+  <div class="dc-title">DAILY CHALLENGE<br>COMPLETE!</div>
+  <div class="dc-score" id="dc-score">0</div>
+  <div class="dc-streak">
+    <div class="dc-streak-label">CURRENT STREAK</div>
+    <div class="dc-streak-val">🔥 <span id="dc-streak">0</span> DAYS</div>
+  </div>
+  <div class="go-btns" style="max-width:280px;width:100%">
+    <button class="btn primary" onclick="goMenu()">MENU</button>
+  </div>
+</div>
+
+<div id="name-modal">
+  <div class="nm-title">ENTER YOUR<br>NAME</div>
+  <div class="nm-sub">YOUR SCORE WILL BE SAVED<br>TO THE LEADERBOARD</div>
+  <input class="nm-input" id="name-input" placeholder="PLAYER1" maxlength="12" autocomplete="off" autocorrect="off" spellcheck="false">
+  <button class="btn primary" style="max-width:280px" onclick="saveName()">▶ SAVE SCORE</button>
+</div>
+
+<script>
+function $id(id){return document.getElementById(id);}
+// ════════════════════════════════════
+//  PARTICLE SYSTEM
+// ════════════════════════════════════
+let canvas, ctx2;
+let particles = [];
+
+function resizeCanvas() {
+  if(!canvas) return;
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+}
+
+const colorHex = {
+  'var(--c1)':'#ff2d55','var(--c2)':'#ffd60a','var(--c3)':'#30d158',
+  'var(--c4)':'#0af5ff','var(--c5)':'#bf5af2','var(--c6)':'#ff6b35','var(--c7)':'#ff375f'
+};
+
+function spawnParticles(x, y, color, count=12) {
+  const hex = colorHex[color] || color || '#0af5ff';
+  for (let i = 0; i < count; i++) {
+    const angle = (Math.PI * 2 * i / count) + (Math.random() - 0.5) * 0.5;
+    const speed = 3 + Math.random() * 6;
+    particles.push({
+      x, y,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed - 2,
+      size: 3 + Math.random() * 5,
+      color: hex,
+      alpha: 1,
+      decay: 0.025 + Math.random() * 0.025,
+      gravity: 0.15
+    });
+  }
+}
+
+function spawnLineClear(cells, color) {
+  cells.forEach(cell => {
+    const rect = cell.getBoundingClientRect();
+    const x = rect.left + rect.width / 2;
+    const y = rect.top + rect.height / 2;
+    spawnParticles(x, y, color, 8);
+  });
+}
+
+function animParticles() {
+  if(!ctx2) { requestAnimationFrame(animParticles); return; }
+  ctx2.clearRect(0, 0, canvas.width, canvas.height);
+  particles = particles.filter(p => p.alpha > 0.01);
+  particles.forEach(p => {
+    p.x += p.vx;
+    p.y += p.vy;
+    p.vy += p.gravity;
+    p.vx *= 0.97;
+    p.alpha -= p.decay;
+    p.size *= 0.97;
+
+    ctx2.save();
+    ctx2.globalAlpha = Math.max(0, p.alpha);
+    ctx2.fillStyle = p.color;
+    ctx2.shadowBlur = 10;
+    ctx2.shadowColor = p.color;
+    ctx2.fillRect(p.x - p.size/2, p.y - p.size/2, p.size, p.size);
+    ctx2.restore();
+  });
+  requestAnimationFrame(animParticles);
+}
+animParticles();
+
+// ════════════════════════════════════
+//  SCREEN SHAKE
+// ════════════════════════════════════
+function shakeBoard(intensity=1) {
+  const board = $id('board');
+  if(!board) return;
+  board.classList.remove('shake');
+  void board.offsetWidth;
+  board.classList.add('shake');
+  setTimeout(() => { if(board) board.classList.remove('shake'); }, 400);
+}
+
+function flashScreen(color='#fff') {
+  const el = document.createElement('div');
+  el.className = 'flash-overlay';
+  el.style.background = color;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 350);
+}
+
+// ════════════════════════════════════
+//  AUDIO
+// ════════════════════════════════════
+let audioCtx = null;
+let soundOn = localStorage.getItem('bb_sound') !== 'off';
+
+function getAudioCtx() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  return audioCtx;
+}
+
+function playTone(freq, type, duration, vol=0.15, delay=0, freqEnd) {
+  if (!soundOn) return;
+  try {
+    const ctx = getAudioCtx();
+    const o = ctx.createOscillator();
+    const g = ctx.createGain();
+    o.connect(g); g.connect(ctx.destination);
+    o.type = type;
+    o.frequency.setValueAtTime(freq, ctx.currentTime + delay);
+    if (freqEnd) o.frequency.exponentialRampToValueAtTime(freqEnd, ctx.currentTime + delay + duration);
+    g.gain.setValueAtTime(vol, ctx.currentTime + delay);
+    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + delay + duration);
+    o.start(ctx.currentTime + delay);
+    o.stop(ctx.currentTime + delay + duration + 0.02);
+  } catch(e){}
+}
+
+function sfxPlace() {
+  playTone(180, 'square', 0.06, 0.1);
+  playTone(220, 'square', 0.05, 0.08, 0.04);
+}
+
+function sfxClear(lines) {
+  const notes = [330,440,550,660,880,1100];
+  for (let i = 0; i < Math.min(lines+1, 6); i++)
+    playTone(notes[i], 'sine', 0.2, 0.2, i * 0.06);
+}
+
+function sfxCombo(level) {
+  const base = [440,550,660,880][Math.min(level-1,3)];
+  [base, base*1.25, base*1.5, base*2].forEach((f,i) =>
+    playTone(f, 'triangle', 0.15, 0.22, i*0.04));
+}
+
+function sfxGameOver() {
+  [400,320,250,180,120].forEach((f,i) =>
+    playTone(f, 'sawtooth', 0.3, 0.18, i*0.1, f*0.6));
+}
+
+function sfxMenu() { playTone(440, 'sine', 0.1, 0.12); }
+
+function toggleSound() {
+  soundOn = !soundOn;
+  localStorage.setItem('bb_sound', soundOn ? 'on' : 'off');
+  $id('sound-btn').textContent = soundOn ? '🔊' : '🔇';
+  if (soundOn) sfxMenu();
+}
+
+// ════════════════════════════════════
+//  HAPTICS
+// ════════════════════════════════════
+function haptic(p) { try { if (navigator.vibrate) navigator.vibrate(p); } catch(e){} }
+function hapticPlace() { haptic(12); }
+function hapticClear() { haptic([25,15,40]); }
+function hapticCombo() { haptic([35,15,35,15,70]); }
+function hapticGameOver() { haptic([80,40,80,40,180]); }
+
+// ════════════════════════════════════
+//  CONSTANTS & STATE
+// ════════════════════════════════════
+const COLS=8, ROWS=8;
+const COLORS=['var(--c1)','var(--c2)','var(--c3)','var(--c4)','var(--c5)','var(--c6)','var(--c7)'];
+
+const PIECES=[
+  [[1]],[[1,1]],[[1],[1]],
+  [[1,1,1]],[[1],[1],[1]],
+  [[1,1],[1,1]],
+  [[1,0],[1,0],[1,1]],[[0,1],[0,1],[1,1]],
+  [[1,1],[1,0],[1,0]],[[1,1],[0,1],[0,1]],
+  [[1,1,1],[0,1,0]],[[0,1],[1,1],[0,1]],
+  [[0,1,1],[1,1,0]],[[1,1,0],[0,1,1]],
+  [[1,1],[1,1],[1,1]],[[1,1,1],[1,1,1]],
+  [[1,0,0],[1,0,0],[1,1,1]],[[1,1,1],[1,0,0],[1,0,0]],
+  [[1,1,1],[0,0,1],[0,0,1]],[[0,0,1],[0,0,1],[1,1,1]],
+  [[0,1,0],[1,1,1],[0,1,0]],
+  [[1,1,1,1]],[[1],[1],[1],[1]],
+  [[1,1,1,1,1]],
+  [[1,0],[1,1],[0,1]],[[1,1,1],[1,0,0]],[[1,1,1],[0,0,1]],
+];
+
+let board=[], score=0;
+let best=parseInt(localStorage.getItem('bb_best')||'0');
+let dailyBest=parseInt(localStorage.getItem('bb_daily_best')||'0');
+let pieces=[null,null,null];
+let dragPiece=null, dragSlot=-1;
+let isDaily=false;
+let gamesPlayed=parseInt(localStorage.getItem('bb_games')||'0');
+let streak=parseInt(localStorage.getItem('bb_streak')||'0');
+let lastPlayedDay=localStorage.getItem('bb_last_day')||'';
+let playerName=localStorage.getItem('bb_name')||'';
+let pendingScore=0;
+let consecutiveClearCount=0;
+let ghostCellSize=36;
+
+// ════════════════════════════════════
+//  RNG
+// ════════════════════════════════════
+function seededRng(seed) {
+  let s=seed;
+  return ()=>{ s=(s*1664525+1013904223)&0xffffffff; return (s>>>0)/0xffffffff; };
+}
+
+let rng=Math.random;
+
+function todayKey() {
+  const d=new Date();
+  return `${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}`;
+}
+
+function todaySeed() {
+  const k=todayKey(); let h=5381;
+  for(let i=0;i<k.length;i++) h=(h*33^k.charCodeAt(i))&0x7fffffff;
+  return h;
+}
+
+// ════════════════════════════════════
+//  SCREENS
+// ════════════════════════════════════
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  const el = $id(id);
+  if(el) el.classList.add('active');
+  const app = $id('app');
+  if(app) app.scrollTo(0,0);
+}
+
+function goMenu() {
+  closeOverlays();
+  updateMenuStats();
+  showScreen('menu-screen');
+}
+
+function closeOverlays() {
+  ['gameover','daily-complete','name-modal'].forEach(id => {
+    const el = $id(id);
+    if(el) el.classList.remove('show');
+  });
+}
+
+function updateMenuStats() {
+  $id('menu-best').textContent=best.toLocaleString();
+  $id('menu-streak').textContent=streak;
+  $id('menu-games').textContent=gamesPlayed;
+  const done=localStorage.getItem('bb_daily_done')===todayKey();
+  $id('daily-badge').textContent=done?'✓ DONE':'TODAY';
+}
+
+// ════════════════════════════════════
+//  GAME START
+// ════════════════════════════════════
+function startClassic() {
+  sfxMenu(); isDaily=false;
+  $id('mode-label').textContent='CLASSIC';
+  $id('mode-label').className='mode-label';
+  const dbw1=$id('daily-bar-wrap'); if(dbw1) dbw1.style.display='none';
+  rng=Math.random;
+  initGame(); showScreen('game-screen');
+}
+
+function startDaily() {
+  sfxMenu();
+  const dk=todayKey();
+  if(localStorage.getItem('bb_daily_done')===dk){
+    alert(`DAILY COMPLETE!\nYour score: ${(localStorage.getItem('bb_daily_score')||0).toLocaleString()}`);
+    return;
+  }
+  isDaily=true;
+  rng=seededRng(todaySeed());
+  $id('mode-label').textContent='★ DAILY';
+  $id('mode-label').className='mode-label daily-mode';
+  const dbw2=$id('daily-bar-wrap'); if(dbw2) dbw2.style.display='';
+  const db0=$id('daily-bar'); if(db0) db0.style.width='0%';
+  initGame(); showScreen('game-screen');
+}
+
+function restartGame() {
+  sfxMenu(); closeOverlays();
+  if(isDaily) goMenu(); else initGame();
+}
+
+function initGame() {
+  score=0; consecutiveClearCount=0;
+  resetPowers();
+  sessionBestCombo=0; sessionBestLines=0; sessionPiecesPlaced=0; sessionLinesCleared=0;
+  $id('score').textContent='0';
+  $id('best-display').textContent=best.toLocaleString();
+  board=Array.from({length:ROWS},()=>Array(COLS).fill(null));
+  if(!isDaily && gamesPlayed>=5) addStartingObstacles();
+  renderBoard();
+  pieces=[rngPiece(),rngPiece(),rngPiece()];
+  renderTray();
+}
+
+function addStartingObstacles() {
+  const count=Math.min(Math.floor(gamesPlayed/5),10);
+  for(let i=0;i<count;i++){
+    const r=Math.floor(Math.random()*ROWS), c=Math.floor(Math.random()*COLS);
+    if(!board[r][c]) board[r][c]=COLORS[Math.floor(Math.random()*COLORS.length)];
+  }
+}
+
+function rngPiece() {
+  const shape=PIECES[Math.floor(rng()*PIECES.length)];
+  const theme = THEMES.find(t=>t.id===activeTheme) || THEMES[0];
+  const palette = theme.colors;
+  const ci=Math.floor(rng()*palette.length);
+  const color = palette[ci];
+  return{shape, color, hex:colorHex[color]||color||'#0af5ff'};
+}
+
+// ════════════════════════════════════
+//  BOARD RENDER
+// ════════════════════════════════════
+let cellSize=0;
+
+function renderBoard() {
+  const el=$id('board');
+  el.innerHTML='';
+  // rebuild scanline overlay
+  const overlay=document.createElement('div');
+  overlay.style.cssText='position:absolute;inset:0;pointer-events:none;z-index:10;border-radius:6px;background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,0.04) 3px,rgba(0,0,0,0.04) 4px)';
+  el.appendChild(overlay);
+
+  for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++){
+    const cell=document.createElement('div');
+    cell.className='cell'+(board[r][c]?' filled':'');
+    if(board[r][c]){
+      cell.style.background=board[r][c];
+      cell.style.boxShadow=`0 0 6px ${board[r][c]}, inset 0 0 3px rgba(255,255,255,0.1)`;
+    }
+    cell.dataset.r=r; cell.dataset.c=c;
+    el.appendChild(cell);
+  }
+  const first=el.querySelector('.cell');
+  if(first) cellSize=first.getBoundingClientRect().width;
+  // Render bomb icons on existing bomb cells
+  renderBombOnBoard();
+}
+
+// ════════════════════════════════════
+//  TRAY
+// ════════════════════════════════════
+function renderTray() {
+  const tray=$id('tray');
+  tray.innerHTML='';
+  pieces.forEach((piece,i)=>{
+    const slot=document.createElement('div');
+    slot.className='piece-slot'+(piece?'':' empty');
+    slot.dataset.slot=i;
+    if(piece){
+      if(!canPlaceAny(piece)) slot.classList.add('cant-place');
+      if(piece.isBomb) {
+        slot.style.borderColor='var(--c1)';
+        slot.style.boxShadow='0 0 12px rgba(255,45,85,0.4)';
+      }
+      const rows=piece.shape.length, cols=piece.shape[0].length;
+      const pg=document.createElement('div');
+      pg.className='piece-grid';
+      pg.style.gridTemplateColumns=`repeat(${cols},14px)`;
+      piece.shape.forEach(row=>row.forEach(val=>{
+        const pc=document.createElement('div');
+        pc.className='piece-cell' + (val ? '' : ' empty-cell');
+        if(val) {
+          pc.style.background=piece.color;
+          pc.style.boxShadow=`0 0 4px ${piece.color}`;
+        }
+        pg.appendChild(pc);
+      }));
+      slot.appendChild(pg);
+      const size=piece.shape.reduce((a,r)=>a+r.filter(Boolean).length,0);
+      const lvl=size<=2?1:size<=4?2:3;
+      const dots=document.createElement('div');
+      dots.className='diff-dots';
+      for(let d=0;d<3;d++){
+        const dot=document.createElement('div');
+        dot.className='diff-dot'+(d<lvl?' on':'');
+        dots.appendChild(dot);
+      }
+      slot.appendChild(dots);
+      slot.addEventListener('pointerdown',e=>startDrag(e,i));
+    }
+    tray.appendChild(slot);
+  });
+}
+
+// ════════════════════════════════════
+//  DRAG
+// ════════════════════════════════════
+function startDrag(e,slotIdx) {
+  e.preventDefault();
+  if(!pieces[slotIdx]) return;
+  dragPiece=pieces[slotIdx]; dragSlot=slotIdx;
+
+  const boardEl=$id('board');
+  const rect=boardEl.getBoundingClientRect();
+  ghostCellSize=Math.floor((rect.width-18-(2*(COLS-1)))/COLS);
+
+  buildGhost();
+  const ghostEl=$id('drag-ghost');
+  if(ghostEl) ghostEl.style.display='block';
+  moveGhost(e);
+  const slots0=document.querySelectorAll('.piece-slot');
+  if(slots0[slotIdx]) slots0[slotIdx].classList.add('dragging-source');
+  hapticPlace();
+  document.addEventListener('pointermove',onDragMove,{passive:false});
+  document.addEventListener('pointerup',onDragEnd,{passive:false});
+}
+
+function buildGhost() {
+  const gg=$id('ghost-grid');
+  if(!gg||!dragPiece) return;
+  const cols=dragPiece.shape[0].length;
+  gg.style.gridTemplateColumns=`repeat(${cols},${ghostCellSize}px)`;
+  gg.innerHTML='';
+  dragPiece.shape.forEach(row=>row.forEach(val=>{
+    const gc=document.createElement('div');
+    gc.className='ghost-cell';
+    gc.style.width=ghostCellSize+'px';
+    gc.style.height=ghostCellSize+'px';
+    gc.style.background=val?dragPiece.color:'transparent';
+    if(!val){gc.style.boxShadow='none'; gc.style.opacity='0';}
+    else{gc.style.boxShadow=`0 0 10px ${dragPiece.hex}, 0 0 20px ${dragPiece.hex}40`;}
+    gg.appendChild(gc);
+  }));
+}
+
+function getPos(e) {
+  if(e.changedTouches) return{x:e.changedTouches[0].clientX,y:e.changedTouches[0].clientY};
+  if(e.touches) return{x:e.touches[0].clientX,y:e.touches[0].clientY};
+  return{x:e.clientX,y:e.clientY};
+}
+
+function moveGhost(e) {
+  const ghost=$id('drag-ghost');
+  if(!ghost||!dragPiece) return;
+  const pos=getPos(e);
+  const cols=dragPiece.shape[0].length, rows=dragPiece.shape.length;
+  const gap=2;
+  const gw=cols*(ghostCellSize+gap), gh=rows*(ghostCellSize+gap);
+  ghost.style.left=(pos.x-gw/2)+'px';
+  ghost.style.top=(pos.y-gh-28)+'px';
+}
+
+function onDragMove(e) {
+  e.preventDefault(); moveGhost(e);
+  const pos=getPos(e);
+  const{boardRow,boardCol}=getBoardPos(pos);
+  highlightBoard(boardRow,boardCol);
+}
+
+function onDragEnd(e) {
+  e.preventDefault();
+  document.removeEventListener('pointermove',onDragMove);
+  document.removeEventListener('pointerup',onDragEnd);
+  const ghostEl2=$id('drag-ghost');
+  if(ghostEl2) ghostEl2.style.display='none';
+  clearHighlights();
+  const pos=getPos(e);
+  const{boardRow,boardCol}=getBoardPos(pos);
+  if(canPlace(dragPiece.shape,boardRow,boardCol)){
+    sfxPlace(); hapticPlace();
+    placePiece(dragPiece,boardRow,boardCol);
+    pieces[dragSlot]=null;
+    refillPieces();
+    renderTray();
+    checkGameOver();
+  } else {
+    const slots2=document.querySelectorAll('.piece-slot');
+    if(slots2[dragSlot]) slots2[dragSlot].classList.remove('dragging-source');
+  }
+  dragPiece=null; dragSlot=-1;
+}
+
+function getBoardPos(pos) {
+  const boardEl=$id('board');
+  const rect=boardEl.getBoundingClientRect();
+  const pad=9, gap=2;
+  const totalW=rect.width-pad*2;
+  const cs=(totalW-gap*(COLS-1))/COLS;
+  const cols=dragPiece.shape[0].length, rows=dragPiece.shape.length;
+  const gw=cols*(ghostCellSize+2), gh=rows*(ghostCellSize+2);
+  const px=pos.x-gw/2, py=pos.y-gh-28;
+  return{
+    boardRow:Math.round((py-rect.top-pad)/(cs+gap)),
+    boardCol:Math.round((px-rect.left-pad)/(cs+gap))
+  };
+}
+
+function highlightBoard(startRow,startCol) {
+  clearHighlights();
+  if(!dragPiece) return;
+  const valid=canPlace(dragPiece.shape,startRow,startCol);
+  const cells=document.querySelectorAll('#board .cell');
+  dragPiece.shape.forEach((row,r)=>row.forEach((val,c)=>{
+    if(!val) return;
+    const br=startRow+r, bc=startCol+c;
+    if(br>=0&&br<ROWS&&bc>=0&&bc<COLS)
+      cells[br*COLS+bc].classList.add(valid?'highlight':'invalid');
+  }));
+}
+
+function clearHighlights() {
+  document.querySelectorAll('#board .cell').forEach(c=>c.classList.remove('highlight','invalid'));
+}
+
+// ════════════════════════════════════
+//  PLACEMENT
+// ════════════════════════════════════
+function canPlace(shape,startRow,startCol) {
+  for(let r=0;r<shape.length;r++) for(let c=0;c<shape[r].length;c++){
+    if(!shape[r][c]) continue;
+    const br=startRow+r, bc=startCol+c;
+    if(br<0||br>=ROWS||bc<0||bc>=COLS||board[br][bc]) return false;
+  }
+  return true;
+}
+
+function placePiece(piece,startRow,startCol) {
+  const slots=document.querySelectorAll('.piece-slot');
+  if(slots[dragSlot]) slots[dragSlot].classList.remove('dragging-source');
+  sessionPiecesPlaced++;
+  if(piece.isBomb) {
+    placeBombPiece(piece, startRow, startCol);
+    return;
+  }
+  piece.shape.forEach((row,r)=>row.forEach((val,c)=>{
+    if(val) board[startRow+r][startCol+c]=piece.color;
+  }));
+  renderBoard();
+  clearLines();
+}
+
+function refillPieces() {
+  if(pieces.every(p=>p===null)) pieces=[rngPiece(),rngPiece(),rngPiece()];
+}
+
+// ════════════════════════════════════
+//  LINE CLEARING
+// ════════════════════════════════════
+function clearLines() {
+  const rowsToClear=[], colsToClear=[];
+  for(let r=0;r<ROWS;r++) if(board[r].every(c=>c)) rowsToClear.push(r);
+  for(let c=0;c<COLS;c++) if(board.every(r=>r[c])) colsToClear.push(c);
+  if(!rowsToClear.length&&!colsToClear.length){ consecutiveClearCount=0; return; }
+
+  consecutiveClearCount++;
+  const lines=rowsToClear.length+colsToClear.length;
+  sessionLinesCleared+=lines;
+  if(lines>sessionBestLines) sessionBestLines=lines;
+  if(consecutiveClearCount>sessionBestCombo) sessionBestCombo=consecutiveClearCount;
+  const toClear=new Set();
+  rowsToClear.forEach(r=>{for(let c=0;c<COLS;c++) toClear.add(r*COLS+c);});
+  colsToClear.forEach(c=>{for(let r=0;r<ROWS;r++) toClear.add(r*COLS+c);});
+
+  const cells=document.querySelectorAll('#board .cell');
+  
+  // Spawn particles for each cleared cell
+  toClear.forEach(idx=>{
+    const cell=cells[idx];
+    if(!cell) return;
+    cell.classList.add('clearing');
+    const rect=cell.getBoundingClientRect();
+    const color=board[Math.floor(idx/COLS)][idx%COLS]||'var(--c4)';
+    spawnParticles(rect.left+rect.width/2, rect.top+rect.height/2, color, 6);
+  });
+
+  // Screen shake — stronger for more lines
+  shakeBoard(Math.min(lines, 4));
+
+  // Flash
+  if(lines >= 2) {
+    const flashColors=['rgba(10,245,255,0.15)','rgba(255,214,10,0.15)','rgba(255,45,85,0.12)'];
+    flashScreen(flashColors[Math.min(lines-2,2)]);
+  }
+
+  const pts=lines*lines*80*Math.max(1,consecutiveClearCount);
+  addScore(pts,lines,consecutiveClearCount);
+
+  sfxClear(lines);
+  if(lines>=2||consecutiveClearCount>=2){ hapticCombo(); sfxCombo(consecutiveClearCount); }
+  else hapticClear();
+  awardPower(lines, consecutiveClearCount);
+
+  if(isDaily){
+    const pct=Math.min(100,((score)/50000)*100);
+    const bar=$id('daily-bar');
+    if(bar) bar.style.width=pct+'%';
+  }
+
+  setTimeout(()=>{
+    rowsToClear.forEach(r=>{for(let c=0;c<COLS;c++) board[r][c]=null;});
+    colsToClear.forEach(c=>{for(let r=0;r<ROWS;r++) board[r][c]=null;});
+    renderBoard();
+  },400);
+}
+
+function addScore(pts,lines,combo) {
+  score+=pts;
+  $id('score').textContent=score.toLocaleString();
+  if(!isDaily&&score>best){
+    best=score;
+    localStorage.setItem('bb_best',best);
+    $id('best-display').textContent=best.toLocaleString();
+  }
+
+  // Popup
+  const popup=document.createElement('div');
+  popup.className='score-popup';
+  popup.textContent='+'+pts.toLocaleString();
+  popup.style.left=(window.innerWidth/2-60)+'px';
+  popup.style.top=(window.innerHeight*0.42)+'px';
+  document.body.appendChild(popup);
+  setTimeout(()=>popup.remove(),950);
+
+  // Combo banner
+  const comboLabels={2:'DOUBLE!',3:'TRIPLE!',4:'QUAD!!',5:'PENTA!!'};
+  const consecLabels={2:'COMBO x2',3:'COMBO x3',4:'ON FIRE! 🔥',5:'UNSTOPPABLE!!'};
+  let label='', labelColor='#ffd60a';
+  if(combo>=2){ label=consecLabels[Math.min(combo,5)]||'INSANE!!'; labelColor=['#0af5ff','#30d158','#ff2d55','#bf5af2'][Math.min(combo-2,3)]; }
+  else if(lines>=2){ label=comboLabels[Math.min(lines,5)]||'LEGENDARY!!'; labelColor=['#ffd60a','#30d158','#0af5ff','#bf5af2'][Math.min(lines-2,3)]; }
+
+  if(label){
+    const banner=document.createElement('div');
+    banner.className='combo-banner';
+    banner.style.color=labelColor;
+    banner.style.textShadow=`0 0 20px ${labelColor}, 0 0 40px ${labelColor}, 3px 3px 0 rgba(0,0,0,0.8)`;
+    banner.textContent=label;
+    document.body.appendChild(banner);
+    setTimeout(()=>banner.remove(),850);
+  }
+}
+
+// ════════════════════════════════════
+//  GAME OVER
+// ════════════════════════════════════
+function canPlaceAny(piece) {
+  for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++) if(canPlace(piece.shape,r,c)) return true;
+  return false;
+}
+
+function checkGameOver() {
+  const avail = pieces.filter(p => p !== null);
+  // Still have a placeable piece — not over
+  if(avail.some(p => canPlaceAny(p))) return;
+
+  // No placeable pieces — but check if a power-up could rescue them
+  const hasPower = Object.entries(powerInventory).some(([type, count]) => {
+    if(count <= 0) return false;
+    if(type === 'laser')    return true; // always clears a row, always helps
+    if(type === 'wildfire') return board.some(row => row.some(c => c)); // board has blocks
+    if(type === 'shatter')  return board.some(row => row.some(c => c)); // can remove a block
+    if(type === 'bomb')     return true; // always clears space
+    return false;
+  });
+  if(hasPower) return;
+
+  sfxGameOver(); hapticGameOver();
+  gamesPlayed++;
+  localStorage.setItem('bb_games', gamesPlayed);
+  recordGameStats(score, sessionLinesCleared, sessionPiecesPlaced);
+  setTimeout(() => isDaily ? finishDaily() : finishClassic(), 500);
+}
+
+function finishClassic() {
+  const xpEarned = Math.floor(score / 100) + (score >= best ? 50 : 0);
+  if(xpEarned > 0) addXP(xpEarned);
+  checkNewUnlocks();
+  pendingScore = score;
+  if(!playerName) {
+    document.getElementById('name-modal').classList.add('show');
+  } else {
+    saveClassicScore(playerName, score);
+    showGameOverSequence(score, false);
+  }
+}
+
+function getGrade(s) {
+  if(s >= 100000) return { letter:'S', color:'#ffd60a', label:'LEGENDARY' };
+  if(s >= 50000)  return { letter:'A', color:'#0af5ff', label:'INCREDIBLE' };
+  if(s >= 25000)  return { letter:'B', color:'#30d158', label:'GREAT' };
+  if(s >= 10000)  return { letter:'C', color:'#bf5af2', label:'SOLID' };
+  if(s >= 5000)   return { letter:'D', color:'#ff6b35', label:'KEEP GOING' };
+  return               { letter:'F', color:'#ff2d55', label:'GAME OVER' };
+}
+
+function countUp(el, target, duration) {
+  if(!el) return;
+  const start = performance.now();
+  const step = ts => {
+    const progress = Math.min((ts - start) / duration, 1);
+    // ease out expo
+    const eased = progress === 1 ? 1 : 1 - Math.pow(2, -10 * progress);
+    const current = Math.floor(eased * target);
+    el.textContent = current.toLocaleString();
+    if(progress < 1) requestAnimationFrame(step);
+    else el.textContent = target.toLocaleString();
+  };
+  requestAnimationFrame(step);
+}
+
+function showGameOverSequence(finalScore, isNew) {
+  const go = $id('gameover');
+  if(!go) return;
+
+  // Reset all animated elements
+  const title = $id('go-title');
+  const scoreWrap = $id('go-score-wrap');
+  const scoreNum = $id('final-score');
+  const gradeWrap = $id('go-grade-wrap');
+  const gradeEl = $id('go-grade');
+  const gradeText = $id('go-grade-text');
+  const newBest = $id('new-best-label');
+  const statsEl = $id('go-stats');
+  const btns = $id('go-btns');
+
+  if(title)     { title.className='go-title'; title.textContent='GAME OVER'; }
+  if(scoreWrap) scoreWrap.className='go-score-wrap';
+  if(scoreNum)  scoreNum.textContent='0';
+  if(gradeWrap) gradeWrap.className='go-grade-wrap';
+  if(newBest)   newBest.style.display='none';
+  if(statsEl)   statsEl.innerHTML='';
+  if(btns)      btns.className='go-btns';
+
+  go.classList.add('show');
+
+  const grade = getGrade(finalScore);
+  const isNewBest = finalScore >= best && finalScore > 0;
+
+  // ── Step 1: Title crashes in (0ms) ──
+  setTimeout(() => {
+    if(title) title.classList.add('animate-in');
+    haptic(80);
+    playTone(120, 'sawtooth', 0.4, 0.2, 0, 80);
+  }, 50);
+
+  // ── Step 2: Score counts up (600ms) ──
+  setTimeout(() => {
+    if(scoreWrap) scoreWrap.classList.add('show');
+    countUp(scoreNum, finalScore, 1200);
+    // tick sounds during count
+    let ticks = 0;
+    const tickInterval = setInterval(() => {
+      ticks++;
+      playTone(200 + ticks * 15, 'square', 0.04, 0.08);
+      if(ticks >= 12) clearInterval(tickInterval);
+    }, 100);
+  }, 600);
+
+  // ── Step 3: Grade pops in (1900ms) ──
+  setTimeout(() => {
+    if(gradeEl)   { gradeEl.textContent = grade.letter; gradeEl.style.color = grade.color; }
+    if(gradeText) { gradeText.textContent = grade.label; gradeText.style.color = grade.color; }
+    if(gradeWrap) gradeWrap.classList.add('show');
+    playTone(660, 'triangle', 0.2, 0.25);
+    playTone(880, 'triangle', 0.2, 0.2, 0.15);
+    if(grade.letter === 'S') {
+      playTone(1100, 'sine', 0.2, 0.3, 0.3);
+      spawnParticles(window.innerWidth/2, window.innerHeight*0.35, '#ffd60a', 30);
+    }
+    // switch title to glitching after it settles
+    setTimeout(() => { if(title) { title.className='go-title go-title-settled glitching'; }}, 200);
+  }, 1900);
+
+  // ── Step 4: New best banner (2300ms) ──
+  setTimeout(() => {
+    if(isNewBest && newBest) {
+      newBest.style.display = 'block';
+      spawnParticles(window.innerWidth/2, window.innerHeight*0.5, '#ffd60a', 25);
+      haptic([30,15,30,15,60]);
+      playTone(880, 'sine', 0.15, 0.25);
+      playTone(1100, 'sine', 0.15, 0.2, 0.15);
+      playTone(1320, 'sine', 0.2, 0.3, 0.3);
+    }
+  }, 2300);
+
+  // ── Step 5: Stats slide in (2500ms) ──
+  const statRows = [
+    { key:'BEST SCORE',    val: best.toLocaleString(),              highlight: isNewBest, isBest: isNewBest },
+    { key:'LINES CLEARED', val: sessionLinesCleared.toString()      },
+    { key:'PIECES PLACED', val: sessionPiecesPlaced.toString()      },
+    { key:'BEST COMBO',    val: sessionBestCombo + 'x'             },
+    { key:'XP EARNED',     val: '+' + xpEarned(finalScore)        },
+  ];
+
+  setTimeout(() => {
+    if(!statsEl) return;
+    statsEl.innerHTML = '';
+    statRows.forEach((row, i) => {
+      const div = document.createElement('div');
+      div.className = 'go-stat-row' + (row.isBest ? ' new-best-row' : '');
+      div.innerHTML = '<span class="go-stat-key">' + row.key + '</span>' +
+                      '<span class="go-stat-val' + (row.highlight ? ' highlight' : '') + '">' + row.val + '</span>';
+      statsEl.appendChild(div);
+      setTimeout(() => div.classList.add('show'), i * 100);
+    });
+  }, 2500);
+
+  // ── Step 6: Buttons appear (3300ms) ──
+  setTimeout(() => {
+    if(btns) btns.classList.add('show');
+  }, 3300);
+}
+
+function xpEarned(s) {
+  return Math.floor(s / 100) + (s >= best ? 50 : 0);
+}
+
+function finishDaily() {
+  const xpEarned = Math.floor(score / 80) + 100; // daily bonus XP
+  if(xpEarned > 0) addXP(xpEarned);
+  const dk=todayKey();
+  localStorage.setItem('bb_daily_done',dk);
+  localStorage.setItem('bb_daily_score',score);
+  const yesterday=new Date(); yesterday.setDate(yesterday.getDate()-1);
+  const yk=`${yesterday.getFullYear()}-${yesterday.getMonth()+1}-${yesterday.getDate()}`;
+  if(lastPlayedDay===yk||lastPlayedDay===dk){ if(lastPlayedDay!==dk) streak++; }
+  else streak=1;
+  lastPlayedDay=dk;
+  localStorage.setItem('bb_streak',streak);
+  localStorage.setItem('bb_last_day',dk);
+  if(score>dailyBest){ dailyBest=score; localStorage.setItem('bb_daily_best',dailyBest); }
+  $id('dc-score').textContent=score.toLocaleString();
+  $id('dc-streak').textContent=streak;
+  $id('daily-complete').classList.add('show');
+  saveDailyScore(playerName||'ANONYMOUS',score);
+}
+
+// ════════════════════════════════════
+//  NAME
+// ════════════════════════════════════
+function saveName() {
+  const val=$id('name-input').value.trim().toUpperCase();
+  playerName=val||'PLAYER1';
+  localStorage.setItem('bb_name',playerName);
+  $id('name-modal').classList.remove('show');
+  saveClassicScore(playerName,pendingScore);
+  $id('gameover').classList.add('show');
+}
+
+// ════════════════════════════════════
+//  LEADERBOARD
+// ════════════════════════════════════
+function getLeaderboard(mode){ try{return JSON.parse(localStorage.getItem(`bb_lb_${mode}`)||'[]');}catch(e){return[];}}
+function saveLeaderboard(mode,data){ localStorage.setItem(`bb_lb_${mode}`,JSON.stringify(data)); }
+
+function saveClassicScore(name,s){
+  if(s<=0) return;
+  const lb=getLeaderboard('classic');
+  lb.push({name,score:s,date:todayKey()});
+  lb.sort((a,b)=>b.score-a.score);
+  saveLeaderboard('classic',lb.slice(0,20));
+}
+
+function saveDailyScore(name,s){
+  if(s<=0) return;
+  const key=`bb_lb_daily_${todayKey()}`;
+  try{
+    const lb=JSON.parse(localStorage.getItem(key)||'[]');
+    const filtered=lb.filter(e=>e.name!==name);
+    filtered.push({name,score:s,date:todayKey()});
+    filtered.sort((a,b)=>b.score-a.score);
+    localStorage.setItem(key,JSON.stringify(filtered.slice(0,20)));
+  }catch(e){}
+}
+
+function showLeaderboard(){ sfxMenu(); showScreen('lb-screen'); showLbTab('classic',document.querySelector('.lb-tab')); }
+
+function showLbTab(mode,btn){
+  document.querySelectorAll('.lb-tab').forEach(t=>t.classList.remove('active'));
+  btn.classList.add('active');
+  const list=$id('lb-list');
+  let entries=[];
+  if(mode==='classic') entries=getLeaderboard('classic');
+  else{ try{entries=JSON.parse(localStorage.getItem(`bb_lb_daily_${todayKey()}`)||'[]');}catch(e){} }
+
+  if(!entries.length){
+    list.innerHTML='<div class="lb-empty">NO SCORES YET<br><br>PLAY A GAME TO<br>APPEAR HERE</div>';
+    return;
+  }
+  const medals=['🥇','🥈','🥉'];
+  list.innerHTML='';
+  entries.forEach((e,i)=>{
+    const div=document.createElement('div');
+    div.className='lb-entry'+(e.name===playerName?' you':'')+(i===0?' first':'');
+    div.innerHTML=`
+      <div class="lb-rank">${medals[i]||(i+1)}</div>
+      <div style="flex:1">
+        <div class="lb-name">${e.name}${e.name===playerName?'<span class="lb-you-tag">YOU</span>':''}</div>
+        <div class="lb-date">${e.date}</div>
+      </div>
+      <div class="lb-score">${e.score.toLocaleString()}</div>
+    `;
+    list.appendChild(div);
+  });
+}
+
+// ════════════════════════════════════
+//  INIT
+// ════════════════════════════════════
+
+
+
+// ════════════════════════════════════
+//  STATS TRACKING
+// ════════════════════════════════════
+function getStat(k, def=0) { return parseInt(localStorage.getItem('bb_stat_'+k)||def); }
+function setStat(k, v)     { localStorage.setItem('bb_stat_'+k, v); }
+function incStat(k, by=1)  { setStat(k, getStat(k)+by); }
+
+function recordGameStats(pts, linesCleared, piecesPlaced) {
+  incStat('total_games');
+  incStat('total_score', pts);
+  incStat('total_lines', linesCleared);
+  incStat('total_pieces', piecesPlaced);
+  const hs = getStat('high_score');
+  if(pts > hs) setStat('high_score', pts);
+  // track session best combo
+  const bc = getStat('best_combo');
+  if(sessionBestCombo > bc) setStat('best_combo', sessionBestCombo);
+  const bl = getStat('best_lines');
+  if(sessionBestLines > bl) setStat('best_lines', sessionBestLines);
+}
+
+function showStats() {
+  sfxMenu();
+  renderStats();
+  showScreen('stats-screen');
+}
+
+function renderStats() {
+  const container = $id('stats-content');
+  if(!container) return;
+
+  const totalGames   = getStat('total_games');
+  const totalScore   = getStat('total_score');
+  const totalLines   = getStat('total_lines');
+  const totalPieces  = getStat('total_pieces');
+  const bestCombo    = getStat('best_combo');
+  const bestLines    = getStat('best_lines');
+  const avgScore     = totalGames > 0 ? Math.floor(totalScore / totalGames) : 0;
+  const avgLines     = totalGames > 0 ? Math.floor(totalLines / totalGames) : 0;
+  const level        = getLevel();
+  const {current, needed} = getXPProgress();
+
+  const colorMap = {'var(--c1)':'#ff2d55','var(--c2)':'#ffd60a','var(--c3)':'#30d158','var(--c4)':'#0af5ff','var(--c5)':'#bf5af2','var(--c6)':'#ff6b35','var(--c7)':'#ff375f'};
+
+  container.innerHTML = `
+    <div class="stats-grid">
+      <div class="stat-card wide" style="--sc:var(--c2)">
+        <div class="stat-card-icon">🏆</div>
+        <div>
+          <div class="stat-card-val">${best.toLocaleString()}</div>
+          <div class="stat-card-label">ALL-TIME BEST SCORE</div>
+        </div>
+      </div>
+
+      <div class="stat-card" style="--sc:var(--c4)">
+        <div class="stat-card-icon">🎮</div>
+        <div class="stat-card-val">${totalGames.toLocaleString()}</div>
+        <div class="stat-card-label">GAMES PLAYED</div>
+      </div>
+
+      <div class="stat-card" style="--sc:var(--c3)">
+        <div class="stat-card-icon">🔥</div>
+        <div class="stat-card-val">${streak}</div>
+        <div class="stat-card-label">CURRENT STREAK</div>
+      </div>
+
+      <div class="stat-card" style="--sc:var(--c5)">
+        <div class="stat-card-icon">📈</div>
+        <div class="stat-card-val">${avgScore.toLocaleString()}</div>
+        <div class="stat-card-label">AVG SCORE</div>
+      </div>
+
+      <div class="stat-card" style="--sc:var(--c6)">
+        <div class="stat-card-icon">⚡</div>
+        <div class="stat-card-val">${totalLines.toLocaleString()}</div>
+        <div class="stat-card-label">TOTAL LINES</div>
+      </div>
+
+      <div class="stat-card" style="--sc:var(--c1)">
+        <div class="stat-card-icon">💥</div>
+        <div class="stat-card-val">${bestCombo}x</div>
+        <div class="stat-card-label">BEST COMBO</div>
+      </div>
+
+      <div class="stat-card" style="--sc:var(--c4)">
+        <div class="stat-card-icon">🧩</div>
+        <div class="stat-card-val">${totalPieces.toLocaleString()}</div>
+        <div class="stat-card-label">PIECES PLACED</div>
+      </div>
+
+      <div class="stat-card wide" style="--sc:var(--c3)">
+        <div class="stat-card-icon">★</div>
+        <div>
+          <div class="stat-card-val">LEVEL ${level}</div>
+          <div class="stat-card-label">${current.toLocaleString()} / ${needed.toLocaleString()} XP TO NEXT</div>
+        </div>
+      </div>
+
+      <div class="stat-card wide" style="--sc:var(--c2)">
+        <div class="stat-card-icon">☀</div>
+        <div>
+          <div class="stat-card-val">${dailyBest.toLocaleString()}</div>
+          <div class="stat-card-label">BEST DAILY SCORE</div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+// session trackers (reset each game)
+let sessionBestCombo = 0;
+let sessionBestLines = 0;
+let sessionPiecesPlaced = 0;
+let sessionLinesCleared = 0;
+
+// ════════════════════════════════════
+//  BOMB BLOCK SYSTEM
+// ════════════════════════════════════
+const BOMB_RADIUS = 1;    // explodes 3x3 around placement
+
+function makeBombPiece() {
+  const smallShapes = [[[1]],[[1,1],[1,1]],[[1,1]],[[1],[1]]];
+  return {
+    shape: smallShapes[Math.floor(Math.random() * smallShapes.length)],
+    color: 'var(--c1)',
+    hex: '#ff2d55',
+    isBomb: true,
+  };
+}
+
+function dropBombIntoTray() {
+  // Find an empty tray slot, or replace the first one
+  let slot = pieces.indexOf(null);
+  if(slot === -1) slot = 0;
+  pieces[slot] = makeBombPiece();
+  renderTray();
+  showToast('💣 BOMB READY - PLACE IT!');
+  playTone(220, 'sawtooth', 0.12, 0.2);
+  playTone(180, 'sawtooth', 0.12, 0.2, 0.1);
+  haptic([20, 10, 40]);
+}
+
+function placeBombPiece(piece, startRow, startCol) {
+  // Place the bomb cell(s) on board
+  piece.shape.forEach((row, r) => row.forEach((val, c) => {
+    if(val) board[startRow+r][startCol+c] = 'BOMB_' + piece.hex;
+  }));
+  renderBoard();
+  // Trigger explosion immediately
+  const centerRow = startRow + Math.floor(piece.shape.length/2);
+  const centerCol = startCol + Math.floor(piece.shape[0].length/2);
+  triggerBombExplosion(centerRow, centerCol, piece.hex);
+}
+
+function triggerBombExplosion(centerRow, centerCol, hex) {
+  const affected = [];
+  for(let r = centerRow - BOMB_RADIUS; r <= centerRow + BOMB_RADIUS; r++) {
+    for(let c = centerCol - BOMB_RADIUS; c <= centerCol + BOMB_RADIUS; c++) {
+      if(r >= 0 && r < ROWS && c >= 0 && c < COLS) {
+        affected.push({r, c});
+      }
+    }
+  }
+
+  // Visual: animate exploding cells
+  const boardEl = $id('board');
+  const cells = boardEl ? boardEl.querySelectorAll('.cell') : [];
+
+  affected.forEach(({r, c}) => {
+    const idx = r * COLS + c;
+    const cell = cells[idx];
+    if(cell) {
+      cell.classList.add('bomb-exploding');
+      const rect = cell.getBoundingClientRect();
+      spawnParticles(rect.left + rect.width/2, rect.top + rect.height/2, hex, 14);
+    }
+  });
+
+  // Screen effects
+  flashPower('#ff2d55');
+  shakeBoard(3);
+  hapticCombo();
+  sfxCombo(2);
+
+  // Clear cells after animation
+  setTimeout(() => {
+    affected.forEach(({r, c}) => {
+      board[r][c] = null;
+    });
+    const pts = affected.length * 50;
+    addScore(pts, affected.length, 1);
+    renderBoard();
+    clearLines();
+    checkGameOver();
+  }, 480);
+}
+
+function renderBombOnBoard() {
+  // Add bomb icon overlays to bomb cells after renderBoard
+  const boardEl = $id('board');
+  if(!boardEl) return;
+  for(let r = 0; r < ROWS; r++) {
+    for(let c = 0; c < COLS; c++) {
+      if(board[r][c] && board[r][c].startsWith && board[r][c].startsWith('BOMB_')) {
+        const idx = r * COLS + c;
+        const cell = boardEl.querySelectorAll('.cell')[idx];
+        if(cell) {
+          cell.classList.add('bomb');
+          cell.style.background = board[r][c].replace('BOMB_','');
+          if(!cell.querySelector('.bomb-icon')) {
+            const icon = document.createElement('div');
+            icon.className = 'bomb-icon';
+            icon.textContent = '💣';
+            cell.appendChild(icon);
+          }
+        }
+      }
+    }
+  }
+}
+
+
+// ════════════════════════════════════
+//  POWER-UP SYSTEM
+// ════════════════════════════════════
+const POWERS = {
+  laser:    { color:'#ffd60a', glow:'rgba(255,214,10,0.4)',   icon:'⚡', name:'LASER' },
+  shatter:  { color:'#0af5ff', glow:'rgba(10,245,255,0.4)',  icon:'💣', name:'SHATTER' },
+  wildfire: { color:'#ff6b35', glow:'rgba(255,107,53,0.4)',  icon:'🔥', name:'WILDFIRE' },
+  bomb:     { color:'#ff2d55', glow:'rgba(255,45,85,0.5)',   icon:'💣', name:'BOMB' },
+};
+
+let powerInventory = { laser:0, shatter:0, wildfire:0, bomb:0 };
+let activePower = null; // currently selected power waiting for board tap
+
+function awardPower(lines, combo) {
+  if(lines >= 4 || combo >= 4) {
+    const roll = Math.random();
+    if(roll < 0.35) givePower('bomb');
+    else if(roll < 0.65) givePower('wildfire');
+    else if(roll < 0.85) givePower('laser');
+    else givePower('shatter');
+  } else if(lines >= 3 || combo >= 3) {
+    const roll = Math.random();
+    if(roll < 0.5) givePower('wildfire');
+    else if(roll < 0.8) givePower('laser');
+    else givePower('shatter');
+  } else if(lines >= 2 || combo >= 2) {
+    const roll = Math.random();
+    if(roll < 0.5) givePower('laser');
+    else givePower('shatter');
+  } else if(Math.random() < 0.12) {
+    givePower('laser');
+  }
+}
+
+function givePower(type) {
+  if(powerInventory[type] >= 3) return; // cap at 3
+  powerInventory[type]++;
+  updatePowerUI();
+  showToast(POWERS[type].icon + ' ' + POWERS[type].name + ' READY!');
+  playTone(660, 'sine', 0.15, 0.2);
+  playTone(880, 'sine', 0.12, 0.18, 0.1);
+}
+
+function updatePowerUI() {
+  Object.keys(POWERS).forEach(type => {
+    const btn = $id('pu-' + type);
+    if(!btn) return;
+    const p = POWERS[type];
+    const count = powerInventory[type];
+    btn.className = 'powerup-btn ' + (count > 0 ? 'has-power' : 'empty-power') + (activePower === type ? ' active-power' : '');
+    btn.style.setProperty('--pu-color', p.color);
+    btn.style.setProperty('--pu-glow', p.glow);
+    // Show count badge
+    let countEl = btn.querySelector('.powerup-count');
+    if(count > 1) {
+      if(!countEl) { countEl = document.createElement('div'); countEl.className='powerup-count'; btn.appendChild(countEl); }
+      countEl.textContent = 'x' + count;
+    } else if(countEl) {
+      countEl.remove();
+    }
+  });
+}
+
+function activatePower(type) {
+  if(powerInventory[type] <= 0) return;
+  sfxMenu();
+  haptic(30);
+  if(activePower === type) {
+    // deselect
+    cancelPower();
+    return;
+  }
+  activePower = type;
+  updatePowerUI();
+
+  const boardEl = $id('board');
+  const hint = $id('hint-text');
+
+  if(type === 'laser') {
+    // Row select mode — highlight rows on hover
+    if(boardEl) {
+      boardEl.classList.add('select-row-mode');
+      boardEl.querySelectorAll('.cell').forEach(cell => {
+        cell.addEventListener('click', onLaserClick, {once:false});
+        cell.addEventListener('pointerenter', onLaserHover);
+        cell.addEventListener('pointerleave', onLaserUnhover);
+      });
+    }
+    if(hint) hint.textContent = 'TAP A ROW TO LASER | TAP POWER TO CANCEL';
+    showSelectHint('LASER - TAP ANY ROW');
+  } else if(type === 'shatter') {
+    if(boardEl) {
+      boardEl.classList.add('select-mode');
+      boardEl.querySelectorAll('.cell.filled').forEach(cell => {
+        cell.addEventListener('click', onShatterClick, {once:false});
+      });
+    }
+    if(hint) hint.textContent = 'TAP A BLOCK TO SHATTER | TAP POWER TO CANCEL';
+    showSelectHint('SHATTER - TAP A BLOCK');
+  } else if(type === 'wildfire') {
+    if(boardEl) {
+      boardEl.classList.add('select-mode');
+      boardEl.querySelectorAll('.cell.filled').forEach(cell => {
+        cell.addEventListener('click', onWildfireClick, {once:false});
+      });
+    }
+    if(hint) hint.textContent = 'TAP A COLOR TO WILDFIRE | TAP POWER TO CANCEL';
+    showSelectHint('WILDFIRE - TAP A COLOR');
+  } else if(type === 'bomb') {
+    // Drop a bomb piece into the tray
+    usePower('bomb');
+    dropBombIntoTray();
+  }
+}
+
+function cancelPower() {
+  activePower = null;
+  updatePowerUI();
+  clearBoardSelectMode();
+  const hint = $id('hint-text');
+  if(hint) hint.textContent = 'HOLD + DRAG TO PLACE';
+  removeSelectHint();
+}
+
+function clearBoardSelectMode() {
+  const boardEl = $id('board');
+  if(!boardEl) return;
+  boardEl.classList.remove('select-mode', 'select-row-mode');
+  boardEl.querySelectorAll('.cell').forEach(cell => {
+    cell.removeEventListener('click', onLaserClick);
+    cell.removeEventListener('click', onShatterClick);
+    cell.removeEventListener('click', onWildfireClick);
+    cell.removeEventListener('pointerenter', onLaserHover);
+    cell.removeEventListener('pointerleave', onLaserUnhover);
+    cell.classList.remove('row-hover');
+  });
+}
+
+function showSelectHint(msg) {
+  removeSelectHint();
+  const el = document.createElement('div');
+  el.className = 'select-hint';
+  el.id = 'select-hint';
+  el.textContent = msg;
+  document.body.appendChild(el);
+  setTimeout(() => { if($id('select-hint')) $id('select-hint').remove(); }, 1800);
+}
+
+function removeSelectHint() {
+  const el = $id('select-hint');
+  if(el) el.remove();
+}
+
+// ── LASER ──
+function onLaserHover(e) {
+  const r = parseInt(e.currentTarget.dataset.r);
+  const boardEl = $id('board');
+  if(!boardEl) return;
+  boardEl.querySelectorAll('.cell').forEach(cell => {
+    cell.classList.toggle('row-hover', parseInt(cell.dataset.r) === r);
+  });
+}
+
+function onLaserUnhover() {
+  const boardEl = $id('boardEl');
+  if(boardEl) boardEl.querySelectorAll('.cell').forEach(c => c.classList.remove('row-hover'));
+}
+
+function onLaserClick(e) {
+  if(activePower !== 'laser') return;
+  e.stopPropagation();
+  const row = parseInt(e.currentTarget.dataset.r);
+  usePower('laser');
+
+  // Flash the row
+  const boardEl = $id('board');
+  if(boardEl) {
+    boardEl.querySelectorAll('.cell').forEach(cell => {
+      if(parseInt(cell.dataset.r) === row) {
+        cell.classList.add('clearing');
+        const rect = cell.getBoundingClientRect();
+        spawnParticles(rect.left + rect.width/2, rect.top + rect.height/2, 'var(--c2)', 8);
+      }
+    });
+  }
+
+  flashPower('#ffd60a');
+  sfxClear(3);
+  hapticCombo();
+  shakeBoard(2);
+
+  setTimeout(() => {
+    for(let c = 0; c < COLS; c++) board[row][c] = null;
+    renderBoard();
+    addScore(COLS * 60, 1, 1);
+    checkGameOver();
+  }, 380);
+}
+
+// ── SHATTER ──
+function onShatterClick(e) {
+  if(activePower !== 'shatter') return;
+  e.stopPropagation();
+  const r = parseInt(e.currentTarget.dataset.r);
+  const c = parseInt(e.currentTarget.dataset.c);
+  if(!board[r][c]) return;
+  usePower('shatter');
+
+  const rect = e.currentTarget.getBoundingClientRect();
+  spawnParticles(rect.left + rect.width/2, rect.top + rect.height/2, board[r][c], 20);
+  e.currentTarget.classList.add('clearing');
+
+  flashPower('#0af5ff');
+  sfxClear(1);
+  haptic([20,10,40]);
+  shakeBoard(1);
+
+  setTimeout(() => {
+    board[r][c] = null;
+    renderBoard();
+    addScore(150, 1, 1);
+    checkGameOver();
+  }, 380);
+}
+
+// ── WILDFIRE ──
+function onWildfireClick(e) {
+  if(activePower !== 'wildfire') return;
+  e.stopPropagation();
+  const r = parseInt(e.currentTarget.dataset.r);
+  const c = parseInt(e.currentTarget.dataset.c);
+  const targetColor = board[r][c];
+  if(!targetColor) return;
+  usePower('wildfire');
+
+  // Find all cells with same color
+  const boardEl = $id('board');
+  let count = 0;
+  for(let row = 0; row < ROWS; row++) {
+    for(let col = 0; col < COLS; col++) {
+      if(board[row][col] === targetColor) {
+        board[row][col] = null;
+        count++;
+        if(boardEl) {
+          const cell = boardEl.querySelectorAll('.cell')[row * COLS + col];
+          if(cell) {
+            cell.classList.add('clearing');
+            const rect2 = cell.getBoundingClientRect();
+            spawnParticles(rect2.left + rect2.width/2, rect2.top + rect2.height/2, targetColor, 10);
+          }
+        }
+      }
+    }
+  }
+
+  flashPower('#ff6b35');
+  sfxCombo(3);
+  hapticCombo();
+  shakeBoard(3);
+
+  const pts = count * 80;
+  addScore(pts, count, 1);
+
+  setTimeout(() => {
+    renderBoard();
+    checkGameOver();
+  }, 420);
+}
+
+function usePower(type) {
+  powerInventory[type] = Math.max(0, powerInventory[type] - 1);
+  cancelPower();
+}
+
+function flashPower(color) {
+  const el = document.createElement('div');
+  el.className = 'powerup-flash';
+  el.style.background = color;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 450);
+}
+
+function resetPowers() {
+  powerInventory = { laser:0, shatter:0, wildfire:0, bomb:0 };
+  activePower = null;
+  updatePowerUI();
+  clearBoardSelectMode();
+}
+
+
+// ════════════════════════════════════
+//  PROGRESSION SYSTEM
+// ════════════════════════════════════
+
+const THEMES = [
+  {
+    id:'arcade', name:'ARCADE', req:0, reqLabel:'DEFAULT',
+    bg:'#080810', surface:'#0e0e1e', surface2:'#141428',
+    colors:['#ff2d55','#ffd60a','#30d158','#0af5ff','#bf5af2','#ff6b35','#ff375f'],
+    boardBg:'#0e0e1e', boardBorder:'rgba(10,245,255,0.15)',
+    preview:['#ff2d55','#ffd60a','#30d158','#0af5ff','#bf5af2']
+  },
+  {
+    id:'sunset', name:'SUNSET', req:5000, reqLabel:'5K SCORE',
+    bg:'#1a0a00', surface:'#1e0e05', surface2:'#2a1408',
+    colors:['#ff6b35','#ff9f1c','#ffbf69','#ff4757','#ffa502','#ff6b35','#ff4500'],
+    boardBg:'#1e0e05', boardBorder:'rgba(255,107,53,0.25)',
+    preview:['#ff6b35','#ff9f1c','#ffbf69','#ff4757','#ffa502']
+  },
+  {
+    id:'forest', name:'FOREST', req:15000, reqLabel:'15K SCORE',
+    bg:'#030d06', surface:'#071a0a', surface2:'#0d2410',
+    colors:['#30d158','#34c759','#a8e063','#52de97','#1dd1a1','#00b894','#55efc4'],
+    boardBg:'#071a0a', boardBorder:'rgba(48,209,88,0.2)',
+    preview:['#30d158','#a8e063','#52de97','#1dd1a1','#00b894']
+  },
+  {
+    id:'galaxy', name:'GALAXY', req:30000, reqLabel:'30K SCORE',
+    bg:'#05001a', surface:'#0a0025', surface2:'#10003a',
+    colors:['#bf5af2','#9b59b6','#a29bfe','#6c5ce7','#fd79a8','#e84393','#d63031'],
+    boardBg:'#0a0025', boardBorder:'rgba(191,90,242,0.25)',
+    preview:['#bf5af2','#a29bfe','#6c5ce7','#fd79a8','#e84393']
+  },
+  {
+    id:'ocean', name:'OCEAN', req:50000, reqLabel:'50K SCORE',
+    bg:'#000d1a', surface:'#001525', surface2:'#002040',
+    colors:['#0af5ff','#00cec9','#74b9ff','#0984e3','#81ecec','#55efc4','#00b894'],
+    boardBg:'#001525', boardBorder:'rgba(10,245,255,0.2)',
+    preview:['#0af5ff','#74b9ff','#0984e3','#81ecec','#00cec9']
+  },
+  {
+    id:'volcano', name:'VOLCANO', req:100000, reqLabel:'100K SCORE',
+    bg:'#0d0000', surface:'#1a0000', surface2:'#250000',
+    colors:['#ff2d55','#ff4500','#ff6b35','#ffd60a','#ff0000','#c0392b','#e74c3c'],
+    boardBg:'#1a0000', boardBorder:'rgba(255,45,85,0.3)',
+    preview:['#ff2d55','#ff4500','#ff6b35','#ffd60a','#e74c3c']
+  },
+];
+
+
+
+// XP / Level system
+const XP_THRESHOLDS = [0,500,1200,2500,4500,7000,10000,14000,19000,25000,35000,50000,70000,100000];
+
+let activeTheme   = localStorage.getItem('bb_theme')   || 'arcade';
+let totalXP       = parseInt(localStorage.getItem('bb_xp') || '0');
+let seenUnlocks   = JSON.parse(localStorage.getItem('bb_seen_unlocks') || '[]');
+
+function getLevel() {
+  for(let i = XP_THRESHOLDS.length-1; i >= 0; i--) {
+    if(totalXP >= XP_THRESHOLDS[i]) return i+1;
+  }
+  return 1;
+}
+
+function getXPProgress() {
+  const lvl = getLevel();
+  const current = XP_THRESHOLDS[lvl-1] || 0;
+  const next = XP_THRESHOLDS[lvl] || XP_THRESHOLDS[XP_THRESHOLDS.length-1];
+  const pct = Math.min(100, ((totalXP - current) / (next - current)) * 100);
+  return { lvl, current: totalXP - current, needed: next - current, pct };
+}
+
+function addXP(amount) {
+  const oldLevel = getLevel();
+  totalXP += amount;
+  localStorage.setItem('bb_xp', totalXP);
+  const newLevel = getLevel();
+  if(newLevel > oldLevel) showToast('★ LEVEL UP! LEVEL ' + newLevel + ' ★');
+  updateXPBar();
+  checkNewUnlocks();
+  updatePowerUI();
+}
+
+function updateXPBar() {
+  const {lvl, current, needed, pct} = getXPProgress();
+  const bar = $id('xp-bar'); if(bar) bar.style.width = pct + '%';
+  const lbl = $id('xp-level'); if(lbl) lbl.textContent = lvl;
+  const xlbl = $id('xp-label'); if(xlbl) xlbl.textContent = current.toLocaleString() + ' / ' + needed.toLocaleString() + ' XP';
+}
+
+function checkNewUnlocks() {
+  const newOnes = [];
+  THEMES.forEach(t => {
+    if(t.req > 0 && best >= t.req && !seenUnlocks.includes('theme_'+t.id)) {
+      newOnes.push(t.name + ' THEME');
+      seenUnlocks.push('theme_'+t.id);
+    }
+  });
+  if(newOnes.length) {
+    localStorage.setItem('bb_seen_unlocks', JSON.stringify(seenUnlocks));
+    setTimeout(() => showToast('🔓 UNLOCKED: ' + newOnes[0]), 600);
+  }
+}
+
+function showToast(msg) {
+  const old = document.querySelector('.unlock-toast');
+  if(old) old.remove();
+  const t = document.createElement('div');
+  t.className = 'unlock-toast';
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3200);
+}
+
+function applyTheme(id) {
+  const t = THEMES.find(x=>x.id===id) || THEMES[0];
+  const root = document.documentElement;
+  root.style.setProperty('--bg', t.bg);
+  root.style.setProperty('--surface', t.surface);
+  root.style.setProperty('--surface2', t.surface2);
+  activeTheme = id;
+  localStorage.setItem('bb_theme', id);
+  // Update active colors used for pieces
+}
+
+function getCurrentPalette() {
+  const theme = THEMES.find(x=>x.id===activeTheme) || THEMES[0];
+  const pal = PALETTES.find(x=>x.id===activePalette) || PALETTES[0];
+  // Use palette colors if unlocked
+  return (streak >= pal.req) ? pal.colors : theme.colors;
+}
+
+
+
+
+function showUnlocks() {
+  sfxMenu();
+  renderUnlockScreen();
+  showScreen('unlocks-screen');
+}
+
+function renderUnlockScreen() {
+  renderThemeGrid();
+}
+
+function renderThemeGrid() {
+  const grid = $id('theme-grid');
+  if(!grid) return;
+  grid.innerHTML = '';
+  THEMES.forEach(theme => {
+    const unlocked = best >= theme.req;
+    const isActive = activeTheme === theme.id;
+    const isNew = unlocked && !seenUnlocks.includes('theme_'+theme.id);
+    const card = document.createElement('div');
+    card.className = 'unlock-card' + (unlocked ? ' unlocked' : ' locked') + (isActive ? ' active-theme' : '');
+    card.innerHTML = `
+      ${isNew ? '<div class="unlock-new-badge">NEW!</div>' : ''}
+      <div class="unlock-preview" style="background:${theme.boardBg};border:1px solid ${theme.boardBorder}">
+        ${theme.preview.map(c=>`<div class="unlock-preview-cell" style="background:${c};box-shadow:0 0 4px ${c}"></div>`).join('')}
+        ${theme.preview.map(c=>`<div class="unlock-preview-cell" style="background:${c};opacity:0.6"></div>`).join('')}
+      </div>
+      <div class="unlock-name">${theme.name}</div>
+      <div class="unlock-req">${unlocked ? (isActive ? '✓ ACTIVE' : 'TAP TO USE') : '🔒 ' + theme.reqLabel}</div>
+      <div class="unlock-badge">${unlocked ? (isActive ? '★' : '✓') : '🔒'}</div>
+    `;
+    if(unlocked) card.onclick = () => { applyTheme(theme.id); renderThemeGrid(); };
+    grid.appendChild(card);
+  });
+}
+
+
+
+// Apply skin CSS vars to board dynamically
+
+
+document.addEventListener('DOMContentLoaded', function() {
+  canvas = document.getElementById('fx-canvas');
+  if(canvas) ctx2 = canvas.getContext('2d');
+  resizeCanvas();
+  applyTheme(activeTheme);
+  updateXPBar();
+  checkNewUnlocks();
+  updatePowerUI();
+  window.addEventListener('resize', resizeCanvas);
+  animParticles();
+
+  const sb = $id('sound-btn');
+  if(sb) sb.textContent = soundOn ? '🔊' : '🔇';
+  const bd = $id('best-display');
+  if(bd) bd.textContent = best.toLocaleString();
+  updateMenuStats();
+  document.addEventListener('touchmove', e=>e.preventDefault(), {passive:false});
+});
+</script>
+</body>
+</html>
