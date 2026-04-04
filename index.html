@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>BOOM BOOM BLOCKS</title>
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Courgette&family=Audiowide&family=Almendra:wght@700&family=Cormorant+Garamond:wght@300;400;600&family=Pacifico&family=Cinzel:wght@400;700&display=swap" rel="stylesheet">
 <meta name="mobile-web-app-capable" content="yes">
@@ -40,6 +40,8 @@
   --glow1: rgba(255,45,85,0.6);
   --glow4: rgba(10,245,255,0.6);
   --glow2: rgba(255,214,10,0.6);
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 html, body {
@@ -48,6 +50,17 @@ html, body {
   overflow: hidden;
   touch-action: none;
   user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-text-size-adjust: 100%;
+  overscroll-behavior: none;
+  -ms-content-zooming: none;
+}
+
+/* Prevent long-press context menu and image saving on all elements */
+* {
+  -webkit-touch-callout: none;
+  -webkit-user-drag: none;
 }
 
 /* ── CRT OVERLAY — only active during gameplay ── */
@@ -101,7 +114,7 @@ body.in-game::after {
   will-change: background;
 }
 
-.screen { display:none; width:100%; max-width:440px; flex-direction:column; align-items:center; min-height:100vh; }
+.screen { display:none; width:100%; max-width:440px; flex-direction:column; align-items:center; min-height:100vh; padding-bottom:var(--safe-bottom); }
 .screen.active { display:flex; }
 
 /* ── MENU ── */
@@ -265,7 +278,7 @@ body.in-game::after {
 
 header {
   width:100%;
-  padding:10px 12px 6px;
+  padding:calc(10px + var(--safe-top)) 12px 6px;
   display:flex; align-items:center; gap:6px;
   flex-shrink: 0;
   min-height: 44px;
@@ -363,6 +376,36 @@ header {
   position:relative;
   contain: layout style paint;
   box-sizing: border-box;
+}
+
+/* ── REFERRAL EXCLUSIVE BORDER ── */
+@property --referral-angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+@keyframes referralBorderSpin {
+  to { --referral-angle: 360deg; }
+}
+body.referral-border #board {
+  border-color: transparent;
+}
+body.referral-border #board::after {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: 8px;
+  background: conic-gradient(
+    from var(--referral-angle),
+    #ff2d55, #ff9f0a, #ffd60a, #30d158, #0af5ff, #bf5af2, #ff2d55
+  );
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  padding: 3px;
+  pointer-events: none;
+  z-index: 1;
+  animation: referralBorderSpin 3s linear infinite;
 }
 
 #board.shake {
@@ -2396,6 +2439,11 @@ body.theme-emoji #board {
   0%, 100% { text-shadow: 0 0 20px currentColor, 0 0 40px currentColor; }
   50% { text-shadow: 0 0 30px currentColor, 0 0 60px currentColor, 0 0 80px currentColor; }
 }
+@keyframes multiLineSlide {
+  0%   { transform:translate(-50%,-50%) translateX(-60px) scale(0.8); opacity:0; }
+  40%  { transform:translate(-50%,-50%) translateX(5px) scale(1.05); opacity:1; }
+  100% { transform:translate(-50%,-50%) translateX(0) scale(1); opacity:1; }
+}
 
 
 /* PASTEL — light dreamy theme */
@@ -3856,8 +3904,8 @@ body.theme-onyx #board { animation: onyxPulse 5s ease-in-out infinite; }
 <div id="app">
 <div id="menu-screen" class="screen active">
   <div style="display:flex;gap:20px;justify-content:center;padding-top:8px">
-    <button onclick="window.open('/privacy.html','_blank')" style="font-family:'Press Start 2P',monospace;font-size:0.28rem;color:#303050;letter-spacing:1px;background:none;border:none;padding:8px 12px;cursor:pointer">PRIVACY</button>
-    <button onclick="window.open('/terms.html','_blank')" style="font-family:'Press Start 2P',monospace;font-size:0.28rem;color:#303050;letter-spacing:1px;background:none;border:none;padding:8px 12px;cursor:pointer">TERMS</button>
+    <button onclick="window.open('/privacy.html','_blank')" style="font-family:'Press Start 2P',monospace;font-size:0.28rem;color:var(--muted);letter-spacing:1px;background:none;border:1px solid rgba(255,255,255,0.08);border-radius:4px;padding:8px 14px;cursor:pointer">PRIVACY</button>
+    <button onclick="window.open('/terms.html','_blank')" style="font-family:'Press Start 2P',monospace;font-size:0.28rem;color:var(--muted);letter-spacing:1px;background:none;border:1px solid rgba(255,255,255,0.08);border-radius:4px;padding:8px 14px;cursor:pointer">TERMS</button>
   </div>
   <div class="menu-bg-grid"></div>
 
@@ -3895,6 +3943,7 @@ body.theme-onyx #board { animation: onyxPulse 5s ease-in-out infinite; }
   <button class="menu-btn ghost" onclick="showStats()" style="border-color:var(--c4);color:var(--c4);box-shadow:0 0 15px rgba(10,245,255,0.15)">📊 STATS</button>
   <button class="menu-btn ghost" onclick="showUnlocks()" style="border-color:var(--c3);color:var(--c3);box-shadow:0 0 15px rgba(48,209,88,0.15)">🔓 UNLOCKS</button>
   <button class="menu-btn ghost" onclick="showBlockDex()" style="border-color:var(--c4);color:var(--c4);box-shadow:0 0 15px rgba(10,245,255,0.15)">🧩 BLOCK DEX</button>
+  <button class="menu-btn ghost" onclick="showReferral()" style="border-color:var(--c2);color:var(--c2);box-shadow:0 0 15px rgba(255,214,10,0.15)">🎁 INVITE FRIENDS</button>
 
 </div>
 
@@ -4168,6 +4217,24 @@ body.theme-onyx #board { animation: onyxPulse 5s ease-in-out infinite; }
 
 <script>
 function $id(id){return document.getElementById(id);}
+
+// ── NATIVE FEEL ──
+// Prevent context menu (long-press popup) everywhere
+document.addEventListener('contextmenu', e => e.preventDefault());
+
+// Prevent double-tap zoom
+let _lastTouchEnd = 0;
+document.addEventListener('touchend', e => {
+  const now = Date.now();
+  if(now - _lastTouchEnd < 300) e.preventDefault();
+  _lastTouchEnd = now;
+}, { passive: false });
+
+// Prevent pinch zoom
+document.addEventListener('touchmove', e => {
+  if(e.touches.length > 1) e.preventDefault();
+}, { passive: false });
+
 // ════════════════════════════════════
 //  PARTICLE SYSTEM
 // ════════════════════════════════════
@@ -7654,6 +7721,59 @@ function _showCrissCrossAnnounce(rows, cols) {
     setTimeout(() => el.remove(), 500);
   }, 1200);
 }
+
+const MULTI_LINE_TIERS = [
+  { min:2, text:'DOUBLE!',  emoji:'⚡', color:'#ffd60a', size:'1.3rem' },
+  { min:3, text:'TRIPLE!',  emoji:'🔥', color:'#ff6030', size:'1.6rem' },
+  { min:4, text:'QUAD!',    emoji:'💥', color:'#ff2d55', size:'1.9rem' },
+  { min:5, text:'PENTA!',   emoji:'🌟', color:'#bf5af2', size:'2.1rem' },
+  { min:6, text:'HEXA!',    emoji:'💎', color:'#0af5ff', size:'2.3rem' },
+];
+
+function _showMultiLineClear(lines) {
+  let tier = MULTI_LINE_TIERS[0];
+  for(const t of MULTI_LINE_TIERS) {
+    if(lines >= t.min) tier = t;
+  }
+
+  const old = document.querySelector('.multi-line-announce');
+  if(old) old.remove();
+
+  const el = document.createElement('div');
+  el.className = 'multi-line-announce';
+  el.style.cssText = `
+    position:fixed;
+    top:28%;
+    left:50%;
+    transform:translate(-50%,-50%);
+    pointer-events:none;
+    z-index:9790;
+    text-align:center;
+    opacity:0;
+    display:flex;
+    align-items:center;
+    gap:8px;
+  `;
+  el.innerHTML = `
+    <span style="font-size:${tier.size};line-height:1">${tier.emoji}</span>
+    <span style="font-family:'Press Start 2P',monospace;font-size:${tier.size};color:${tier.color};letter-spacing:3px;text-shadow:0 0 15px ${tier.color}, 0 0 30px ${tier.color}60, 0 2px 0 rgba(0,0,0,0.5);-webkit-text-stroke:1px rgba(0,0,0,0.2)">${tier.text}</span>
+    <span style="font-size:${tier.size};line-height:1">${tier.emoji}</span>
+  `;
+  document.body.appendChild(el);
+
+  el.style.animation = 'multiLineSlide 0.35s ease forwards';
+
+  // Particles
+  const cx = window.innerWidth / 2;
+  const cy = window.innerHeight * 0.28;
+  spawnParticles(cx, cy, tier.color, lines * 4);
+
+  setTimeout(() => {
+    el.style.animation = 'comboFloat 0.4s ease forwards';
+    setTimeout(() => el.remove(), 400);
+  }, 800);
+}
+
 // ════════════════════════════════════
 function clearLines() {
   const rowsToClear=[], colsToClear=[];
@@ -7684,6 +7804,7 @@ function clearLines() {
     comboPopup._hideTimer = setTimeout(() => { comboPopup.style.display = 'none'; }, 1200);
   }
   const lines=rowsToClear.length+colsToClear.length;
+  if(lines >= 2) _showMultiLineClear(lines);
   sessionLinesCleared+=lines;
   const ld=$id('lines-display'); if(ld) ld.textContent=sessionLinesCleared;
   checkTierStamp();
@@ -7716,6 +7837,33 @@ function clearLines() {
 
   const pts=lines*lines*800*Math.max(1,consecutiveClearCount);
   addScore(pts,lines,consecutiveClearCount);
+
+  // Multi-line bonus XP
+  if(lines >= 2) {
+    const multiBonus = lines === 2 ? 1500 : lines === 3 ? 4000 : lines === 4 ? 8000 : lines * 3000;
+    setTimeout(() => {
+      addScore(multiBonus, 0, 0, '#ffd60a');
+      const tierNames = {2:'DOUBLE', 3:'TRIPLE', 4:'QUAD', 5:'PENTA', 6:'HEXA'};
+      const name = tierNames[Math.min(lines, 6)] || 'MULTI';
+      showToast(`${name} BONUS! +${multiBonus.toLocaleString()}`);
+    }, 200);
+  }
+
+  // Criss-cross bonus XP
+  if(isCrissCross) {
+    const crossBonus = (rowsToClear.length >= 2 && colsToClear.length >= 2) ? 10000 : 5000;
+    setTimeout(() => {
+      addScore(crossBonus, 0, 0, '#bf5af2');
+    }, 400);
+  }
+
+  // Combo streak bonus XP (x3+)
+  if(consecutiveClearCount >= 3) {
+    const comboBonus = consecutiveClearCount * 1000;
+    setTimeout(() => {
+      addScore(comboBonus, 0, 0, '#0af5ff');
+    }, 300);
+  }
 
   // Mega bonus — streak saver piece completed a line
   if(_lastPlacedWasStreakSaver) {
@@ -8013,6 +8161,219 @@ function updateStreak() {
     localStorage.setItem('bb_music_lover', '1');
     setTimeout(() => showUnlockCelebration({name:'LOVER', emoji:'💜', colors:['#bf5af2','#ff2d55','#ffd60a','#0af5ff','#30d158']}, 'MUSIC TRACK'), 2000);
   }
+}
+
+// ── DAILY LOGIN BONUS ──
+function _checkDailyLoginBonus() {
+  const dk = todayKey();
+  const lastClaimed = localStorage.getItem('bb_login_bonus_day');
+  if(lastClaimed === dk) return; // already claimed today
+
+  // Calculate streak for bonus scaling
+  const yesterday = new Date(); yesterday.setDate(yesterday.getDate()-1);
+  const yk = `${yesterday.getFullYear()}-${yesterday.getMonth()+1}-${yesterday.getDate()}`;
+  const isConsecutive = lastPlayedDay === yk || lastPlayedDay === dk;
+  let loginStreak = parseInt(localStorage.getItem('bb_login_streak') || '0');
+  loginStreak = isConsecutive ? loginStreak + 1 : 1;
+  localStorage.setItem('bb_login_streak', loginStreak);
+
+  // Don't show popup on first day — only returning players get the bonus
+  if(loginStreak <= 1) {
+    localStorage.setItem('bb_login_bonus_day', dk);
+    return;
+  }
+
+  // Bonus scales with streak, caps at day 7 then repeats
+  const day = Math.min(loginStreak, 7);
+  const bonuses = {
+    1: { xp: 500,   label: 'DAY 1' },
+    2: { xp: 750,   label: 'DAY 2' },
+    3: { xp: 1000,  label: 'DAY 3' },
+    4: { xp: 1500,  label: 'DAY 4' },
+    5: { xp: 2000,  label: 'DAY 5' },
+    6: { xp: 3000,  label: 'DAY 6' },
+    7: { xp: 5000,  label: 'DAY 7!' },
+  };
+  const bonus = bonuses[day];
+
+  // Mark as claimed
+  localStorage.setItem('bb_login_bonus_day', dk);
+
+  // Show popup after a short delay so menu renders first
+  setTimeout(() => {
+    _showLoginBonusPopup(bonus, day, loginStreak);
+  }, 600);
+}
+
+function _showLoginBonusPopup(bonus, day, loginStreak) {
+  const old = document.querySelector('.login-bonus-popup');
+  if(old) old.remove();
+
+  // Build day indicator dots
+  let dots = '';
+  for(let i = 1; i <= 7; i++) {
+    const filled = i <= ((loginStreak - 1) % 7) + 1;
+    dots += `<div style="width:18px;height:18px;border-radius:50%;background:${filled ? '#ffd60a' : 'rgba(255,255,255,0.1)'};border:2px solid ${filled ? '#ffd60a' : 'rgba(255,255,255,0.15)'};display:flex;align-items:center;justify-content:center;font-size:0.2rem;color:#000;font-weight:bold">${filled ? '✓' : i}</div>`;
+  }
+
+  const el = document.createElement('div');
+  el.className = 'login-bonus-popup';
+  el.style.cssText = `
+    position:fixed; inset:0; z-index:9900;
+    display:flex; align-items:center; justify-content:center;
+    background:rgba(0,0,0,0.85); backdrop-filter:blur(6px);
+    animation: bossIntroFadeIn 0.3s ease forwards;
+  `;
+  el.innerHTML = `
+    <div style="display:flex;flex-direction:column;align-items:center;gap:12px;padding:28px;text-align:center;background:rgba(14,14,30,0.95);border:2px solid #ffd60a;border-radius:16px;box-shadow:0 0 40px rgba(255,214,10,0.3);max-width:320px;width:90%">
+      <div style="font-size:2.5rem;line-height:1">🎁</div>
+      <div style="font-family:'Press Start 2P',monospace;font-size:0.6rem;color:#ffd60a;letter-spacing:3px;text-shadow:0 0 15px rgba(255,214,10,0.6)">DAILY BONUS</div>
+      <div style="display:flex;gap:6px;align-items:center;padding:8px 0">${dots}</div>
+      <div style="font-family:'Press Start 2P',monospace;font-size:0.4rem;color:var(--text);letter-spacing:1px">${bonus.label}</div>
+      <div style="font-family:'Press Start 2P',monospace;font-size:0.9rem;color:#ffd60a;text-shadow:0 0 20px rgba(255,214,10,0.8)">+${bonus.xp.toLocaleString()} XP</div>
+      ${day === 7 ? '<div style="font-family:\'Press Start 2P\',monospace;font-size:0.3rem;color:#ff9f0a;letter-spacing:1px">🔥 WEEKLY BONUS!</div>' : ''}
+      <button onclick="this.parentElement.parentElement.remove()" style="
+        font-family:'Press Start 2P',monospace;font-size:0.4rem;
+        background:linear-gradient(180deg,#ffd60a,#ff9f0a);
+        color:#000;border:none;border-radius:8px;
+        padding:12px 28px;cursor:pointer;letter-spacing:2px;
+        box-shadow:0 0 20px rgba(255,214,10,0.4);
+        margin-top:4px;
+      ">CLAIM</button>
+    </div>
+  `;
+  document.body.appendChild(el);
+
+  // Particles
+  const cx = window.innerWidth / 2, cy = window.innerHeight / 2;
+  spawnParticles(cx, cy, '#ffd60a', 15);
+  spawnParticles(cx, cy, '#fff', 8);
+
+  // Award the XP when popup is shown
+  const total = parseInt(localStorage.getItem('bb_total_score') || '0');
+  localStorage.setItem('bb_total_score', total + bonus.xp);
+  incStat('total_score', bonus.xp);
+  updateXPBar();
+
+  if(hasSFXFile('levelup')) sfxFile('levelup'); else sfxPowerEarned();
+  haptic([20, 10, 40, 10, 60]);
+}
+
+// ── REFERRAL SYSTEM ──
+function _getReferralCount() {
+  return parseInt(localStorage.getItem('bb_referrals') || '0');
+}
+
+const REFERRAL_REWARDS = [
+  { at: 1,  xp: 2000,  label: '1 FRIEND',   reward: '+2,000 XP' },
+  { at: 3,  xp: 5000,  label: '3 FRIENDS',   reward: '+5,000 XP' },
+  { at: 5,  xp: 10000, label: '5 FRIENDS',   reward: '+10,000 XP' },
+  { at: 10, xp: 25000, label: '10 FRIENDS',  reward: '+25,000 XP + 🏜️ EXCLUSIVE BORDER' },
+];
+
+function showReferral() {
+  sfxMenu();
+  const old = document.querySelector('.referral-popup');
+  if(old) old.remove();
+
+  const count = _getReferralCount();
+  const shareUrl = 'https://boomboomblocks.com';
+  const shareText = `I'm playing Boom Boom Blocks — a free arcade puzzle game! Can you beat my high score? 🎮💥`;
+
+  // Build reward tiers
+  let tiersHtml = '';
+  REFERRAL_REWARDS.forEach(tier => {
+    const claimed = count >= tier.at;
+    tiersHtml += `
+      <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.05)">
+        <div style="width:24px;height:24px;border-radius:50%;background:${claimed ? '#30d158' : 'rgba(255,255,255,0.1)'};border:2px solid ${claimed ? '#30d158' : 'rgba(255,255,255,0.15)'};display:flex;align-items:center;justify-content:center;font-size:0.55rem;flex-shrink:0">${claimed ? '✓' : ''}</div>
+        <div style="flex:1">
+          <div style="font-family:'Press Start 2P',monospace;font-size:0.3rem;color:${claimed ? '#30d158' : 'var(--text)'};letter-spacing:1px">${tier.label}</div>
+          <div style="font-family:'Press Start 2P',monospace;font-size:0.25rem;color:var(--muted);margin-top:2px">${tier.reward}</div>
+        </div>
+      </div>
+    `;
+  });
+
+  const el = document.createElement('div');
+  el.className = 'referral-popup';
+  el.style.cssText = `
+    position:fixed; inset:0; z-index:9900;
+    display:flex; align-items:center; justify-content:center;
+    background:rgba(0,0,0,0.85); backdrop-filter:blur(6px);
+    animation: bossIntroFadeIn 0.3s ease forwards;
+  `;
+  el.innerHTML = `
+    <div style="display:flex;flex-direction:column;align-items:center;gap:10px;padding:24px;text-align:center;background:rgba(14,14,30,0.95);border:2px solid var(--c2);border-radius:16px;box-shadow:0 0 40px rgba(255,214,10,0.2);max-width:340px;width:92%">
+      <div style="font-size:2rem;line-height:1">🎁</div>
+      <div style="font-family:'Press Start 2P',monospace;font-size:0.55rem;color:var(--c2);letter-spacing:3px">INVITE FRIENDS</div>
+      <div style="font-family:'Press Start 2P',monospace;font-size:0.28rem;color:var(--muted);line-height:1.8;letter-spacing:0.5px">Share the game and earn<br>rewards for each friend!</div>
+      <div style="font-family:'Press Start 2P',monospace;font-size:0.35rem;color:var(--c4);letter-spacing:1px;padding:6px 0">${count} FRIEND${count !== 1 ? 'S' : ''} INVITED</div>
+      <div style="width:100%;text-align:left">${tiersHtml}</div>
+      <button onclick="_shareReferral()" style="
+        font-family:'Press Start 2P',monospace;font-size:0.38rem;
+        background:linear-gradient(180deg,#ffd60a,#ff9f0a);
+        color:#000;border:none;border-radius:8px;
+        padding:12px 24px;cursor:pointer;letter-spacing:2px;
+        box-shadow:0 0 20px rgba(255,214,10,0.3);
+        width:100%;margin-top:4px;
+      ">📤 SHARE GAME</button>
+      <button onclick="this.parentElement.parentElement.remove()" style="
+        font-family:'Press Start 2P',monospace;font-size:0.3rem;
+        background:none;color:var(--muted);border:1px solid rgba(255,255,255,0.1);
+        border-radius:6px;padding:8px 20px;cursor:pointer;letter-spacing:1px;
+      ">CLOSE</button>
+    </div>
+  `;
+  document.body.appendChild(el);
+}
+
+function _shareReferral() {
+  const shareUrl = 'https://boomboomblocks.com';
+  const shareText = `I'm playing Boom Boom Blocks — a free arcade puzzle game! Can you beat my high score? 🎮💥`;
+
+  if(navigator.share) {
+    navigator.share({
+      title: 'Boom Boom Blocks',
+      text: shareText,
+      url: shareUrl,
+    }).then(() => {
+      _onReferralShared();
+    }).catch(() => {});
+  } else {
+    // Fallback — copy link to clipboard
+    navigator.clipboard.writeText(shareUrl + '\n' + shareText).then(() => {
+      _onReferralShared();
+      showToast('📋 LINK COPIED!');
+    }).catch(() => {
+      showToast('⚠️ COULD NOT COPY LINK');
+    });
+  }
+}
+
+function _onReferralShared() {
+  let count = _getReferralCount() + 1;
+  localStorage.setItem('bb_referrals', count);
+
+  // Check for reward unlocks
+  REFERRAL_REWARDS.forEach(tier => {
+    const key = 'bb_referral_' + tier.at;
+    if(count >= tier.at && !localStorage.getItem(key)) {
+      localStorage.setItem(key, '1');
+      incStat('total_score', tier.xp);
+      updateXPBar();
+      setTimeout(() => {
+        showToast(`🎁 REFERRAL REWARD! +${tier.xp.toLocaleString()} XP`);
+        flashPower('#ffd60a');
+        spawnParticles(window.innerWidth/2, window.innerHeight/2, '#ffd60a', 15);
+        if(hasSFXFile('unlock')) sfxFile('unlock'); else sfxUnlock();
+      }, 300);
+    }
+  });
+
+  // Refresh the popup
+  const old = document.querySelector('.referral-popup');
+  if(old) { old.remove(); showReferral(); }
 }
 
 function finishClassic() {
@@ -10931,6 +11292,13 @@ function applyTheme(id) {
   // Blossom theme — start/stop petals
   if(id === 'blossom') startPetals(); else stopPetals();
 
+  // Referral exclusive border
+  if(localStorage.getItem('bb_referral_10')) {
+    document.body.classList.add('referral-border');
+  } else {
+    document.body.classList.remove('referral-border');
+  }
+
   // Rainbow — inject/remove SVG rainbow arc behind title
   const logoWrap = document.querySelector('.logo-wrap');
   if(logoWrap) {
@@ -11954,6 +12322,7 @@ document.addEventListener('DOMContentLoaded', function() {
   const bd = $id('best-display');
   if(bd) bd.textContent = best.toLocaleString();
   updateMenuStats();
+  _checkDailyLoginBonus();
   document.addEventListener('touchmove', e => {
     // Only block scroll when actively dragging a piece on the game screen
     const gameScreen = $id('game-screen');
