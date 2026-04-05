@@ -2365,16 +2365,6 @@ body.theme-emoji #board {
   100% { opacity:0; transform:translate(-50%,-50%) scale(0.85); }
 }
 
-@keyframes goldenPopIn {
-  0%   { opacity:0; transform:translate(-50%,-50%) scale(0.3) rotate(-3deg); }
-  50%  { opacity:1; transform:translate(-50%,-50%) scale(1.1) rotate(1deg); }
-  100% { opacity:1; transform:translate(-50%,-50%) scale(1) rotate(0deg); }
-}
-@keyframes goldenPopOut {
-  0%   { opacity:1; transform:translate(-50%,-50%) scale(1); }
-  100% { opacity:0; transform:translate(-50%,-50%) scale(0.8) translateY(10px); }
-}
-
 
 #combo-popup { transition: opacity 0.3s; }
 #combo-popup.pop { animation: comboBoardPop 0.3s cubic-bezier(0.175,0.885,0.32,1.275); }
@@ -7788,11 +7778,25 @@ function clearLines() {
 
   consecutiveClearCount++;
   const isCrissCross = rowsToClear.length > 0 && colsToClear.length > 0;
+  const lines=rowsToClear.length+colsToClear.length;
+  const hasMultiLine = lines >= 2;
+
+  // Criss-cross shows independently (different position)
   if(isCrissCross) {
     _showCrissCrossAnnounce(rowsToClear.length, colsToClear.length);
-  } else {
+  }
+
+  // Multi-line and combo share the same screen space — only one at a time
+  if(hasMultiLine) {
+    _showMultiLineClear(lines);
+    // Delay combo announcement so it appears after multi-line fades
+    if(consecutiveClearCount >= 2 && !isCrissCross) {
+      setTimeout(() => _showComboAnnounce(consecutiveClearCount), 850);
+    }
+  } else if(!isCrissCross) {
     _showComboAnnounce(consecutiveClearCount);
   }
+
   const comboPopup = $id('combo-popup');
   if(comboPopup) {
     comboPopup.style.display = 'block';
@@ -7803,8 +7807,6 @@ function clearLines() {
     clearTimeout(comboPopup._hideTimer);
     comboPopup._hideTimer = setTimeout(() => { comboPopup.style.display = 'none'; }, 1200);
   }
-  const lines=rowsToClear.length+colsToClear.length;
-  if(lines >= 2) _showMultiLineClear(lines);
   sessionLinesCleared+=lines;
   const ld=$id('lines-display'); if(ld) ld.textContent=sessionLinesCleared;
   checkTierStamp();
@@ -7872,9 +7874,9 @@ function clearLines() {
     setTimeout(() => {
       addScore(megaBonus, 0, 0, '#ffd60a');
       flashPower('#ffd60a');
+      flashScreen('rgba(255,214,10,0.25)');
       haptic([20, 10, 40, 10, 80, 10, 120]);
       if(hasSFXFile('golden')) sfxFile('golden'); else sfxGloryBlock();
-      _showGoldenStreakPopup(lines);
     }, 350);
   } else {
     _lastPlacedWasStreakSaver = false;
@@ -12165,42 +12167,6 @@ function showPowerReminder() {
   popup.classList.add('show');
   clearTimeout(popup._timer);
   popup._timer = setTimeout(() => popup.classList.remove('show'), 3000);
-}
-
-function _showGoldenStreakPopup(lines) {
-  const old = document.querySelector('.golden-streak-popup');
-  if(old) old.remove();
-  const el = document.createElement('div');
-  el.className = 'golden-streak-popup';
-  el.style.cssText = `
-    position:fixed; top:50%; left:50%;
-    transform:translate(-50%,-50%) scale(0.3);
-    background:rgba(8,8,16,0.95);
-    border:3px solid #ffd60a;
-    border-radius:16px;
-    padding:20px 28px;
-    display:flex; flex-direction:column; align-items:center; gap:8px;
-    z-index:9999; pointer-events:none; text-align:center;
-    box-shadow:0 0 40px rgba(255,214,10,0.5), 0 0 80px rgba(255,214,10,0.2);
-    opacity:0;
-    animation: goldenPopIn 0.5s cubic-bezier(0.175,0.885,0.32,1.275) forwards;
-  `;
-  el.innerHTML = `
-    <div style="font-size:2.2rem;line-height:1;text-shadow:0 0 20px gold">⭐</div>
-    <div style="font-family:'Press Start 2P',monospace;font-size:0.7rem;color:#ffd60a;letter-spacing:3px;text-shadow:0 0 15px rgba(255,214,10,0.8)">GOLDEN STREAK</div>
-    <div style="font-family:'Press Start 2P',monospace;font-size:1.2rem;color:#fff;text-shadow:0 0 12px rgba(255,214,10,0.6)">×${lines}</div>
-  `;
-  document.body.appendChild(el);
-
-  // Particles
-  const cx = window.innerWidth / 2, cy = window.innerHeight / 2;
-  spawnParticles(cx, cy, '#ffd60a', 15);
-  spawnParticles(cx, cy, '#fff', 8);
-
-  setTimeout(() => {
-    el.style.animation = 'goldenPopOut 0.3s ease forwards';
-    setTimeout(() => el.remove(), 350);
-  }, 1800);
 }
 
 function showGloryPopup() {
