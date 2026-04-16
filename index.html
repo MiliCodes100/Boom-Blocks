@@ -5,7 +5,7 @@
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>BOOM BOOM BLOCKS</title>
-<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Courgette&family=Audiowide&family=Almendra:wght@700&family=Cormorant+Garamond:wght@300;400;600&family=Pacifico&family=Cinzel:wght@400;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Courgette&family=Audiowide&family=Almendra:wght@700&family=Cormorant+Garamond:wght@300;400;600&family=Pacifico&family=Cinzel:wght@400;700&family=Creepster&family=Fredoka:wght@500;700&display=swap" rel="stylesheet">
 <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -111,7 +111,6 @@ body.in-game::after {
   scroll-behavior:smooth;
   -webkit-overflow-scrolling:touch;
   touch-action:pan-y;
-  will-change: background;
 }
 
 .screen { display:none; width:100%; max-width:440px; flex-direction:column; align-items:center; min-height:100vh; padding-bottom:var(--safe-bottom); }
@@ -1599,6 +1598,17 @@ body.theme-toxic .menu-btn:hover {
 body.theme-toxic #board {
   box-shadow: 0 0 40px rgba(0,255,65,0.25), inset 0 0 30px rgba(0,255,65,0.05) !important;
 }
+body.theme-toxic .logo-boom,
+body.theme-toxic .logo-blocks {
+  font-family: 'Creepster', cursive !important;
+  letter-spacing: 4px;
+}
+body.theme-toxic .menu-btn,
+body.theme-toxic .score-label,
+body.theme-toxic .mode-label {
+  font-family: 'Creepster', cursive !important;
+  letter-spacing: 2px;
+}
 
 /* CANDY — pastel sweet shop */
 body.theme-candy {
@@ -2111,6 +2121,19 @@ body.theme-wood .cell.highlight {
 /* RAINBOW — full spectrum celebration */
 body.theme-rainbow .menu-btn {
   background: transparent !important;
+}
+body.theme-rainbow .logo-boom,
+body.theme-rainbow .logo-blocks {
+  font-family: 'Fredoka', sans-serif !important;
+  letter-spacing: 3px;
+  font-weight: 700;
+}
+body.theme-rainbow .menu-btn,
+body.theme-rainbow .score-label,
+body.theme-rainbow .mode-label {
+  font-family: 'Fredoka', sans-serif !important;
+  letter-spacing: 1px;
+  font-weight: 500;
 }
 body.theme-rainbow .menu-btn:nth-of-type(1) {
   border-color: #ff0000 !important; color: #ff0000 !important;
@@ -4243,6 +4266,8 @@ const colorHex = {
 };
 
 function spawnParticles(x, y, color, count=12) {
+  // Cap total active particles to prevent frame drops
+  if(particles.length > 300) return;
   const hex = colorHex[color] || color || '#0af5ff';
   for (let i = 0; i < count; i++) {
     const angle = (Math.PI * 2 * i / count) + (Math.random() - 0.5) * 0.5;
@@ -7098,20 +7123,21 @@ function _initBoardCells() {
   _cellCache = [];
   // Set grid columns based on current board size
   el.style.gridTemplateColumns = `repeat(${COLS},1fr)`;
-  // Build scanline overlay once
+  // Build all cells using a fragment for a single DOM insertion
+  const frag = document.createDocumentFragment();
   const overlay = document.createElement('div');
   overlay.id = 'board-scanline';
   overlay.style.cssText = 'position:absolute;inset:0;pointer-events:none;z-index:10;border-radius:6px;background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,0.04) 3px,rgba(0,0,0,0.04) 4px)';
-  el.appendChild(overlay);
-  // Build all cells once
+  frag.appendChild(overlay);
   for(let r = 0; r < ROWS; r++) for(let c = 0; c < COLS; c++) {
     const cell = document.createElement('div');
     cell.className = 'cell';
     cell.dataset.r = r;
     cell.dataset.c = c;
-    el.appendChild(cell);
+    frag.appendChild(cell);
     _cellCache.push(cell);
   }
+  el.appendChild(frag);
   _boardInitialized = true;
   _prevBoard = Array.from({length: ROWS}, () => Array(COLS).fill(null));
   const first = el.querySelector('.cell');
@@ -7125,8 +7151,10 @@ function renderBoard() {
     _initBoardCells();
   }
 
-  const isGlass = (THEMES.find(t => t.id === activeTheme) || {}).glassStyle;
+  const _rbTheme = THEMES.find(t => t.id === activeTheme) || THEMES[0];
+  const isGlass = _rbTheme.glassStyle;
   const cells = (_cellCache.length ? _cellCache : el.querySelectorAll('.cell'));
+  const snakeColor = _drSnakeBody.length ? _getSnakeColor() : null;
 
   for(let r = 0; r < ROWS; r++) for(let c = 0; c < COLS; c++) {
     if(!board[r]) continue;
@@ -7146,7 +7174,7 @@ function renderBoard() {
       cell.style.cssText = 'background:repeating-linear-gradient(-45deg,#333 0px,#333 4px,#111 4px,#111 8px);box-shadow:0 0 4px rgba(100,100,100,0.4);outline:1.5px solid #555;outline-offset:-1.5px;border-radius:3px';
       cell.textContent = '';
     } else if(color === SNAKE_COLOR) {
-      const sc = _getSnakeColor();
+      const sc = snakeColor;
       cell.className = 'cell filled snake-cell';
       cell.style.cssText = `background:${sc};box-shadow:0 0 10px ${sc};outline:1.5px solid ${sc};outline-offset:-1.5px;border-radius:3px`;
       cell.textContent = '';
@@ -7176,8 +7204,7 @@ function renderBoard() {
       cell.className = 'cell';
       cell.style.cssText = '';
       cell.textContent = '';
-      const oldEyes2 = cell.querySelector('.snake-eyes');
-      if(oldEyes2) oldEyes2.remove();
+      if(_drSnakeBody.length) { const oldEyes2 = cell.querySelector('.snake-eyes'); if(oldEyes2) oldEyes2.remove(); }
     }
     if(_prevBoard && _prevBoard[r]) _prevBoard[r][c] = color;
   }
@@ -7187,27 +7214,34 @@ function renderBoard() {
     if(first) cellSize = first.getBoundingClientRect().width;
   }
   // Render bomb icons on existing bomb cells
-  // Snake head eyes — remove all old eyes first, then add to head
+  // Snake head eyes — only clean old body cells, not ALL cells
   if(_drSnakeBody.length > 0) {
     const cells2 = _cellCache.length ? _cellCache : el.querySelectorAll('.cell');
-    // Clear eyes from ALL cells
-    cells2.forEach(c => { const e = c.querySelector('.snake-eyes'); if(e) e.remove(); });
+    // Remove eyes from body cells only (head will get fresh ones)
+    for(let i = 1; i < _drSnakeBody.length; i++) {
+      const seg = _drSnakeBody[i];
+      const c = cells2[seg.r * COLS + seg.c];
+      if(c) { const e = c.querySelector('.snake-eyes'); if(e) e.remove(); }
+    }
     // Add eyes to head only
     const head = _drSnakeBody[0];
     const headCell = cells2[head.r * COLS + head.c];
     if(headCell) {
-      const eyes = document.createElement('div');
-      eyes.className = 'snake-eyes';
-      eyes.style.cssText = `
-        position:absolute; inset:0;
-        display:flex; align-items:center; justify-content:center; gap:25%;
-        pointer-events:none; z-index:1;
-      `;
-      eyes.innerHTML = `
-        <div style="width:22%;height:22%;background:#000;border-radius:50%;box-shadow:inset 0 0 1px rgba(255,255,255,0.5)"></div>
-        <div style="width:22%;height:22%;background:#000;border-radius:50%;box-shadow:inset 0 0 1px rgba(255,255,255,0.5)"></div>
-      `;
-      headCell.appendChild(eyes);
+      let eyes = headCell.querySelector('.snake-eyes');
+      if(!eyes) {
+        eyes = document.createElement('div');
+        eyes.className = 'snake-eyes';
+        eyes.style.cssText = `
+          position:absolute; inset:0;
+          display:flex; align-items:center; justify-content:center; gap:25%;
+          pointer-events:none; z-index:1;
+        `;
+        eyes.innerHTML = `
+          <div style="width:22%;height:22%;background:#000;border-radius:50%;box-shadow:inset 0 0 1px rgba(255,255,255,0.5)"></div>
+          <div style="width:22%;height:22%;background:#000;border-radius:50%;box-shadow:inset 0 0 1px rgba(255,255,255,0.5)"></div>
+        `;
+        headCell.appendChild(eyes);
+      }
     }
   }
 
@@ -7819,13 +7853,18 @@ function clearLines() {
   const cells=(_cellCache.length ? _cellCache : document.querySelectorAll('#board .cell'));
   
   // Spawn particles for each cleared cell
+  let _clearIdx = 0;
   toClear.forEach(idx=>{
     const cell=cells[idx];
     if(!cell) return;
     cell.classList.add('clearing');
-    const rect=cell.getBoundingClientRect();
-    const color=board[Math.floor(idx/COLS)][idx%COLS]||'var(--c4)';
-    spawnParticles(rect.left+rect.width/2, rect.top+rect.height/2, color, 6);
+    // For large clears, only spawn particles on every other cell
+    if(toClear.size <= 16 || _clearIdx % 2 === 0) {
+      const rect=cell.getBoundingClientRect();
+      const color=board[Math.floor(idx/COLS)][idx%COLS]||'var(--c4)';
+      spawnParticles(rect.left+rect.width/2, rect.top+rect.height/2, color, toClear.size > 16 ? 4 : 6);
+    }
+    _clearIdx++;
   });
 
   // Screen shake — stronger for more lines
@@ -10762,7 +10801,8 @@ const THEMES = [
     colors:['#00ff41','#39ff14','#7fff00','#adff2f','#00e600','#33ff33','#b3ff00'],
     boardBg:'#041504', boardBorder:'rgba(0,255,65,0.3)',
     preview:['#00ff41','#39ff14','#7fff00','#adff2f','#00e600'],
-    emoji:'☢️'
+    emoji:'☢️',
+    font: "'Creepster', cursive"
   },
   {
     id:'crt', name:'CRT', req:'stage5', reqLabel:'CLEAR STAGE 5', category:'roguelike',
@@ -10806,7 +10846,8 @@ const THEMES = [
     colors:['#ff0000','#ff7700','#ffee00','#00cc00','#0099ff','#7700ff','#ff00cc'],
     boardBg:'#100015', boardBorder:'rgba(255,100,255,0.3)',
     preview:['#ff0000','#ff7700','#ffee00','#00cc00','#0099ff'],
-    emoji:'🌈'
+    emoji:'🌈',
+    font: "'Fredoka', sans-serif"
   },
   // ── SPECIAL UNLOCKS ──
   // ── DUNE ──
