@@ -2,6 +2,8 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>BOOM BOOM BLOCKS</title>
@@ -14,12 +16,16 @@
 <link rel="manifest" href="manifest.json">
   <link rel="icon" type="image/png" href="icon-192.png">
 <meta property="og:title" content="Boom Boom Blocks">
-<meta property="og:description" content="Free arcade block puzzle game">
+<meta property="og:description" content="Free arcade block puzzle game with roguelike mode, boss battles, power-ups, and combos. Can you beat the leaderboard?">
 <meta property="og:url" content="https://boomboomblocks.com">
 <meta property="og:type" content="website">
-<meta name="twitter:card" content="summary">
+<meta property="og:image" content="https://boomboomblocks.com/icon-512.png">
+<meta property="og:image:width" content="512">
+<meta property="og:image:height" content="512">
+<meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Boom Boom Blocks">
-<meta name="twitter:description" content="Free arcade block puzzle game">
+<meta name="twitter:description" content="Free arcade block puzzle game with roguelike mode, boss battles, power-ups, and combos!">
+<meta name="twitter:image" content="https://boomboomblocks.com/icon-512.png">
 <link rel="apple-touch-icon" href="icon-192.png">
 <style>
 * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
@@ -4200,6 +4206,7 @@ body.theme-onyx #board { animation: onyxPulse 5s ease-in-out infinite; }
   <div style="width:100%" id="dr-rc-stats"></div>
   <button class="menu-btn daily" onclick="startDaily()" style="width:100%;margin-top:8px">⚔️ PLAY AGAIN</button>
   <button class="menu-btn ghost" onclick="shareScoreImage()" style="width:100%;margin-top:0">📸 SHARE RESULT</button>
+  <div id="dr-social" style="display:flex;gap:6px;width:100%;justify-content:center;margin-top:2px"></div>
   <button class="menu-btn ghost" onclick="goMenu()" style="width:100%;margin-top:0">◀ BACK TO MENU</button>
 </div>
 
@@ -4229,6 +4236,7 @@ body.theme-onyx #board { animation: onyxPulse 5s ease-in-out infinite; }
       <button class="btn secondary" onclick="goMenu()" style="flex:1">⬡ MENU</button>
     </div>
     <button class="btn ghost" onclick="shareScoreImage()" style="width:100%;margin-top:0">📸 SHARE SCORE</button>
+    <div id="go-social" style="display:flex;gap:6px;width:100%;justify-content:center;margin-top:2px"></div>
     <button class="btn ad-retry" id="ad-retry-btn" onclick="adRetry()" style="display:none;width:100%">📺 WATCH AD TO CONTINUE</button>
   </div>
 </div>
@@ -4350,15 +4358,6 @@ function spawnParticles(x, y, color, count=12) {
   }
   // Restart animation loop if it was idle
   if(!_particleAnimRunning) { _particleAnimRunning = true; requestAnimationFrame(animParticles); }
-}
-
-function spawnLineClear(cells, color) {
-  cells.forEach(cell => {
-    const rect = cell.getBoundingClientRect();
-    const x = rect.left + rect.width / 2;
-    const y = rect.top + rect.height / 2;
-    spawnParticles(x, y, color, 8);
-  });
 }
 
 let _particleAnimRunning = false;
@@ -6298,7 +6297,7 @@ function _drShowFloorComplete(floor, floorScore, isLastFloorOfStage) {
 
   // Particles
   const cx = window.innerWidth / 2, cy = window.innerHeight / 2;
-  const theme = THEMES.find(t => t.id === activeTheme) || THEMES[0];
+  const theme = _getTheme();
   theme.colors.forEach(col => spawnParticles(cx, cy, col, 5));
 
   const globalFloor = _drStage * DAILY_RUN_FLOORS.length + _drFloor + 1;
@@ -6726,7 +6725,7 @@ function _drShowRunComplete(result) {
   // Particles
   if(result.cleared) {
     const cx = window.innerWidth / 2, cy = window.innerHeight / 2;
-    const theme = THEMES.find(t => t.id === activeTheme) || THEMES[0];
+    const theme = _getTheme();
     for(let i = 0; i < 4; i++) setTimeout(() => theme.colors.forEach(c => spawnParticles(cx, cy, c, 4)), i * 200);
   }
   } catch(e) {
@@ -6734,6 +6733,7 @@ function _drShowRunComplete(result) {
     console.error('[BBB] _drShowRunComplete error:', e);
     showScreen('dr-run-complete');
   }
+  _populateSocialButtons();
 }
 
 function shareScoreImage() {
@@ -6745,7 +6745,7 @@ function shareScoreImage() {
   const ctx = canvas.getContext('2d');
 
   // Get current theme colors
-  const theme = THEMES.find(t => t.id === activeTheme) || THEMES[0];
+  const theme = _getTheme();
   const c1 = theme.colors[0], c2 = theme.colors[1], c3 = theme.colors[2];
 
   // Background
@@ -6873,6 +6873,77 @@ function shareScoreImage() {
   }, 'image/png');
 }
 
+// ── SOCIAL SHARE BUTTONS ──
+function _getShareText(s) {
+  return `I scored ${(s || score).toLocaleString()} in Boom Boom Blocks! Can you beat it? 🎮💥`;
+}
+
+function _shareToTwitter(text) {
+  const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent('https://boomboomblocks.com')}`;
+  window.open(url, '_blank', 'width=600,height=400');
+}
+
+function _shareToWhatsApp(text) {
+  const url = `https://wa.me/?text=${encodeURIComponent(text + '\nhttps://boomboomblocks.com')}`;
+  window.open(url, '_blank');
+}
+
+function _shareToFacebook() {
+  const url = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent('https://boomboomblocks.com')}`;
+  window.open(url, '_blank', 'width=600,height=400');
+}
+
+function _shareToReddit(text) {
+  const url = `https://reddit.com/submit?url=${encodeURIComponent('https://boomboomblocks.com')}&title=${encodeURIComponent(text)}`;
+  window.open(url, '_blank', 'width=800,height=600');
+}
+
+function _copyShareLink(s) {
+  const text = _getShareText(s) + '\nhttps://boomboomblocks.com';
+  navigator.clipboard.writeText(text).then(() => {
+    showToast('📋 COPIED TO CLIPBOARD!');
+  }).catch(() => {
+    showToast('⚠️ COULD NOT COPY');
+  });
+}
+
+function _renderSocialButtons(containerId, scoreVal) {
+  const el = $id(containerId);
+  if(!el) return;
+  const text = _getShareText(scoreVal);
+  const btnStyle = `
+    font-size:1.1rem; padding:6px 10px; border:none; border-radius:6px;
+    cursor:pointer; line-height:1; flex:1; max-width:48px;
+  `;
+  el.innerHTML = `
+    <button onclick="_shareToTwitter('${text.replace(/'/g, "\\'")}')" style="${btnStyle}background:#1da1f2;color:#fff" title="Share on X/Twitter">𝕏</button>
+    <button onclick="_shareToWhatsApp('${text.replace(/'/g, "\\'")}')" style="${btnStyle}background:#25d366;color:#fff" title="Share on WhatsApp">💬</button>
+    <button onclick="_shareToFacebook()" style="${btnStyle}background:#1877f2;color:#fff" title="Share on Facebook">f</button>
+    <button onclick="_shareToReddit('${text.replace(/'/g, "\\'")}')" style="${btnStyle}background:#ff4500;color:#fff" title="Share on Reddit">↗</button>
+    <button onclick="_copyShareLink(${scoreVal || 0})" style="${btnStyle}background:var(--surface2);color:var(--text);border:1px solid rgba(255,255,255,0.1)" title="Copy link">📋</button>
+  `;
+}
+
+// Called when showing game over / run complete to populate social buttons
+function _populateSocialButtons() {
+  const goScore = parseInt(($id('final-score')?.textContent || '0').replace(/,/g, ''));
+  _renderSocialButtons('go-social', goScore);
+  const drScore = parseInt(($id('dr-rc-score')?.textContent || '0').replace(/,/g, ''));
+  _renderSocialButtons('dr-social', drScore);
+}
+
+// ── MILESTONE SHARE ──
+function _shareMilestone(title, desc) {
+  const text = `${title} ${desc} in Boom Boom Blocks! 🎮💥`;
+  if(navigator.share) {
+    navigator.share({ title: 'Boom Boom Blocks', text, url: 'https://boomboomblocks.com' }).catch(() => {});
+  } else {
+    navigator.clipboard.writeText(text + '\nhttps://boomboomblocks.com').then(() => {
+      showToast('📋 COPIED TO CLIPBOARD!');
+    }).catch(() => {});
+  }
+}
+
 function restartGame() {
   sfxMenu(); closeOverlays();
   if(isDaily) goMenu(); else initGame();
@@ -6916,7 +6987,7 @@ function initGame() {
 
   if (isDaily) {
     // Roguelike: always start with a random epic T4 piece in a random slot
-    const _theme = THEMES.find(t=>t.id===activeTheme)||THEMES[0];
+    const _theme = _getTheme();
     const color = _theme.colors[Math.floor(Math.random() * _theme.colors.length)];
     const pick = PIECES_T4[Math.floor(Math.random() * PIECES_T4.length)];
     const slot = Math.floor(Math.random() * 3);
@@ -6928,7 +6999,7 @@ function initGame() {
 
     // 1% chance of GLORY BLOCK on very first tray (board must be empty)
     if (_gloryRoll) {
-      const _gt = THEMES.find(t=>t.id===activeTheme)||THEMES[0];
+      const _gt = _getTheme();
       const gloryColor = _gt.colors[Math.floor(Math.random() * _gt.colors.length)];
       pieces[0] = { shape: GLORY_BLOCK, color: gloryColor, hex: gloryColor, isGlory: true };
       setTimeout(() => { showGloryPopup(); sfxGloryBlock(); }, 300);
@@ -6938,12 +7009,12 @@ function initGame() {
     // CURSED: level 20+ only, 10% chance it replaces the normal pick
     if(getLevel() >= 20 && rng() < 0.10) insanePieces.splice(0, insanePieces.length, CURSED_PIECE);
         const pick = insanePieces[Math.floor(Math.random() * insanePieces.length)];
-        const _theme = THEMES.find(t=>t.id===activeTheme)||THEMES[0];
+        const _theme = _getTheme();
         const color = _theme.colors[Math.floor(Math.random() * _theme.colors.length)];
         const slot = Math.floor(Math.random() * 3);
         pieces[slot] = { shape: pick, color, hex: color };
       } else if (_epicRoll) {
-        const _theme = THEMES.find(t=>t.id===activeTheme)||THEMES[0];
+        const _theme = _getTheme();
         const color = _theme.colors[Math.floor(Math.random() * _theme.colors.length)];
         const pick = PIECES_T4[Math.floor(Math.random() * PIECES_T4.length)];
         const slot = Math.floor(Math.random() * 3);
@@ -6978,7 +7049,7 @@ function _invertColor(hex) {
 }
 
 function _getSnakeColor() {
-  const theme = THEMES.find(t => t.id === activeTheme) || THEMES[0];
+  const theme = _getTheme();
   const mainColor = theme.colors[0] || '#ff2d55';
   return _invertColor(mainColor);
 }
@@ -7070,7 +7141,7 @@ const EASY_PHASE_PIECES = 9; // first 3 trays are easy
 
 function rngPieceEasy() {
   const shape = EASY_PIECES[Math.floor(rng() * EASY_PIECES.length)];
-  const theme = THEMES.find(t => t.id === activeTheme) || THEMES[0];
+  const theme = _getTheme();
   const palette = theme.colors;
   const color = palette[Math.floor(rng() * palette.length)];
   return { shape, color, hex: colorHex[color] || color || '#0af5ff' };
@@ -7135,7 +7206,7 @@ function scorePieceUsefulnessFast(shape) {
 }
 
 function rngPiece() {
-  const theme = THEMES.find(t => t.id === activeTheme) || THEMES[0];
+  const theme = _getTheme();
   const palette = theme.colors;
 
   // Filter to only placeable pieces from active tier pool
@@ -7216,7 +7287,7 @@ function renderBoard() {
     _initBoardCells();
   }
 
-  const _rbTheme = THEMES.find(t => t.id === activeTheme) || THEMES[0];
+  const _rbTheme = _getTheme();
   const isGlass = _rbTheme.glassStyle;
   const cells = (_cellCache.length ? _cellCache : el.querySelectorAll('.cell'));
   const snakeColor = _drSnakeBody.length ? _getSnakeColor() : null;
@@ -7610,7 +7681,7 @@ function refillPieces() {
       const idx = t5Indices.pop();
       const safePool = [...PIECES_T1, ...PIECES_T2, ...PIECES_T3];
       const safeShape = safePool[Math.floor(Math.random() * safePool.length)];
-      const theme = THEMES.find(t => t.id === activeTheme) || THEMES[0];
+      const theme = _getTheme();
       const color = theme.colors[Math.floor(Math.random() * theme.colors.length)];
       pieces[idx] = { shape: safeShape, color, hex: colorHex[color] || color || '#0af5ff' };
     }
@@ -7624,7 +7695,7 @@ function refillPieces() {
       const idx = t4Indices.pop();
       const safePool = [...PIECES_T1, ...PIECES_T2, ...PIECES_T3];
       const safeShape = safePool[Math.floor(Math.random() * safePool.length)];
-      const theme = THEMES.find(t => t.id === activeTheme) || THEMES[0];
+      const theme = _getTheme();
       const color = theme.colors[Math.floor(Math.random() * theme.colors.length)];
       pieces[idx] = { shape: safeShape, color, hex: colorHex[color] || color || '#0af5ff' };
     }
@@ -8069,7 +8140,7 @@ function addScore(pts,lines,combo,blockColor) {
   // Combo banner
   const comboLabels={2:'DOUBLE!',3:'TRIPLE!',4:'QUAD!!',5:'PENTA!!'};
   const consecLabels={2:'COMBO x2',3:'COMBO x3',4:'ON FIRE! 🔥',5:'UNSTOPPABLE!!'};
-  const _ct = THEMES.find(t=>t.id===activeTheme)||THEMES[0];
+  const _ct = _getTheme();
   const _cp = _ct.colors;
   let label='', labelColor=_cp[1]||'#ffd60a';
   if(combo>=2){ label=consecLabels[Math.min(combo,5)]||'INSANE!!'; labelColor=[_cp[1],_cp[2],_cp[0],_cp[4]][Math.min(combo-2,3)]||_cp[0]; }
@@ -8629,6 +8700,7 @@ function showGameOverSequence(finalScore, isNew) {
   // ── Step 6: Buttons appear (3300ms) ──
   setTimeout(() => {
     if(btns) btns.classList.add('show');
+    _populateSocialButtons();
   }, 3300);
 }
 
@@ -10994,6 +11066,13 @@ const THEMES = [
 const XP_THRESHOLDS = [0,13000,38000,75000,125000,180000,300000,500000,750000,1000000,1500000,2000000,3000000,5000000];
 
 let activeTheme   = localStorage.getItem('bb_theme')   || 'arcade';
+let _activeThemeObj = null; // cached THEMES.find result
+function _getTheme() {
+  if(!_activeThemeObj || _activeThemeObj.id !== activeTheme) {
+    _activeThemeObj = _getTheme();
+  }
+  return _activeThemeObj;
+}
 let seenUnlocks   = JSON.parse(localStorage.getItem('bb_seen_unlocks') || '[]');
 
 function getTotalScore() {
@@ -11422,6 +11501,7 @@ function applyTheme(id) {
   document.body.className = document.body.className.replace(/theme-\S+/g, '').trim();
   document.body.classList.add('theme-' + id);
   activeTheme = id;
+  _activeThemeObj = null; // invalidate cache
   localStorage.setItem('bb_theme', id);
   haptic(20); // theme selected tap
   // Force board re-render so theme-specific styles (glass, etc.) update
@@ -11772,7 +11852,7 @@ function showLevelUpStamp(level) {
   // Particle burst from center
   const cx = window.innerWidth / 2;
   const cy = window.innerHeight / 2;
-  const theme = THEMES.find(t => t.id === activeTheme) || THEMES[0];
+  const theme = _getTheme();
   for(let i = 0; i < 5; i++) {
     setTimeout(() => {
       theme.colors.forEach(col => spawnParticles(cx, cy, col, 4));
